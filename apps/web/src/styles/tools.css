@@ -1,0 +1,102 @@
+.app-shell.app-shell--tools {
+  background: linear-gradient(180deg, #e9ebee 0%, #e7e9ec 50%, #eceeef 100%);
+}
+
+.tools-page {
+  padding-top: calc(8px + env(safe-area-inset-top));
+}
+
+.tool-search {
+  display: flex;
+  align-items: center;
+  height: 52px;
+  margin-top: 0;
+  padding: 0 18px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 0.5px solid rgba(255, 255, 255, 0.82);
+  border-radius: 28px;
+  box-shadow:
+    0 0.5px 0 rgba(0, 0, 0, 0.09),
+    0 8px 24px rgba(38, 42, 48, 0.06);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+}
+
+.tool-search > span {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-right: 14px;
+  border: 1.7px solid #8e8e93;
+  border-radius: 50%;
+}
+
+.tool-search > span::after {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  width: 7px;
+  height: 2px;
+  content: '';
+  background: #8e8e93;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.tool-search input {
+  width: 100%;
+  color: #1f1f23;
+  font-size: 16px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.tool-search input::placeholder {
+  color: #a0a0a6;
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.tools-grid button {
+  display: flex;
+  min-height: 128px;
+  padding: 16px 10px 14px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #242428;
+  background: rgba(255, 255, 255, 0.58);
+  border: 0.5px solid rgba(255, 255, 255, 0.82);
+  border-radius: 22px;
+  box-shadow:
+    0 0.5px 0 rgba(0, 0, 0, 0.09),
+    0 12px 30px rgba(38, 42, 48, 0.065);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+
+.tools-grid button:active {
+  background: rgba(245, 245, 247, 0.82);
+  transform: scale(0.985);
+}
+
+.tools-grid img {
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+}
+
+.tools-grid span {
+  font-size: 17px;
+  font-weight: 590;
+}

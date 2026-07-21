@@ -1,0 +1,225 @@
+.app-shell.app-shell--profile {
+  background: linear-gradient(180deg, #e9ece8 0%, #e7eae6 52%, #ecefe9 100%);
+}
+
+.app-shell--profile .surface-card {
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow:
+    0 0.5px 0 rgba(0, 0, 0, 0.08),
+    0 12px 30px rgba(38, 45, 35, 0.07);
+  -webkit-backdrop-filter: blur(22px) saturate(138%);
+  backdrop-filter: blur(22px) saturate(138%);
+}
+
+.profile-page {
+  padding-top: calc(66px + env(safe-area-inset-top));
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  min-height: 116px;
+}
+
+.profile-avatar {
+  display: grid;
+  width: 106px;
+  height: 106px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(145deg, #f8fdf2, #e8f6da);
+  border: 5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #cfe7b4;
+}
+
+.profile-avatar img {
+  width: 78px;
+  height: 78px;
+  object-fit: contain;
+  filter: sepia(0.1) saturate(1.15);
+}
+
+.profile-hero__identity {
+  min-width: 0;
+  margin-left: 22px;
+}
+
+.profile-hero__identity h1 {
+  margin: 0 0 9px;
+  font-size: 29px;
+  line-height: 1;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  color: var(--green-deep);
+  font-size: 14px;
+  border: 1px solid #cce5ae;
+  border-radius: 16px;
+}
+
+.profile-hero > button {
+  margin-left: auto;
+  padding: 10px 4px 10px 14px;
+  color: #777b7d;
+  font-size: 44px;
+  font-weight: 200;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+}
+
+.student-card {
+  display: flex;
+  align-items: center;
+  min-height: 135px;
+  margin-top: 28px;
+  padding: 20px;
+}
+
+.student-card__icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  margin-right: 20px;
+  flex: 0 0 auto;
+  place-items: center;
+  background: #f4faec;
+  border: 1px solid #d9ecc2;
+  border-radius: 50%;
+}
+
+.student-card__icon img {
+  width: 49px;
+  height: 49px;
+}
+
+.student-card h2 {
+  margin: 0 0 7px;
+  font-size: 20px;
+  font-weight: 630;
+}
+
+.student-card p {
+  margin: 0 0 10px;
+  color: #55595a;
+  font-size: 17px;
+}
+
+.student-card span {
+  color: #989a9b;
+  font-size: 15px;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.profile-stats article {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 96px;
+  padding: 14px;
+}
+
+.profile-stats img {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.profile-stats div {
+  min-width: 0;
+  margin-left: 10px;
+}
+
+.profile-stats span,
+.profile-stats strong {
+  display: block;
+  white-space: nowrap;
+}
+
+.profile-stats span {
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+
+.profile-stats strong {
+  color: var(--green-deep);
+  font-size: 25px;
+}
+
+.profile-stats strong.is-orange {
+  color: #f2752b;
+  font-size: 21px;
+}
+
+.profile-menu {
+  margin-top: 22px;
+  padding: 3px 20px;
+}
+
+.profile-menu button {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  min-height: 70px;
+  padding: 0 2px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #e7eae6;
+}
+
+.profile-menu button:last-child {
+  border-bottom: 0;
+}
+
+.profile-menu img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.profile-menu span {
+  font-size: 19px;
+  font-weight: 550;
+}
+
+.profile-menu strong {
+  color: #86898a;
+  font-size: 34px;
+  font-weight: 300;
+}
+
+@media (max-width: 370px) {
+  .profile-avatar {
+    width: 88px;
+    height: 88px;
+  }
+
+  .profile-avatar img {
+    width: 64px;
+    height: 64px;
+  }
+
+  .profile-hero__identity {
+    margin-left: 16px;
+  }
+
+  .student-card {
+    padding: 16px;
+  }
+}
