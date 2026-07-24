@@ -13,7 +13,9 @@ import {
   type ClassroomSchedule,
 } from './api'
 import {
+  readClassroomInitializationCache,
   readClassroomScheduleCache,
+  writeClassroomInitializationCache,
   writeClassroomScheduleCache,
 } from './cache'
 import { defaultWeekday } from './model'
@@ -26,7 +28,9 @@ vi.mock('./api', () => ({
   getClassroomOptions: vi.fn(),
 }))
 vi.mock('./cache', () => ({
+  readClassroomInitializationCache: vi.fn(),
   readClassroomScheduleCache: vi.fn(),
+  writeClassroomInitializationCache: vi.fn(),
   writeClassroomScheduleCache: vi.fn(),
 }))
 
@@ -34,7 +38,9 @@ const getCurrentWeekMock = vi.mocked(getCurrentWeek)
 const listSemestersMock = vi.mocked(listSemesters)
 const getClassroomOptionsMock = vi.mocked(getClassroomOptions)
 const getClassroomScheduleMock = vi.mocked(getClassroomSchedule)
+const readClassroomInitializationCacheMock = vi.mocked(readClassroomInitializationCache)
 const readClassroomScheduleCacheMock = vi.mocked(readClassroomScheduleCache)
+const writeClassroomInitializationCacheMock = vi.mocked(writeClassroomInitializationCache)
 const writeClassroomScheduleCacheMock = vi.mocked(writeClassroomScheduleCache)
 
 const currentSemester: Semester = { ID: '1106', SchoolYear: '2025-2026', Term: '1' }
@@ -84,7 +90,9 @@ describe('classrooms store', () => {
       Buildings: campusID ? [{ ID: '3', Name: '第二教学楼' }] : [],
     }))
     getClassroomScheduleMock.mockResolvedValue(classroomSchedule)
+    readClassroomInitializationCacheMock.mockResolvedValue(null)
     readClassroomScheduleCacheMock.mockResolvedValue(null)
+    writeClassroomInitializationCacheMock.mockResolvedValue()
     writeClassroomScheduleCacheMock.mockImplementation(async (schedule, cachedAt) => ({
       version: 1,
       semesterID: schedule.SemesterID,
@@ -114,6 +122,48 @@ describe('classrooms store', () => {
       { ID: '22', Name: '芯谷' },
     ])
     expect(getClassroomOptionsMock).not.toHaveBeenCalled()
+    expect(writeClassroomInitializationCacheMock).toHaveBeenCalledWith({
+      semesters: [currentSemester, previousSemester],
+      selectedSemesterID: currentSemester.ID,
+      currentWeek: 8,
+      selectedCampusID: '1',
+    })
+  })
+
+  it('restores query conditions and the semester snapshot without network access', async () => {
+    const cachedAt = new Date('2026-07-24T09:00:00+08:00').getTime()
+    readClassroomInitializationCacheMock.mockResolvedValue({
+      version: 1,
+      semesters: [currentSemester, previousSemester],
+      selectedSemesterID: currentSemester.ID,
+      currentWeek: 8,
+      selectedCampusID: '1',
+      cachedAt,
+    })
+    readClassroomScheduleCacheMock.mockResolvedValue({
+      version: 1,
+      semesterID: currentSemester.ID,
+      campusID: '1',
+      schedule: classroomSchedule,
+      cachedAt,
+    })
+    const store = useClassroomsStore()
+
+    await store.initialize()
+    await store.search()
+
+    expect(store.initialized).toBe(true)
+    expect(store.initializationError).toBe('')
+    expect(store.selectedSemesterID).toBe(currentSemester.ID)
+    expect(store.currentWeek).toBe(8)
+    expect(store.selectedCampusID).toBe('1')
+    expect(store.classroomSchedule).toEqual(classroomSchedule)
+    expect(store.usingCachedSchedule).toBe(true)
+    expect(store.buildings).toEqual([{ ID: '第二教学楼', Name: '第二教学楼' }])
+    expect(store.hasSearched).toBe(true)
+    expect(listSemestersMock).not.toHaveBeenCalled()
+    expect(getCurrentWeekMock).not.toHaveBeenCalled()
+    expect(getClassroomScheduleMock).not.toHaveBeenCalled()
   })
 
   it('loads campus-dependent buildings only when requested', async () => {

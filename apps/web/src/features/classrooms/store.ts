@@ -19,7 +19,10 @@ import {
   type ClassroomSchedule,
 } from './api'
 import {
+  type CachedClassroomSchedule,
+  readClassroomInitializationCache,
   readClassroomScheduleCache,
+  writeClassroomInitializationCache,
   writeClassroomScheduleCache,
 } from './cache'
 import { defaultWeekday, findAvailableClassrooms, toggleSectionPair } from './model'
@@ -72,12 +75,18 @@ export const useClassroomsStore = defineStore('classrooms', {
       this.initializing = true
       this.initializationError = ''
       try {
+        if (!force && (await this.restoreInitializationCache())) return
+
         const [semesters, currentWeekResult] = await Promise.all([
           listSemesters(),
           getCurrentWeek().catch(() => null),
         ])
         this.semesters = [...semesters].sort(compareSemestersNewestFirst)
-        this.currentWeek = validWeek(currentWeekResult?.CurrentWeek) ? currentWeekResult.CurrentWeek : 1
+        this.currentWeek = validWeek(currentWeekResult?.CurrentWeek)
+          ? currentWeekResult.CurrentWeek
+          : validWeek(this.currentWeek)
+            ? this.currentWeek
+            : 1
         if (this.semesters.length === 0) {
           this.selectedSemesterID = ''
           this.initialized = true
@@ -92,6 +101,7 @@ export const useClassroomsStore = defineStore('classrooms', {
           this.selectedCampusID = preferredCampusID(this.campuses)
         }
         this.initialized = true
+        await this.persistInitializationCache().catch(() => undefined)
         useSessionStore().markAuthenticated()
       } catch (error) {
         this.handleAuthorizationError(error)
@@ -111,6 +121,7 @@ export const useClassroomsStore = defineStore('classrooms', {
       this.selectedClassroomTypeID = ''
       this.buildings = []
       this.selectedCampusID = preferredCampusID(this.campuses)
+      void this.persistInitializationCache().catch(() => undefined)
     },
     async loadBuildings() {
       if (!this.selectedSemesterID || !this.selectedCampusID) return false
@@ -136,6 +147,7 @@ export const useClassroomsStore = defineStore('classrooms', {
       this.resetResults()
       this.resetSchedule()
       this.optionsError = ''
+      void this.persistInitializationCache().catch(() => undefined)
     },
     togglePair(pairStart: number) {
       this.sections = toggleSectionPair(this.sections, pairStart)
@@ -203,9 +215,7 @@ export const useClassroomsStore = defineStore('classrooms', {
         try {
           const cached = await readClassroomScheduleCache(semesterID, campusID)
           if (cached) {
-            this.classroomSchedule = cached.schedule
-            this.scheduleCachedAt = cached.cachedAt
-            this.usingCachedSchedule = true
+            this.applyCachedSchedule(cached)
             return cached.schedule
           }
         } catch {
@@ -229,7 +239,56 @@ export const useClassroomsStore = defineStore('classrooms', {
       }
       return schedule
     },
+    async restoreInitializationCache() {
+      const cached = await readClassroomInitializationCache().catch(() => null)
+      if (!cached) return false
+
+      this.semesters = [...cached.semesters].sort(compareSemestersNewestFirst)
+      this.selectedSemesterID = cached.selectedSemesterID
+      this.currentWeek = cached.currentWeek
+      this.week = this.isCurrentSemester() ? this.currentWeek : 1
+      this.selectedCampusID = this.campuses.some(
+        (campus) => campus.ID === cached.selectedCampusID,
+      )
+        ? cached.selectedCampusID
+        : preferredCampusID(this.campuses)
+
+      const schedule = await readClassroomScheduleCache(
+        this.selectedSemesterID,
+        this.selectedCampusID,
+      ).catch(() => null)
+      if (schedule) this.applyCachedSchedule(schedule)
+
+      this.initialized = true
+      return true
+    },
+    persistInitializationCache() {
+      if (
+        this.semesters.length === 0 ||
+        !this.selectedSemesterID ||
+        !this.selectedCampusID ||
+        !validWeek(this.currentWeek)
+      ) {
+        return Promise.resolve()
+      }
+      return writeClassroomInitializationCache({
+        semesters: this.semesters,
+        selectedSemesterID: this.selectedSemesterID,
+        currentWeek: this.currentWeek,
+        selectedCampusID: this.selectedCampusID,
+      })
+    },
+    applyCachedSchedule(cached: CachedClassroomSchedule) {
+      this.classroomSchedule = cached.schedule
+      this.scheduleCachedAt = cached.cachedAt
+      this.usingCachedSchedule = true
+      if (this.buildings.length === 0) {
+        this.buildings = buildingOptionsFromSchedule(cached.schedule)
+      }
+    },
     async refreshSchedule() {
+      await this.initialize(true)
+      if (useSessionStore().status === 'anonymous') return
       await this.search(true)
     },
     clearData() {
@@ -329,6 +388,12 @@ function validWeek(week: number | undefined): week is number {
 
 function preferredCampusID(campuses: ClassroomOption[]) {
   return campuses.find((campus) => campus.Name.trim().includes('航空港'))?.ID || campuses[0]?.ID || ''
+}
+
+function buildingOptionsFromSchedule(schedule: ClassroomSchedule): ClassroomOption[] {
+  return [...new Set(schedule.Rooms.map((entry) => entry.Classroom.Building.trim()).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, 'zh-CN', { numeric: true }))
+    .map((name) => ({ ID: name, Name: name }))
 }
 
 function errorMessage(error: unknown, fallback: string) {
