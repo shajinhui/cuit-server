@@ -1,5 +1,7 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 
+import { setNativeSystemBarTheme } from '@/shared/native/systemBars'
+
 const defaultThemeColor = '#fbfcf9'
 
 export function usePageTheme(backgroundColor: string) {
@@ -15,13 +17,16 @@ export function usePageTheme(backgroundColor: string) {
     theme?.setAttribute('content', backgroundColor)
     document.documentElement.style.backgroundColor = backgroundColor
     document.body.style.backgroundColor = backgroundColor
+    void setNativeSystemBarTheme(backgroundColor)
   })
 
   onBeforeUnmount(() => {
+    const restoredThemeColor = previousThemeColor || defaultThemeColor
     document
       .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-      ?.setAttribute('content', previousThemeColor || defaultThemeColor)
+      ?.setAttribute('content', restoredThemeColor)
     document.documentElement.style.backgroundColor = previousHtmlBackground
     document.body.style.backgroundColor = previousBodyBackground
+    void setNativeSystemBarTheme(restoredThemeColor)
   })
 }
