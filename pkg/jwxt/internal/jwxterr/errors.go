@@ -8,12 +8,16 @@ import (
 )
 
 var (
-	ErrRemoteUnavailable       = errors.New("jwxt: remote unavailable")
-	ErrUnsupportedLoginPage    = errors.New("jwxt: unsupported login page")
-	ErrInvalidCredentials      = errors.New("jwxt: invalid credentials")
-	ErrLoginVerificationFailed = errors.New("jwxt: login verification failed")
-	ErrSessionExpired          = errors.New("jwxt: session expired")
-	ErrGradeQueryFailed        = errors.New("jwxt: grade query failed")
+	ErrRemoteUnavailable         = errors.New("jwxt: remote unavailable")
+	ErrUnsupportedLoginPage      = errors.New("jwxt: unsupported login page")
+	ErrInvalidCredentials        = errors.New("jwxt: invalid credentials")
+	ErrLoginVerificationFailed   = errors.New("jwxt: login verification failed")
+	ErrSessionExpired            = errors.New("jwxt: session expired")
+	ErrGradeQueryFailed          = errors.New("jwxt: grade query failed")
+	ErrCourseTableQueryFailed    = errors.New("jwxt: course table query failed")
+	ErrExamQueryFailed           = errors.New("jwxt: exam query failed")
+	ErrProfileQueryFailed        = errors.New("jwxt: profile query failed")
+	ErrPlanCompletionQueryFailed = errors.New("jwxt: plan completion query failed")
 )
 
 type SafeError struct {

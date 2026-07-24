@@ -74,6 +74,18 @@ func TestParseGradesReportsUnexpectedRowAndColumn(t *testing.T) {
 	}
 }
 
+func TestParseGradesAllowsEmptyRowsInEmptyTable(t *testing.T) {
+	body := []byte(`<table class="gridtable"><tbody><tr>
+	</tr></tbody></table>`)
+	grades, err := ParseGrades(body)
+	if err != nil {
+		t.Fatalf("ParseGrades returned error for an empty row: %v", err)
+	}
+	if len(grades) != 0 {
+		t.Fatalf("unexpected grades parsed from an empty row: %+v", grades)
+	}
+}
+
 const sampleGradeHTML = `
 <div class="grid">
 <table id="grid123" class="gridtable">

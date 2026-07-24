@@ -11,10 +11,12 @@ import (
 
 	"cuit-server/internal/academic"
 	"cuit-server/internal/platform/database"
+	"cuit-server/internal/schedule"
 	"cuit-server/migrations"
 	"cuit-server/pkg/jwxt"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/hertz-contrib/logger/accesslog"
 	"github.com/joho/godotenv"
 )
 
@@ -25,8 +27,12 @@ func main() {
 		address = "127.0.0.1:8888"
 	}
 	secureCookie := strings.EqualFold(os.Getenv("APP_COOKIE_SECURE"), "true")
+	sqlitePath := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
+	if sqlitePath == "" {
+		sqlitePath = "data/cuit-server.db"
+	}
 	startupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	db, err := database.OpenMySQL(startupCtx, os.Getenv("MYSQL_DSN"))
+	db, err := database.OpenSQLite(startupCtx, sqlitePath)
 	if err != nil {
 		cancel()
 		log.Fatal(err)
@@ -47,16 +53,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	repository := academic.NewMySQLRepository(db)
+	repository := academic.NewSQLiteRepository(db)
 
-	academicService := academic.NewService(func() (academic.GradeClient, error) {
+	jwxtService := academic.NewService(func() (academic.JWXTClient, error) {
 		// 每次教务登录都创建独立 Client，确保不同学生不会共享 CookieJar。
 		return jwxt.NewClient()
-	}, repository, credentials, 30*24*time.Hour)
-	academicHandler := academic.NewHandler(academicService, secureCookie)
+	}, repository, credentials, 3*time.Minute)
+	academicHandler := academic.NewHandler(jwxtService, secureCookie)
+	scheduleHandler := schedule.NewHandler(jwxtService, schedule.NewCalendarClient())
 
 	h := server.Default(server.WithHostPorts(address))
+	h.Use(accesslog.New())
 	academicHandler.Register(h)
+	scheduleHandler.Register(h)
 	h.GET("/api/v1/health", func(_ context.Context, c *app.RequestContext) {
 		c.JSON(http.StatusOK, map[string]any{"code": 0, "message": "success", "data": map[string]string{"status": "ok"}})
 	})

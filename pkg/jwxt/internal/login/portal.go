@@ -1,3 +1,8 @@
+// Package login 的 Portal 辅助实现，负责解析门户页面、构建登录请求并处理学校账户切换。
+//
+// 说明：Portal 是学校对外统一入口，登录后会返回一个 redirectUrl，SDK 需要跟随该地址
+// 去完成后续的 CAS/EAMS 登录回调。此文件实现了从 Portal 提交登录、处理返回 JSON、以及
+// 切换学校账户的细节。
 package login
 
 import (
@@ -67,6 +72,7 @@ func ParsePortalRoute(baseURL *url.URL, body []byte) (*PortalRoute, error) {
 		return nil, jwxterr.WithURL(jwxterr.ErrUnsupportedLoginPage, "parse-portal", baseURL, 0, "redirectUrl missing")
 	}
 
+	// 返回 PortalRoute，包含跳转页面、登录类型与最终的 redirectUrl，供后续登录使用。
 	return &PortalRoute{
 		PageURL:     routeURL,
 		LoginType:   loginType,

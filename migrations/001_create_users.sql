@@ -1,17 +1,16 @@
 CREATE TABLE IF NOT EXISTS users (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    student_no VARCHAR(32) NOT NULL COMMENT '学号',
-    name VARCHAR(64) NULL COMMENT '姓名',
-    gender TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '0未知 1男 2女',
-    college VARCHAR(128) NULL COMMENT '学院',
-    major VARCHAR(128) NULL COMMENT '专业',
-    class_name VARCHAR(128) NULL COMMENT '班级',
-    enrollment_year SMALLINT UNSIGNED NULL COMMENT '入学年份',
-    jwxt_password_enc VARBINARY(512) NOT NULL COMMENT '加密后的教务密码',
-    credential_key_version SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-    last_login_at DATETIME(3) NULL,
-    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-    PRIMARY KEY (id),
-    UNIQUE KEY uk_users_student_no (student_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_no TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '',
+    gender INTEGER NOT NULL DEFAULT 0,
+    college TEXT NOT NULL DEFAULT '',
+    major TEXT NOT NULL DEFAULT '',
+    class_name TEXT NOT NULL DEFAULT '',
+    enrollment_year INTEGER NOT NULL DEFAULT 0,
+    jwxt_password_enc BLOB NOT NULL,
+    credential_key_version INTEGER NOT NULL DEFAULT 1,
+    session_token_hash BLOB UNIQUE,
+    last_login_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,3 +1,7 @@
+// Package grade: 与 EAMS 成绩相关的 HTTP 请求实现（封装具体 URL、请求头、Referer、表单等）。
+//
+// 说明：本文件负责构造请求获取学期页面、学期下拉数据以及成绩列表，然后调用 parser
+// 将 HTML 转为结构化数据。调用方只需传入已经登录的 `resty.Client`。
 package grade
 
 import (
@@ -40,7 +44,14 @@ func ListSemesters(ctx context.Context, client *resty.Client, baseURL *url.URL) 
 	if err != nil {
 		return nil, err
 	}
-	return ParseSemesters(body)
+	semesters, err := ParseSemesters(body)
+	if err != nil {
+		return nil, err
+	}
+	for index := range semesters {
+		semesters[index].Current = semesters[index].ID == currentSemesterID
+	}
+	return semesters, nil
 }
 
 func GetGrades(ctx context.Context, client *resty.Client, baseURL *url.URL, semesterID string) ([]Grade, error) {

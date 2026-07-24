@@ -1,5 +1,7 @@
 # Campus Assistant 架构设计文档
 
+> 当前实现已经收敛为“单个 Hertz API + SQLite + 独立 JWXT SDK”，不使用 Redis 和 MySQL。本文后续涉及 Redis、MySQL 和后台 Worker 的内容仅保留为早期讨论，不代表当前实现要求；当前结构以 `README.md`、`Agent.md` 和代码为准。
+
 第一版最适合做成 **模块化单体（Modular Monolith）**。
 
 不要一开始拆微服务、上 Kafka、搞十几个仓库。你的核心复杂度不在服务间调用，而在：

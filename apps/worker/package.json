@@ -1,0 +1,16 @@
+{
+  "name": "cuit-eams-connectivity-probe",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "wrangler types && tsc --noEmit && wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.1",
+    "typescript": "7.0.2",
+    "wrangler": "4.113.0"
+  },
+  "packageManager": "pnpm@10.26.1"
+}

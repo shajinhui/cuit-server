@@ -21,7 +21,7 @@ func TestSemesterAndGradeRequestsMatchEAMSProtocol(t *testing.T) {
 <script>bg.Go('/eams/teach/grade/course/person!search.action?semesterId=1006&projectType=','semesterGrade');</script>`))
 		case semesterDataPath:
 			assertSemesterForm(t, r)
-			_, _ = w.Write([]byte(`{semesters:{y0:[{id:906,schoolYear:"2025-2026",name:"1"},{id:1006,schoolYear:"2025-2026",name:"2"}]}}`))
+			_, _ = w.Write([]byte(`{semesters:{y0:[{id:906,schoolYear:"2025-2026",name:"1"},{id:1006,schoolYear:"2025-2026",name:"2"}],y1:[{id:1106,schoolYear:"2026-2027",name:"1"}]}}`))
 		case gradeSearchPath:
 			assertGradeQuery(t, r)
 			_, _ = w.Write([]byte(sampleGradeHTML))
@@ -41,8 +41,14 @@ func TestSemesterAndGradeRequestsMatchEAMSProtocol(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListSemesters returned error: %v", err)
 	}
-	if len(semesters) != 2 {
+	if len(semesters) != 3 {
 		t.Fatalf("unexpected semester count: %d", len(semesters))
+	}
+	if !semesters[1].Current || semesters[1].ID != "1006" {
+		t.Fatalf("current semester was not preserved: %+v", semesters)
+	}
+	if semesters[2].Current {
+		t.Fatalf("future semester must not be marked current: %+v", semesters[2])
 	}
 
 	grades, err := GetGrades(context.Background(), client, baseURL, "906")

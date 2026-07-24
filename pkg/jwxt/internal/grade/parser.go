@@ -1,3 +1,8 @@
+// Package grade 实现了成绩页面的 HTML 解析逻辑。
+//
+// 提供的功能：
+// - 解析学期选择控件以获取可用学期列表
+// - 解析成绩表格为结构化的 Grade 列表
 package grade
 
 import (
@@ -60,6 +65,9 @@ func ParseGrades(body []byte) ([]Grade, error) {
 	var parseErr error
 	table.Find("tbody tr").EachWithBreak(func(index int, row *goquery.Selection) bool {
 		cells := row.Find("td")
+		if cells.Length() == 0 && normalizeText(row.Text()) == "" {
+			return true
+		}
 		if cells.Length() != 11 {
 			message := fmt.Sprintf("unexpected grade column count: row=%d columns=%d", index+1, cells.Length())
 			parseErr = jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, message)

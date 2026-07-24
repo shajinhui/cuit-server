@@ -1,5 +1,5 @@
 .app-shell.app-shell--tools {
-  background: linear-gradient(180deg, #e9ebee 0%, #e7e9ec 50%, #eceeef 100%);
+  background: #f2f2f7;
 }
 
 .tools-page {
@@ -56,6 +56,13 @@
   color: #a0a0a6;
 }
 
+.tool-search:focus-within {
+  border-color: var(--focus-ring);
+  box-shadow:
+    0 0 0 3px var(--focus-ring-soft),
+    0 8px 24px rgba(38, 42, 48, 0.06);
+}
+
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -85,9 +92,14 @@
     background-color 160ms ease;
 }
 
-.tools-grid button:active {
+.tools-grid button:not(:disabled):active {
   background: rgba(245, 245, 247, 0.82);
   transform: scale(0.985);
+}
+
+.tools-grid button:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .tools-grid img {
@@ -96,7 +108,20 @@
   object-fit: contain;
 }
 
-.tools-grid span {
+.tools-grid .tool-copy {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.tools-grid .tool-label {
   font-size: 17px;
   font-weight: 590;
+}
+
+.tools-grid small {
+  color: #8e8e93;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
 }

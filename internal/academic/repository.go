@@ -12,60 +12,91 @@ import (
 var ErrStoredSessionNotFound = errors.New("academic: stored session not found")
 
 type UserRepository interface {
-	UpsertLogin(ctx context.Context, studentNo string, encryptedPassword []byte, loggedAt time.Time) (int64, error)
-	CreateSession(ctx context.Context, userID int64, tokenHash [sha256.Size]byte, expiresAt time.Time) error
-	FindUserBySession(ctx context.Context, tokenHash [sha256.Size]byte, now time.Time) (StoredUser, error)
-	DeleteSession(ctx context.Context, tokenHash [sha256.Size]byte) error
+	UpsertLogin(
+		ctx context.Context,
+		user LoginUser,
+		encryptedPassword []byte,
+		tokenHash [sha256.Size]byte,
+		loggedAt time.Time,
+	) (int64, error)
+	FindUserBySession(ctx context.Context, tokenHash [sha256.Size]byte) (StoredUser, error)
+	ClearSession(ctx context.Context, tokenHash [sha256.Size]byte) error
 }
 
-type MySQLRepository struct {
+type SQLiteRepository struct {
 	db *sql.DB
 }
 
-func NewMySQLRepository(db *sql.DB) *MySQLRepository {
-	return &MySQLRepository{db: db}
+func NewSQLiteRepository(db *sql.DB) *SQLiteRepository {
+	return &SQLiteRepository{db: db}
 }
 
-func (r *MySQLRepository) UpsertLogin(ctx context.Context, studentNo string, encryptedPassword []byte, loggedAt time.Time) (int64, error) {
-	result, err := r.db.ExecContext(ctx, `
-INSERT INTO users (student_no, jwxt_password_enc, last_login_at)
-VALUES (?, ?, ?)
-ON DUPLICATE KEY UPDATE
-    id = LAST_INSERT_ID(id),
-    jwxt_password_enc = VALUES(jwxt_password_enc),
-    last_login_at = VALUES(last_login_at)`, studentNo, encryptedPassword, loggedAt)
+func (r *SQLiteRepository) UpsertLogin(
+	ctx context.Context,
+	user LoginUser,
+	encryptedPassword []byte,
+	tokenHash [sha256.Size]byte,
+	loggedAt time.Time,
+) (int64, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("academic: begin user login save: %w", err)
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+INSERT INTO users (
+    student_no, name, college, major, enrollment_year,
+    jwxt_password_enc, session_token_hash, last_login_at, updated_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(student_no) DO UPDATE SET
+    name = excluded.name,
+    college = excluded.college,
+    major = excluded.major,
+    enrollment_year = excluded.enrollment_year,
+    jwxt_password_enc = excluded.jwxt_password_enc,
+    session_token_hash = excluded.session_token_hash,
+    last_login_at = excluded.last_login_at,
+    updated_at = excluded.updated_at`,
+		user.StudentNo,
+		user.Name,
+		user.College,
+		user.Major,
+		user.EnrollmentYear,
+		encryptedPassword,
+		tokenHash[:],
+		loggedAt,
+		loggedAt,
+	)
 	if err != nil {
 		return 0, fmt.Errorf("academic: save user login: %w", err)
 	}
-	userID, err := result.LastInsertId()
-	if err != nil {
+
+	var userID int64
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM users WHERE student_no = ?`, user.StudentNo).Scan(&userID); err != nil {
 		return 0, fmt.Errorf("academic: read saved user ID: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("academic: commit user login save: %w", err)
 	}
 	return userID, nil
 }
 
-func (r *MySQLRepository) CreateSession(ctx context.Context, userID int64, tokenHash [sha256.Size]byte, expiresAt time.Time) error {
-	_, err := r.db.ExecContext(ctx, `
-INSERT INTO user_sessions (user_id, token_hash, expires_at)
-VALUES (?, ?, ?)`, userID, tokenHash[:], expiresAt)
-	if err != nil {
-		return fmt.Errorf("academic: save user session: %w", err)
-	}
-	return nil
-}
-
-func (r *MySQLRepository) FindUserBySession(ctx context.Context, tokenHash [sha256.Size]byte, now time.Time) (StoredUser, error) {
+func (r *SQLiteRepository) FindUserBySession(ctx context.Context, tokenHash [sha256.Size]byte) (StoredUser, error) {
 	var user StoredUser
 	err := r.db.QueryRowContext(ctx, `
-SELECT u.id, u.student_no, u.jwxt_password_enc, s.expires_at
-FROM user_sessions s
-JOIN users u ON u.id = s.user_id
-WHERE s.token_hash = ? AND s.expires_at > ?
-LIMIT 1`, tokenHash[:], now).Scan(
+SELECT id, student_no, name, college, major, enrollment_year, jwxt_password_enc
+FROM users
+WHERE session_token_hash = ?
+LIMIT 1`, tokenHash[:]).Scan(
 		&user.ID,
 		&user.StudentNo,
+		&user.Name,
+		&user.College,
+		&user.Major,
+		&user.EnrollmentYear,
 		&user.EncryptedPassword,
-		&user.SessionExpiresAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return StoredUser{}, ErrStoredSessionNotFound
@@ -76,9 +107,13 @@ LIMIT 1`, tokenHash[:], now).Scan(
 	return user, nil
 }
 
-func (r *MySQLRepository) DeleteSession(ctx context.Context, tokenHash [sha256.Size]byte) error {
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM user_sessions WHERE token_hash = ?`, tokenHash[:]); err != nil {
-		return fmt.Errorf("academic: delete user session: %w", err)
+func (r *SQLiteRepository) ClearSession(ctx context.Context, tokenHash [sha256.Size]byte) error {
+	if _, err := r.db.ExecContext(
+		ctx,
+		`UPDATE users SET session_token_hash = NULL, updated_at = CURRENT_TIMESTAMP WHERE session_token_hash = ?`,
+		tokenHash[:],
+	); err != nil {
+		return fmt.Errorf("academic: clear user session: %w", err)
 	}
 	return nil
 }

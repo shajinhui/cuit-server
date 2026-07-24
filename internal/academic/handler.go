@@ -5,8 +5,10 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
+	apiresponse "cuit-server/internal/platform/response"
 	"cuit-server/pkg/jwxt"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -14,14 +16,17 @@ import (
 )
 
 const (
-	sessionCookieName = "campus_session"
-	sessionMaxAge     = 30 * 24 * time.Hour
+	sessionCookieName   = "campus_session"
+	sessionCookieMaxAge = 400 * 24 * time.Hour
 )
 
 type GradeService interface {
 	Login(ctx context.Context, username string, password string) (string, error)
+	GetStudentProfile(ctx context.Context, sessionID string) (jwxt.StudentProfile, error)
+	GetPlanCompletion(ctx context.Context, sessionID string) (jwxt.PlanCompletion, error)
 	ListSemesters(ctx context.Context, sessionID string) ([]jwxt.Semester, error)
 	GetGrades(ctx context.Context, sessionID string, semesterID string) ([]jwxt.Grade, error)
+	GetExams(ctx context.Context, sessionID string, semesterID string, examType string) ([]jwxt.Exam, error)
 	Authenticated(ctx context.Context, sessionID string) (bool, error)
 	Logout(ctx context.Context, sessionID string) error
 }
@@ -34,13 +39,6 @@ type Handler struct {
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Remember bool   `json:"remember"`
-}
-
-type apiResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Data    any    `json:"data"`
 }
 
 func NewHandler(service GradeService, secureCookie bool) *Handler {
@@ -52,8 +50,11 @@ func (h *Handler) Register(server *server.Hertz) {
 	group.POST("/session", h.login)
 	group.GET("/session", h.sessionStatus)
 	group.DELETE("/session", h.logout)
+	group.GET("/profile", h.getStudentProfile)
+	group.GET("/plan-completion", h.getPlanCompletion)
 	group.GET("/semesters", h.listSemesters)
 	group.GET("/grades", h.getGrades)
+	group.GET("/exams", h.getExams)
 }
 
 func (h *Handler) login(ctx context.Context, c *app.RequestContext) {
@@ -70,25 +71,25 @@ func (h *Handler) login(ctx context.Context, c *app.RequestContext) {
 		writeServiceError(c, err)
 		return
 	}
-	maxAge := 0
-	if request.Remember {
-		maxAge = int(sessionMaxAge.Seconds())
-	}
-	// 前端脚本不可读取会话标识；数据库只保存随机会话摘要。
-	c.SetCookie(sessionCookieName, sessionID, maxAge, "/", "", protocol.CookieSameSiteLaxMode, h.secureCookie, true)
-	writeSuccess(c, map[string]bool{"authenticated": true})
+	h.setSessionCookie(c, sessionID)
+	apiresponse.Success(c, map[string]bool{"authenticated": true})
 }
 
 func (h *Handler) sessionStatus(ctx context.Context, c *app.RequestContext) {
 	requestCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	authenticated, err := h.service.Authenticated(requestCtx, string(c.Cookie(sessionCookieName)))
+	sessionID := string(c.Cookie(sessionCookieName))
+	authenticated, err := h.service.Authenticated(requestCtx, sessionID)
 	if err != nil {
 		log.Printf("查询登录状态失败: %v", err)
 		writeServiceError(c, err)
 		return
 	}
-	writeSuccess(c, map[string]bool{"authenticated": authenticated})
+	if authenticated {
+		// 浏览器会限制持久 Cookie 的最长时间，因此每次启动应用时续写 Cookie。
+		h.setSessionCookie(c, sessionID)
+	}
+	apiresponse.Success(c, map[string]bool{"authenticated": authenticated})
 }
 
 func (h *Handler) logout(ctx context.Context, c *app.RequestContext) {
@@ -98,7 +99,31 @@ func (h *Handler) logout(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	c.SetCookie(sessionCookieName, "", -1, "/", "", protocol.CookieSameSiteLaxMode, h.secureCookie, true)
-	writeSuccess(c, map[string]bool{"authenticated": false})
+	apiresponse.Success(c, map[string]bool{"authenticated": false})
+}
+
+func (h *Handler) getStudentProfile(ctx context.Context, c *app.RequestContext) {
+	requestCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	profile, err := h.service.GetStudentProfile(requestCtx, string(c.Cookie(sessionCookieName)))
+	if err != nil {
+		log.Printf("查询个人信息失败: %v", err)
+		writeServiceError(c, err)
+		return
+	}
+	apiresponse.Success(c, profile)
+}
+
+func (h *Handler) getPlanCompletion(ctx context.Context, c *app.RequestContext) {
+	requestCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	result, err := h.service.GetPlanCompletion(requestCtx, string(c.Cookie(sessionCookieName)))
+	if err != nil {
+		log.Printf("查询计划完成情况失败: %v", err)
+		writeServiceError(c, err)
+		return
+	}
+	apiresponse.Success(c, result)
 }
 
 func (h *Handler) listSemesters(ctx context.Context, c *app.RequestContext) {
@@ -110,7 +135,7 @@ func (h *Handler) listSemesters(ctx context.Context, c *app.RequestContext) {
 		writeServiceError(c, err)
 		return
 	}
-	writeSuccess(c, semesters)
+	apiresponse.Success(c, semesters)
 }
 
 func (h *Handler) getGrades(ctx context.Context, c *app.RequestContext) {
@@ -123,17 +148,49 @@ func (h *Handler) getGrades(ctx context.Context, c *app.RequestContext) {
 		writeServiceError(c, err)
 		return
 	}
-	writeSuccess(c, grades)
+	apiresponse.Success(c, grades)
 }
 
-func writeSuccess(c *app.RequestContext, data any) {
-	c.Header("Cache-Control", "no-store")
-	c.JSON(http.StatusOK, apiResponse{Code: 0, Message: "success", Data: data})
+func (h *Handler) getExams(ctx context.Context, c *app.RequestContext) {
+	semesterID := strings.TrimSpace(c.Query("semester_id"))
+	examType := strings.TrimSpace(c.Query("exam_type"))
+	if semesterID == "" || (examType != jwxt.ExamTypeFinal && examType != jwxt.ExamTypeMakeup) {
+		writeError(c, http.StatusBadRequest, 40000, "考试查询参数无效")
+		return
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+
+	exams, err := h.service.GetExams(
+		requestCtx,
+		string(c.Cookie(sessionCookieName)),
+		semesterID,
+		examType,
+	)
+	if err != nil {
+		log.Printf("查询考试安排失败: semester_id=%s exam_type=%s: %v", semesterID, examType, err)
+		writeServiceError(c, err)
+		return
+	}
+	apiresponse.Success(c, exams)
+}
+
+func (h *Handler) setSessionCookie(c *app.RequestContext, sessionID string) {
+	// 前端脚本不可读取会话标识；SQLite 只保存随机 Token 的哈希。
+	c.SetCookie(
+		sessionCookieName,
+		sessionID,
+		int(sessionCookieMaxAge.Seconds()),
+		"/",
+		"",
+		protocol.CookieSameSiteLaxMode,
+		h.secureCookie,
+		true,
+	)
 }
 
 func writeError(c *app.RequestContext, status int, code int, message string) {
-	c.Header("Cache-Control", "no-store")
-	c.JSON(status, apiResponse{Code: code, Message: message, Data: nil})
+	apiresponse.Error(c, status, code, message)
 }
 
 func writeServiceError(c *app.RequestContext, err error) {
@@ -148,6 +205,12 @@ func writeServiceError(c *app.RequestContext, err error) {
 		writeError(c, http.StatusBadGateway, 50201, "教务系统暂时无法访问")
 	case errors.Is(err, jwxt.ErrGradeQueryFailed):
 		writeError(c, http.StatusBadGateway, 50202, "成绩查询失败，请稍后重试")
+	case errors.Is(err, jwxt.ErrExamQueryFailed):
+		writeError(c, http.StatusBadGateway, 50208, "考试安排查询失败，请稍后重试")
+	case errors.Is(err, jwxt.ErrProfileQueryFailed):
+		writeError(c, http.StatusBadGateway, 50205, "个人信息查询失败，请稍后重试")
+	case errors.Is(err, jwxt.ErrPlanCompletionQueryFailed):
+		writeError(c, http.StatusBadGateway, 50206, "计划完成情况查询失败，请稍后重试")
 	default:
 		writeError(c, http.StatusInternalServerError, 50000, "服务暂时不可用")
 	}

@@ -4,6 +4,7 @@ type Semester struct {
 	ID         string
 	SchoolYear string
 	Term       string
+	Current    bool
 }
 
 type Grade struct {
