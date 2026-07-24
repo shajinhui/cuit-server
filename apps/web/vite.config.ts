@@ -15,15 +15,15 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['icons/app-icon-192.png', 'icons/app-icon-512.png'],
         manifest: {
           id: '/',
-          name: '成信校园助手',
-          short_name: '校园助手',
-          description: '课表、成绩与校园服务助手',
+          name: '成信友友',
+          short_name: '成信友友',
+          description: '成信友友，课表、成绩与校园服务助手',
           lang: 'zh-CN',
           theme_color: '#75b82a',
           background_color: '#fbfcf9',
           display: 'standalone',
           display_override: ['standalone'],
-          orientation: 'portrait',
+          orientation: 'any',
           start_url: '/',
           icons: [
             {
@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
           enabled: true,
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,webp,woff,woff2}', 'assets/**/*.png'],
+          globPatterns: ['**/*.{js,css,html,svg,webp,jpg,jpeg,woff,woff2}', 'assets/**/*.png'],
           navigateFallbackDenylist: [/^\/api\//],
         },
       }),

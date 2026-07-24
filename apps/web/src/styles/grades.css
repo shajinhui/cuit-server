@@ -23,8 +23,8 @@
 
 .grade-icon-button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   place-items: center;
   color: #34343a;
@@ -36,6 +36,11 @@
     0 5px 16px rgba(35, 39, 45, 0.055);
   -webkit-backdrop-filter: blur(22px) saturate(145%);
   backdrop-filter: blur(22px) saturate(145%);
+  transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.grade-icon-button:active {
+  transform: scale(0.96);
 }
 
 .grade-icon-button:disabled {
@@ -56,37 +61,6 @@
   margin-top: -4px;
   font-size: 13px;
   letter-spacing: 1px;
-}
-
-.grade-more {
-  position: relative;
-}
-
-.grade-action-menu {
-  position: absolute;
-  z-index: 10;
-  top: 43px;
-  right: 0;
-  width: 112px;
-  padding: 5px;
-  background: rgba(250, 250, 252, 0.84);
-  border: 0.5px solid rgba(255, 255, 255, 0.95);
-  border-radius: 14px;
-  box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.1),
-    0 14px 34px rgba(32, 36, 43, 0.14);
-  -webkit-backdrop-filter: blur(28px) saturate(165%);
-  backdrop-filter: blur(28px) saturate(165%);
-}
-
-.grade-action-menu button {
-  width: 100%;
-  padding: 9px 10px;
-  color: #4e5964;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 9px;
 }
 
 .semester-select {
@@ -258,6 +232,29 @@
 .grade-loading p {
   margin: 13px 0 0;
   font-size: 13px;
+}
+
+.grade-unavailable strong {
+  color: #3e4852;
+  font-size: 18px;
+}
+
+.grade-unavailable p {
+  max-width: 280px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.grade-unavailable button {
+  min-height: 40px;
+  margin-top: 18px;
+  padding: 0 18px;
+  color: #34343a;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.72);
+  border: 0.5px solid rgba(255, 255, 255, 0.96);
+  border-radius: 20px;
+  box-shadow: 0 6px 18px rgba(38, 42, 48, 0.08);
 }
 
 .grade-list {

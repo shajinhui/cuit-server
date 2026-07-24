@@ -1,8 +1,14 @@
 @import './schedule.css';
 @import './tools.css';
+@import './classrooms.css';
+@import './exams.css';
+@import './calendar.css';
+@import './campus-map.css';
 @import './profile.css';
+@import './plan-completion.css';
 @import './grades.css';
 @import './login.css';
+@import './pwa-install.css';
 
 :root {
   font-family:
@@ -18,6 +24,9 @@
   --line: #e8ebe7;
   --surface: rgba(255, 255, 255, 0.93);
   --shadow: 0 10px 30px rgba(29, 40, 25, 0.09);
+  --focus-ring: #2f6f1f;
+  --focus-ring-soft: rgba(47, 111, 31, 0.18);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 * {
@@ -56,6 +65,13 @@ button {
   color: inherit;
 }
 
+button:focus-visible,
+a:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
 #app {
   min-height: 100vh;
   min-height: 100dvh;
@@ -79,7 +95,7 @@ button {
 
 .app-shell__content {
   min-height: 100vh;
-  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
 }
 
 .page-padding {
@@ -95,26 +111,29 @@ button {
 }
 
 .bottom-navigation {
+  --bottom-navigation-outer-radius: 32px;
+  --bottom-navigation-inner-radius: 27px;
+
   position: fixed;
   z-index: 50;
-  bottom: calc(4px + env(safe-area-inset-bottom));
+  bottom: max(8px, calc(env(safe-area-inset-bottom) - 2px));
   left: 50%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  width: calc(100% - 44px);
-  max-width: 410px;
+  width: calc(100% - 56px);
+  max-width: 396px;
   min-height: 64px;
   padding: 5px;
   overflow: hidden;
-  background: rgba(247, 249, 246, 0.58);
+  background: rgba(255, 255, 255, 0.44);
   border: 0;
-  border-radius: 32px;
+  border-radius: var(--bottom-navigation-outer-radius);
   box-shadow:
-    0 18px 42px rgba(26, 32, 24, 0.18),
-    0 3px 10px rgba(26, 32, 24, 0.08);
+    0 20px 46px rgba(28, 28, 30, 0.13),
+    0 3px 10px rgba(28, 28, 30, 0.06);
   transform: translateX(-50%);
-  -webkit-backdrop-filter: blur(22px) saturate(155%);
-  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+  backdrop-filter: blur(18px) saturate(165%);
 }
 
 .bottom-navigation__item {
@@ -124,90 +143,93 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  color: #777a7b;
-  font-size: 13px;
+  color: #1c1c1e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
   text-decoration: none;
   background: transparent;
-  border-radius: 27px;
-  transition:
-    color 220ms ease,
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: var(--bottom-navigation-inner-radius);
 }
 
 .bottom-navigation__selection {
   position: absolute;
   top: 5px;
   bottom: 5px;
-  left: 5px;
-  width: calc((100% - 10px) / 3);
+  left: 7px;
+  width: calc((100% - 10px) / 3 - 4px);
   pointer-events: none;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(224, 240, 204, 0.68));
-  border-radius: 27px;
-  box-shadow:
-    0 6px 18px rgba(48, 65, 38, 0.16),
-    0 1px 4px rgba(48, 65, 38, 0.08);
-  transform: translateX(calc(var(--active-index) * 100%));
-  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  background: rgba(116, 116, 128, 0.12);
+  border: 0;
+  border-radius: var(--bottom-navigation-inner-radius);
+  box-shadow: 0 2px 8px rgba(28, 28, 30, 0.05);
+  transform: translateX(calc(var(--active-index) * (100% + 4px)));
+  transition: transform 180ms var(--ease-out);
+  will-change: transform;
 }
 
-.bottom-navigation__item img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  filter: grayscale(1);
-  opacity: 0.58;
-  transition:
-    filter 220ms ease,
-    opacity 220ms ease,
-    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.bottom-navigation__item span {
-  transition:
-    color 220ms ease,
-    transform 220ms ease;
+.bottom-navigation__icon {
+  display: block;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  color: inherit;
+  background: currentcolor;
+  -webkit-mask: var(--nav-icon) center / contain no-repeat;
+  mask: var(--nav-icon) center / contain no-repeat;
 }
 
 .bottom-navigation__item.is-active {
-  color: var(--green-deep);
-  font-weight: 700;
+  color: #007aff;
   background: transparent;
   box-shadow: none;
 }
 
-.bottom-navigation__item.is-active img {
-  filter: none;
-  opacity: 1;
-  transform: translateY(-1px) scale(1.07);
-}
-
-.bottom-navigation__item:active {
-  transform: scale(0.97);
-}
-
-.bottom-navigation__item:focus {
-  outline: none;
+.bottom-navigation__item:focus-visible {
+  outline-color: rgba(0, 122, 255, 0.46);
+  outline-offset: -3px;
 }
 
 .bottom-navigation__item:focus-visible:not(.is-active) {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 122, 255, 0.07);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bottom-navigation__item,
-  .bottom-navigation__item img,
-  .bottom-navigation__item span,
   .bottom-navigation__selection {
     transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .bottom-navigation {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .bottom-navigation {
+    background: #fff;
+    border: 1px solid rgba(28, 28, 30, 0.28);
+  }
+
+  .bottom-navigation__selection {
+    background: #e5e5ea;
+    border: 1px solid rgba(28, 28, 30, 0.18);
+  }
+
+  .bottom-navigation__item.is-active {
+    color: #0066cc;
   }
 }
 
 .toast-message {
   position: fixed;
   z-index: 80;
-  bottom: calc(82px + env(safe-area-inset-bottom));
+  bottom: calc(80px + env(safe-area-inset-bottom));
   left: 50%;
   padding: 11px 18px;
   color: #fff;
@@ -219,9 +241,16 @@ button {
   transform: translateX(-50%);
 }
 
-.toast-enter-active,
+.toast-enter-active {
+  transition:
+    opacity 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
+}
+
 .toast-leave-active {
-  transition: all 180ms ease;
+  transition:
+    opacity 120ms var(--ease-out),
+    transform 120ms var(--ease-out);
 }
 
 .toast-enter-from,
@@ -249,5 +278,33 @@ button {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .login-submit,
+  .password-toggle {
+    transition: opacity 120ms ease !important;
+  }
+
+  .login-submit:active,
+  .password-toggle:active {
+    transform: none !important;
+  }
+
+  .password-toggle-slash,
+  .login-error-enter-active,
+  .login-error-leave-active,
+  .login-submit-label,
+  .login-submit-loading {
+    transition: opacity 120ms ease !important;
+  }
+
+  .login-page .toast-enter-active,
+  .login-page .toast-leave-active {
+    transition: opacity 120ms ease !important;
+  }
+
+  .login-page .toast-enter-from,
+  .login-page .toast-leave-to {
+    transform: translateX(-50%);
   }
 }
