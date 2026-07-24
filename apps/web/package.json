@@ -7,19 +7,25 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
+    "build:android": "vue-tsc --noEmit && vite build --mode android",
     "check": "pnpm lint && pnpm test && pnpm run typecheck && pnpm run build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:sync": "pnpm run build:android && cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.4.2",
     "pinia": "4.0.2",
     "vue": "3.5.40",
     "vue-router": "5.2.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.4.2",
     "@eslint/js": "^10.0.1",
     "@types/node": "26.1.1",
     "@vite-pwa/assets-generator": "1.0.2",

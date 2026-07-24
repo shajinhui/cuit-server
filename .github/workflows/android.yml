@@ -1,0 +1,154 @@
+name: Android APK
+
+on:
+  push:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: APK 类型
+        required: true
+        default: debug
+        type: choice
+        options:
+          - debug
+          - release
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      VITE_API_BASE_URL: https://api.fanxiaogao05.dpdns.org
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/web/package.json
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Add Android build tools to PATH
+        run: |
+          build_tools_dir="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)"
+          if [[ ! -x "$build_tools_dir/apksigner" ]]; then
+            echo "::error::GitHub Runner 中没有可用的 apksigner"
+            exit 1
+          fi
+          echo "$build_tools_dir" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web assets
+        run: pnpm run build:android
+
+      - name: Sync Capacitor Android project
+        run: pnpm exec cap sync android
+
+      - name: Build debug APK
+        if: github.event_name != 'workflow_dispatch' || inputs.build_type == 'debug'
+        working-directory: apps/web/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK
+        if: github.event_name != 'workflow_dispatch' || inputs.build_type == 'debug'
+        uses: actions/upload-artifact@v7
+        with:
+          name: chengxin-youyou-debug-apk
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Restore release signing key
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'release'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=()
+          for name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEYSTORE_PASSWORD \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD
+          do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::缺少 GitHub Actions Secrets: ${missing[*]}"
+            exit 1
+          fi
+          keystore_file="$RUNNER_TEMP/chengxin-youyou-release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_file"
+          chmod 0600 "$keystore_file"
+          echo "ANDROID_KEYSTORE_FILE=$keystore_file" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'release'
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          pnpm exec cap build android \
+            --androidreleasetype APK \
+            --signing-type apksigner \
+            --keystorepath "$ANDROID_KEYSTORE_FILE" \
+            --keystorepass "$ANDROID_KEYSTORE_PASSWORD" \
+            --keystorealias "$ANDROID_KEY_ALIAS" \
+            --keystorealiaspass "$ANDROID_KEY_PASSWORD"
+
+      - name: Verify release signature
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'release'
+        run: |
+          apksigner verify \
+            android/app/build/outputs/apk/release/app-release-signed.apk
+
+      - name: Upload signed release APK
+        if: github.event_name == 'workflow_dispatch' && inputs.build_type == 'release'
+        uses: actions/upload-artifact@v7
+        with:
+          name: chengxin-youyou-release-apk
+          path: apps/web/android/app/build/outputs/apk/release/app-release-signed.apk
+          if-no-files-found: error
+          retention-days: 30

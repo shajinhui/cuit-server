@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { computed, readonly, ref, shallowRef } from 'vue'
 
 import { isInstalledDisplay, resolveInstallGuide } from './model'
@@ -40,8 +41,10 @@ export function registerPwaInstall() {
   if (registered || typeof window === 'undefined') return
   registered = true
 
-  installed.value = readInstalledDisplay()
+  installed.value = Capacitor.isNativePlatform() || readInstalledDisplay()
   dismissedUntil.value = readDismissedUntil()
+
+  if (installed.value) return
 
   window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   window.addEventListener('appinstalled', handleAppInstalled)

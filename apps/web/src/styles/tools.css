@@ -3,7 +3,7 @@
 }
 
 .tools-page {
-  padding-top: calc(8px + env(safe-area-inset-top));
+  padding-top: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
 }
 
 .tool-search {

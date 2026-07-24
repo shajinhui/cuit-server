@@ -12,7 +12,7 @@
   flex-direction: column;
   height: 100dvh;
   min-height: 0;
-  padding-top: calc(4px + env(safe-area-inset-top));
+  padding-top: calc(4px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
 }
 
 .schedule-header {
@@ -509,7 +509,7 @@
 .add-course-sheet {
   display: flex;
   width: min(100%, 480px);
-  max-height: calc(100dvh - env(safe-area-inset-top) - 12px);
+  max-height: calc(100dvh - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - 12px);
   flex-direction: column;
   overflow: hidden;
   color: #101722;
@@ -578,7 +578,7 @@
 }
 
 .add-course-form {
-  padding: 4px 16px calc(18px + env(safe-area-inset-bottom));
+  padding: 4px 16px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -823,7 +823,7 @@
 
 @media (max-height: 740px) {
   .schedule-page {
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   }
 
   .schedule-header p {

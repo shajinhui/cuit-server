@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'dev-dist/**', 'coverage/**', '**/*.d.ts'],
+    ignores: ['dist/**', 'dev-dist/**', 'coverage/**', 'android/**', '**/*.d.ts'],
   },
   {
     files: ['**/*.{js,mjs,cjs,ts,vue}'],
