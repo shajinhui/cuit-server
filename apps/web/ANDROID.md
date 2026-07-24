@@ -14,6 +14,12 @@ Capacitor 的本地页面使用 `https://fanxiaogao05.dpdns.org` 作为 hostname
 
 原生包不注册 Service Worker，静态资源直接从 APK 加载；已有 IndexedDB 业务缓存仍保留。封装 APK 只保证应用外壳可以离线启动，不会自动缓存所有 API 数据。
 
+## 系统栏与安全区
+
+`MainActivity` 为 Android 7 及以上统一启用 Edge-to-Edge，状态栏和手势导航栏保持透明，页面继续通过 `--safe-area-inset-*` 避开挖孔和系统手势区域。
+
+部分厂商设备的 Android WebView 版本低于 140。Capacitor 会在这些设备上改由原生 WebView 父容器承载安全区，因此 `SystemBarBackgroundPlugin` 会把父容器背景同步为当前页面的主题色，避免顶部和底部露出白边。新增页面必须继续通过 `usePageTheme()` 声明页面背景色。
+
 ## GitHub 生成测试 APK
 
 推送涉及 `apps/web` 或 Android 工作流的提交后，`Android APK` 工作流会：
