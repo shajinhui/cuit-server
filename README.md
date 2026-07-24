@@ -35,3 +35,6 @@ pnpm dev
 当前 HTTP API 见 [`docs/API.md`](docs/API.md)。
 
 第一阶段执行计划见 `implementation_plan.md`。
+
+Debian 13、Cloudflare Pages 和 Cloudflare Tunnel 的正式部署步骤见
+[`deploy/README.md`](deploy/README.md)。
