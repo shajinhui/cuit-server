@@ -1,0 +1,23 @@
+[Unit]
+Description=CUIT Campus Assistant API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cuit-server
+Group=cuit-server
+WorkingDirectory=/var/lib/cuit-server
+EnvironmentFile=/etc/cuit-server/cuit-server.env
+ExecStart=/usr/local/bin/cuit-server-api
+Restart=on-failure
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cuit-server
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

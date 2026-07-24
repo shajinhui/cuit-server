@@ -12,7 +12,9 @@ cp .env.example .env
 go run ./apps/api
 ```
 
-默认监听 `127.0.0.1:8888`。可通过 `APP_ADDR` 修改监听地址；HTTPS 部署时设置 `APP_COOKIE_SECURE=true`。
+默认监听 `127.0.0.1:8888`。可通过 `APP_ADDR` 修改监听地址；HTTPS 部署时设置
+`APP_COOKIE_SECURE=true`。前后端分属不同 Origin 时，通过 `APP_CORS_ORIGIN`
+配置唯一允许携带 Cookie 访问 API 的前端地址。
 
 SQLite 文件默认位于 `data/cuit-server.db`，可通过 `SQLITE_PATH` 修改。启动时会自动创建目录、数据库并执行 `migrations` 中的建表语句。
 
@@ -38,3 +40,6 @@ GET    /api/v1/health           健康检查
 登录成功后，API 会保存用户学号、已取得的学籍资料、加密后的教务密码和应用 Session Token 哈希。同一学号再次登录会直接覆盖旧 Session。
 
 应用 Session 本身不设置业务过期时间，只会在新登录覆盖、主动退出或已保存凭据失效时撤销。学校系统 Cookie 只存在对应用户的独立 `jwxt.Client` 中；同一用户的查询会串行执行，Client 空闲 3 分钟后释放，下一次查询会使用加密凭据自动登录。
+
+Debian 13、Cloudflare Pages 和 Cloudflare Tunnel 的正式部署步骤见
+[`deploy/README.md`](../../deploy/README.md)。

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cuit-server/internal/academic"
+	"cuit-server/internal/platform/cors"
 	"cuit-server/internal/platform/database"
 	"cuit-server/internal/schedule"
 	"cuit-server/migrations"
@@ -27,6 +28,7 @@ func main() {
 		address = "127.0.0.1:8888"
 	}
 	secureCookie := strings.EqualFold(os.Getenv("APP_COOKIE_SECURE"), "true")
+	allowedOrigin := strings.TrimSpace(os.Getenv("APP_CORS_ORIGIN"))
 	sqlitePath := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
 	if sqlitePath == "" {
 		sqlitePath = "data/cuit-server.db"
@@ -64,6 +66,9 @@ func main() {
 
 	h := server.Default(server.WithHostPorts(address))
 	h.Use(accesslog.New())
+	if allowedOrigin != "" {
+		h.Use(cors.New(allowedOrigin))
+	}
 	academicHandler.Register(h)
 	scheduleHandler.Register(h)
 	h.GET("/api/v1/health", func(_ context.Context, c *app.RequestContext) {

@@ -65,6 +65,14 @@ pnpm dev
 
 如需修改开发代理目标，复制 `.env.example` 为本地 `.env` 并设置 `VITE_DEV_API_TARGET`。
 
+正式环境由 Cloudflare Pages 构建时设置：
+
+```text
+VITE_API_BASE_URL=https://api.fanxiaogao05.dpdns.org
+```
+
+完整 Pages 配置见 [`deploy/README.md`](../../deploy/README.md)。
+
 提交前执行：
 
 ```bash
