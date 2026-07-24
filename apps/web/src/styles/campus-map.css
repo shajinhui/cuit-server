@@ -6,9 +6,9 @@
   height: 100dvh;
   margin: 0 auto;
   padding:
-    calc(8px + env(safe-area-inset-top))
+    calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
     16px
-    calc(9px + env(safe-area-inset-bottom));
+    calc(9px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   flex-direction: column;
   overflow: hidden;
   color: #1c1c1e;
@@ -428,10 +428,10 @@
     display: grid;
     max-width: 900px;
     padding:
-      calc(7px + env(safe-area-inset-top))
-      calc(14px + env(safe-area-inset-right))
-      calc(7px + env(safe-area-inset-bottom))
-      calc(14px + env(safe-area-inset-left));
+      calc(7px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+      calc(14px + var(--safe-area-inset-right, env(safe-area-inset-right, 0px)))
+      calc(7px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))
+      calc(14px + var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
     grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.22fr);
     grid-template-rows: 48px 48px 52px minmax(0, 1fr);
     gap: 9px 12px;

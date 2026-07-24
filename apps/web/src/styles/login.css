@@ -58,7 +58,7 @@
 .login-content {
   position: relative;
   z-index: 1;
-  padding: calc(52px + env(safe-area-inset-top)) 28px calc(24px + env(safe-area-inset-bottom));
+  padding: calc(52px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 28px calc(24px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .login-brand {
@@ -447,7 +447,7 @@
 }
 
 .login-toast {
-  bottom: calc(20px + env(safe-area-inset-bottom));
+  bottom: calc(20px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   max-width: calc(100% - 36px);
   white-space: normal;
   text-align: center;
@@ -462,8 +462,8 @@
 
 @media (max-height: 720px) {
   .login-content {
-    padding-top: calc(26px + env(safe-area-inset-top));
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding-top: calc(26px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+    padding-bottom: calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   }
 
   .login-logo {

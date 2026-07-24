@@ -38,3 +38,6 @@ pnpm dev
 
 Debian 13、Cloudflare Pages 和 Cloudflare Tunnel 的正式部署步骤见
 [`deploy/README.md`](deploy/README.md)。
+
+Android APK 使用 Capacitor 和 GitHub Actions 构建，配置、签名与下载步骤见
+[`apps/web/ANDROID.md`](apps/web/ANDROID.md)。

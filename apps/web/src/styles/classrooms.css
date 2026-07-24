@@ -9,7 +9,7 @@ body:has(.classroom-page) {
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  padding-bottom: calc(32px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   color: #1c1c1e;
   background: #f2f2f7;
 }
@@ -19,8 +19,8 @@ body:has(.classroom-page) {
   z-index: 20;
   top: 0;
   display: grid;
-  min-height: calc(60px + env(safe-area-inset-top));
-  padding: calc(8px + env(safe-area-inset-top)) 22px 8px;
+  min-height: calc(60px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 22px 8px;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   background: rgba(242, 242, 247, 0.88);
@@ -679,7 +679,7 @@ body:has(.classroom-page) {
   display: flex;
   width: min(100%, 480px);
   max-height: min(88dvh, 760px);
-  padding: 8px 22px calc(22px + env(safe-area-inset-bottom));
+  padding: 8px 22px calc(22px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   flex-direction: column;
   overflow: hidden;
   background: #f2f2f7;

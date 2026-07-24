@@ -258,3 +258,15 @@ ESLint → Vitest → vue-tsc → Vite build
 - [ ] PWA/缓存修改已验证生产构建。
 - [ ] README、API 文档和代码行为保持一致。
 - [ ] `pnpm run check` 全部通过。
+
+## 14. Android 原生包
+
+Capacitor Android 工程、GitHub APK 构建、签名密钥和真机验收流程见 [ANDROID.md](./ANDROID.md)。
+
+涉及 Capacitor 配置、原生运行时或 Android 工程的修改，除 `pnpm run check` 外还必须执行：
+
+```bash
+VITE_API_BASE_URL=https://api.fanxiaogao05.dpdns.org pnpm run android:sync
+```
+
+无法在本机运行 Gradle 时，由 `.github/workflows/android.yml` 完成实际 APK 编译；本地构建成功不能替代 GitHub Actions 和真机验证。

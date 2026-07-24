@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 70;
   right: max(14px, calc((100vw - 452px) / 2));
-  bottom: max(14px, env(safe-area-inset-bottom));
+  bottom: max(14px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   left: max(14px, calc((100vw - 452px) / 2));
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) auto;
@@ -22,7 +22,7 @@
 }
 
 .pwa-install-promotion--above-navigation {
-  bottom: calc(84px + env(safe-area-inset-bottom));
+  bottom: calc(84px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
 .pwa-install-promotion > img {
@@ -117,14 +117,14 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
   background: rgba(0, 0, 0, 0.24);
 }
 
 .pwa-install-guide {
   width: 100%;
   max-width: 480px;
-  padding: 10px 22px calc(18px + env(safe-area-inset-bottom));
+  padding: 10px 22px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   color: #1c1c1e;
   background: #f2f2f7;
   border-radius: 28px 28px 0 0;

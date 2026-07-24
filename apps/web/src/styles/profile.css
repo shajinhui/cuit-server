@@ -21,7 +21,7 @@
 }
 
 .profile-page {
-  padding-top: calc(22px + env(safe-area-inset-top));
+  padding-top: calc(22px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
 }
 
 .profile-hero {
