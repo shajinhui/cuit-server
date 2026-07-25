@@ -86,6 +86,30 @@ describe('schedule calendar model', () => {
     expect(inactiveBlock.muted).toBe(true)
     expect(inactiveBlock.tone).toBe(activeBlock.tone)
   })
+
+  it('keeps course and activity details for the detail card', () => {
+    const course = createCourse('编译原理', [
+      createActivity({
+        RoomName: 'H1208',
+        Teachers: ['张老师'],
+        Weeks: [1, 2, 3, 5],
+      }),
+    ])
+    course.Code = 'CS301'
+    course.Credits = '3'
+    course.TeachingClass = '软件工程 1 班'
+    course.Teachers = ['李老师']
+
+    expect(buildCourseBlocks([course], 1)[0]).toMatchObject({
+      room: 'H1208',
+      code: 'CS301',
+      credits: '3',
+      teachingClass: '软件工程 1 班',
+      teachers: ['李老师', '张老师'],
+      weeks: [1, 2, 3, 5],
+      source: 'jwxt',
+    })
+  })
 })
 
 function createCourse(name: string, activities: CourseActivity[]): Course {
