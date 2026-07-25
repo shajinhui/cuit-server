@@ -27,7 +27,6 @@ const addCourseError = ref('')
 let noticeTimer: number | undefined
 
 const {
-  cachedAtLabel,
   courses,
   dateTitle,
   resetWeekSelection,
@@ -247,11 +246,6 @@ async function refreshSchedule() {
           <strong>{{ item.date }}</strong>
         </button>
       </div>
-
-      <p v-if="store.usingCachedData" class="schedule-offline-status" role="status">
-        <strong>离线课表</strong>
-        <span>显示 {{ cachedAtLabel }} 保存的数据</span>
-      </p>
 
       <div class="schedule-board">
         <div v-if="store.loading && !store.table" class="schedule-state" aria-live="polite">

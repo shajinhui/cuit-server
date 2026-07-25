@@ -300,26 +300,6 @@
   font-weight: 650;
 }
 
-.schedule-offline-status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  align-self: flex-start;
-  min-height: 28px;
-  margin: -8px 0 8px;
-  padding: 5px 10px;
-  color: rgba(16, 23, 34, 0.68);
-  font-size: 12px;
-  background: rgba(255, 255, 255, 0.42);
-  border: 0.5px solid rgba(255, 255, 255, 0.7);
-  border-radius: 14px;
-}
-
-.schedule-offline-status strong {
-  color: #101722;
-  font-weight: 650;
-}
-
 .schedule-board {
   position: relative;
   flex: 1;

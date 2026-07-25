@@ -1,43 +1,151 @@
-# Campus Assistant
+# 成信友友
 
-这是成都信息工程大学校园助手后端项目。
+[![Web CI](https://github.com/shajinhui/cuit-server/actions/workflows/web.yml/badge.svg)](https://github.com/shajinhui/cuit-server/actions/workflows/web.yml)
+[![Android APK](https://github.com/shajinhui/cuit-server/actions/workflows/android.yml/badge.svg)](https://github.com/shajinhui/cuit-server/actions/workflows/android.yml)
 
-当前已完成并真实验证 `pkg/jwxt` 的 CAS/EAMS 登录闭环，包括一网通办登录、校内账号切换、CAS 桥接页处理和 EAMS 会话确认。
+面向成都信息工程大学学生的校园教务助手。项目将 CAS、EAMS 和一网通办登录流程封装在服务端，通过一个移动端优先的 PWA 提供课表、成绩、考试、空教室和学籍信息查询。
 
-成绩模块已实现学期列表和指定学期成绩查询。个人课表 SDK、后端接口和前端课表页面已完成对接。当前已通过离线协议、解析和 API 测试，真实课表查询仍等待真实账号验证。
+- 在线访问：<https://fanxiaogao05.dpdns.org>
+- API 文档：[docs/API.md](docs/API.md)
+- 部署说明：[deploy/README.md](deploy/README.md)
+- Android 构建：[apps/web/ANDROID.md](apps/web/ANDROID.md)
 
-当前实现：
+> 本项目是非官方学生项目，与成都信息工程大学及学校教务系统运营方无隶属或授权关系。
 
-- `pkg/jwxt`：独立 JWXT SDK，负责 CAS/EAMS 登录、Cookie 会话和教务页面访问。
-- `cmd/jwxt-demo`：用于手动验证登录和指定学期成绩查询。
-- `apps/api`：最小 Hertz API，提供教务登录、登录状态、退出、学期列表、成绩、个人课表和当前教学周查询。
-- `apps/web`：Vue 3 PWA，已完成登录、课表、校园工具、个人中心和成绩查询页面。
-- `migrations`：SQLite 用户与应用会话表。
+<p align="center">
+  <img src="apps/web/src/assets/campus-app-login-v3.png" width="22%" alt="登录页面">
+  <img src="apps/web/src/assets/campus-app-schedule-v2.png" width="22%" alt="课表页面">
+  <img src="apps/web/src/assets/campus-app-tools-v2.png" width="22%" alt="校园工具页面">
+  <img src="apps/web/src/assets/campus-app-profile-v2.png" width="22%" alt="个人中心页面">
+</p>
 
-SQLite 已接入用户、加密教务凭据和应用会话持久化。每个学号只保存一个应用 Session，新登录会覆盖旧 Session；内存中的 JWXT Client 空闲 3 分钟后释放，需要查询时再自动登录。
+## 功能
 
-本地启动：
+- 统一身份认证登录及应用会话管理
+- 学期列表、成绩和个人课表查询
+- 期末考试、补考批次及考场安排查询
+- 按学期、校区、教学周、星期和节次查询空教室
+- 学籍信息与培养计划完成情况
+- 教学周、公开校历和校园地图
+- 最近课表、手动课程和教室占用数据的本机离线查看
+- PWA 安装及 Capacitor Android APK
+
+## 系统结构
+
+```mermaid
+flowchart LR
+    User["PWA / Android"] --> API["Hertz API"]
+    API --> Session["应用会话与业务服务"]
+    Session --> SQLite["SQLite"]
+    Session --> Client["每位用户独立的 JWXT Client"]
+    Client --> CAS["CAS / 一网通办"]
+    Client --> EAMS["EAMS 教务系统"]
+```
+
+浏览器不直接访问学校认证系统。后端为每位用户创建独立的 `jwxt.Client` 和 `CookieJar`，避免不同学生的学校会话相互混用。
+
+## 技术栈
+
+| 部分 | 技术 |
+|---|---|
+| Web | Vue 3、TypeScript、Vite、Pinia、Vue Router、vite-plugin-pwa |
+| Android | Capacitor 8、Gradle |
+| API | Go、Hertz |
+| JWXT SDK | Resty v2、goquery、`net/http/cookiejar` |
+| 数据 | SQLite |
+| 部署 | Cloudflare Pages、Cloudflare Tunnel、systemd |
+
+## 目录
+
+```text
+.
+├── apps/
+│   ├── api/          # HTTP 服务入口
+│   ├── web/          # Vue PWA 与 Android 工程
+│   └── worker/       # EAMS/CAS 网络连通性探测
+├── internal/         # 后端业务模块与基础能力
+├── migrations/       # SQLite 迁移
+├── pkg/jwxt/         # 独立的 CAS/EAMS/JWXT SDK
+├── docs/             # HTTP API 文档
+├── deploy/           # 正式环境部署说明与 systemd 配置
+└── cmd/jwxt-demo/    # SDK 手动验证程序
+```
+
+各模块的实现约定见对应目录下的 README：
+
+- [JWXT SDK](pkg/jwxt/README.md)
+- [API 服务](apps/api/README.md)
+- [Web 应用](apps/web/README.md)
+
+## 本地开发
+
+### 环境要求
+
+- Go 1.25.12
+- Node.js 24
+- pnpm 10.26.1
+
+### 1. 配置并启动 API
+
+```bash
+git clone https://github.com/shajinhui/cuit-server.git
+cd cuit-server
+
+cp .env.example .env
+openssl rand -base64 32
+```
+
+将生成的值写入 `.env` 的 `JWXT_CREDENTIAL_KEY`，然后启动：
 
 ```bash
 go run ./apps/api
+```
 
+API 默认监听 `http://127.0.0.1:8888`。首次启动会自动创建 `data/cuit-server.db` 并执行数据库迁移。
+
+### 2. 启动 Web
+
+```bash
 cd apps/web
-pnpm install
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-首次启动前复制 `.env.example` 为 `.env`。API 会自动创建 `data/cuit-server.db` 并执行迁移。`JWXT_CREDENTIAL_KEY` 可通过 `openssl rand -base64 32` 生成；密钥变更后，已有教务密码密文将无法解密。
+Web 默认运行在 `http://127.0.0.1:5173`，开发服务器会将 `/api` 代理到本地 API。
 
-前端默认运行在 `http://127.0.0.1:5173`，并把 `/api` 代理到 `http://127.0.0.1:8888`。
+## 验证
 
-早期架构讨论保留在 `architecture_guide.md`；当前运行结构以本 README 和代码为准。
+后端：
 
-当前 HTTP API 见 [`docs/API.md`](docs/API.md)。
+```bash
+go test ./...
+go vet ./...
+```
 
-第一阶段执行计划见 `implementation_plan.md`。
+前端：
 
-Debian 13、Cloudflare Pages 和 Cloudflare Tunnel 的正式部署步骤见
-[`deploy/README.md`](deploy/README.md)。
+```bash
+cd apps/web
+pnpm run check
+```
 
-Android APK 使用 Capacitor 和 GitHub Actions 构建，配置、签名与下载步骤见
-[`apps/web/ANDROID.md`](apps/web/ANDROID.md)。
+`pnpm run check` 会依次执行 ESLint、Vitest、TypeScript 类型检查和生产构建。网络集成测试默认不访问学校系统，显式测试方式见 [JWXT SDK 文档](pkg/jwxt/README.md)。
+
+## 安全与隐私
+
+- 不在前端保存教务密码、CAS Ticket 或学校 Cookie。
+- 教务密码在服务端加密后存入 SQLite，加密密钥仅由环境变量提供。
+- 应用 Session 只在数据库中保存 Token 哈希；浏览器使用 `HttpOnly` Cookie。
+- 每位用户使用独立的 JWXT Client 和 CookieJar，同一用户的教务请求串行执行。
+- 日志不得记录密码、Cookie、Token、Ticket 或完整认证重定向地址。
+- `.env`、SQLite 数据库、Android 签名文件和真实账号不得提交到仓库。
+
+完整开发约束见 [Agent.md](Agent.md)。
+
+## 使用边界
+
+本项目仅用于学习、个人信息查询和校园服务体验改进，不提供抢课、批量抓取、凭据共享或绕过学校访问控制的能力。学校页面或登录流程发生变化时，相关功能可能暂时不可用。
+
+## 授权
+
+仓库目前尚未添加开源许可证。公开代码仅代表允许查看，不自动授予复制、修改或分发权利。
