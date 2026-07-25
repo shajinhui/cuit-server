@@ -6,6 +6,10 @@ defineProps<{
   selectedWeek: number
   timeSlots: TimeSlot[]
 }>()
+
+const emit = defineEmits<{
+  select: [course: CourseBlock]
+}>()
 </script>
 
 <template>
@@ -28,19 +32,22 @@ defineProps<{
       />
     </template>
 
-    <article
+    <button
       v-for="course in courses"
       :key="course.id"
+      type="button"
       class="course-block"
       :class="[`course-block--${course.tone}`, { 'is-muted': course.muted }]"
       :style="{
         gridColumn: course.day + 1,
         gridRow: `${course.start} / span ${course.span}`,
       }"
+      :aria-label="`${course.name}，${course.room}，查看课程详情`"
+      @click="emit('select', course)"
     >
-      <strong>{{ course.name }}</strong>
-      <span>@{{ course.room }}</span>
+      <strong class="course-block__name">{{ course.name }}</strong>
+      <span class="course-block__room">@{{ course.room }}</span>
       <small v-if="course.muted" class="course-block__status">非本周</small>
-    </article>
+    </button>
   </div>
 </template>

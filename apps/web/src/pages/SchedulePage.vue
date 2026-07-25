@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 
 import {
   AddCourseSheet,
+  CourseDetailSheet,
   ScheduleGrid,
   useScheduleCalendar,
   useScheduleStore,
+  type CourseBlock,
   type ManualCourseInput,
 } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
@@ -24,6 +26,7 @@ const moreMenuRef = ref<HTMLElement | null>(null)
 const addCourseOpen = ref(false)
 const addingCourse = ref(false)
 const addCourseError = ref('')
+const selectedCourse = ref<CourseBlock | null>(null)
 let noticeTimer: number | undefined
 
 const {
@@ -89,6 +92,14 @@ function openAddCourse() {
 
 function closeAddCourse() {
   if (!addingCourse.value) addCourseOpen.value = false
+}
+
+function openCourseDetails(course: CourseBlock) {
+  selectedCourse.value = course
+}
+
+function closeCourseDetails() {
+  selectedCourse.value = null
 }
 
 async function addManualCourse(input: ManualCourseInput) {
@@ -264,8 +275,16 @@ async function refreshSchedule() {
           <p>教务系统暂未返回学期信息。</p>
         </div>
 
-        <ScheduleGrid v-else :courses="courses" :selected-week="selectedWeek" :time-slots="timeSlots" />
+        <ScheduleGrid
+          v-else
+          :courses="courses"
+          :selected-week="selectedWeek"
+          :time-slots="timeSlots"
+          @select="openCourseDetails"
+        />
       </div>
+
+      <CourseDetailSheet :course="selectedCourse" @close="closeCourseDetails" />
 
       <AddCourseSheet
         :open="addCourseOpen"

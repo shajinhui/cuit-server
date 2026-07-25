@@ -22,6 +22,12 @@ export interface CourseBlock {
   id: string
   name: string
   room: string
+  code: string
+  credits: string
+  teachingClass: string
+  teachers: string[]
+  weeks: number[]
+  source: 'jwxt' | 'manual'
   day: number
   start: number
   span: number
@@ -100,6 +106,12 @@ export function buildCourseBlocks(
         id: `${course.LessonID || course.Code}-${activityIndex}-${activity.Weekday}-${activity.StartSection}`,
         name: course.Name || '未命名课程',
         room: activity.RoomName || '地点待定',
+        code: course.Code,
+        credits: course.Credits,
+        teachingClass: course.TeachingClass,
+        teachers: uniqueStrings([...(course.Teachers ?? []), ...(activity.Teachers ?? [])]),
+        weeks: [...activityWeeks],
+        source: 'jwxt',
         day: activity.Weekday,
         start: activity.StartSection,
         span: activity.EndSection - activity.StartSection + 1,
@@ -114,6 +126,12 @@ export function buildCourseBlocks(
       id: course.id,
       name: course.name,
       room: course.room || '地点待定',
+      code: '',
+      credits: '',
+      teachingClass: '',
+      teachers: [],
+      weeks: [...course.weeks],
+      source: 'manual',
       day: course.weekday,
       start: course.startSection,
       span: course.endSection - course.startSection + 1,
@@ -142,4 +160,8 @@ function toneForCourse(identity: string): CourseTone {
   let hash = 0
   for (const character of identity) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
   return courseTones[hash % courseTones.length]
+}
+
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
 }
