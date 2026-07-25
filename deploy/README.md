@@ -121,6 +121,12 @@ fanxiaogao05.dpdns.org
 
 根域当前已有 DNS 记录。绑定 Pages 前先确认该记录不再承载其他服务，然后按 Pages 提示替换冲突记录。
 
+`pnpm run build` 还会生成 Android Web 热更新清单和 ZIP。Android 使用原生
+HTTP 从 `https://fanxiaogao05.dpdns.org/app-updates/android/latest.json`
+读取清单，因此不会被同域的 Capacitor 本地资源服务器拦截。自定义域名是首选
+下载地址，Pages 自动注入的 `CF_PAGES_URL` 是不可变部署的备用地址；不需要
+R2 或额外上传步骤。
+
 ## 5. 上线验证
 
 按顺序检查：

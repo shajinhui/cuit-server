@@ -1,0 +1,1 @@
+export { registerAndroidLiveUpdates } from './runtime'

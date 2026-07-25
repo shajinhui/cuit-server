@@ -14,6 +14,32 @@ Capacitor 的本地页面使用 `https://fanxiaogao05.dpdns.org` 作为 hostname
 
 原生包不注册 Service Worker，静态资源直接从 APK 加载；已有 IndexedDB 业务缓存仍保留。封装 APK 只保证应用外壳可以离线启动，不会自动缓存所有 API 数据。
 
+## Web 热更新
+
+从 Android `0.2.0`（`versionCode 2`）开始，APK 内置 Capgo Updater，并通过现有 Cloudflare Pages 免费分发 Web 更新，不依赖 R2：
+
+1. App 先加载 APK 内置页面，不等待网络。
+2. 启动或回到前台后，通过原生 HTTP 从 `https://fanxiaogao05.dpdns.org/app-updates/android/latest.json` 后台检查更新；这不会被 Capacitor 本地资源服务器拦截。
+3. 新包通过 SHA-256 校验后静默下载，并排队到 App 下次进入后台或冷启动时切换。
+4. 新包启动后 10 秒内未完成 `notifyAppReady()`，插件自动回滚到上一个可用版本。
+
+更新过程没有安装弹窗，也不会在用户操作中强制刷新。切换 Web 包时仍会重建 WebView，因此未保存的临时表单不能只放在内存中。
+
+Cloudflare Pages 继续执行 `pnpm run build`。构建会同时输出普通 PWA 和 Android 更新包；自定义域名作为国内网络首选下载地址，Pages 提供的 `CF_PAGES_URL` 作为该次不可变部署的备用地址。只有 `nativeVersion` 与 APK 完全一致的设备才会接收更新。
+
+以下改动可以热更新：
+
+- Vue 页面、样式、图片和前端业务逻辑。
+- 不要求新增或升级原生插件的接口调用。
+
+以下改动必须重新构建并安装 APK，同时递增 `versionCode` 和 `versionName`：
+
+- Capacitor 插件、Android 权限、Gradle 或 Java 原生代码。
+- 应用图标、启动图、系统栏等原生资源。
+- 依赖新原生能力的前端代码。
+
+首次启用热更新仍必须安装一次 `0.2.0` 或更高版本的基础 APK；旧 APK 本身没有更新插件，无法自动获得这项能力。
+
 ## 系统栏与安全区
 
 `MainActivity` 为 Android 7 及以上统一启用 Edge-to-Edge，状态栏和手势导航栏保持透明，页面继续通过 `--safe-area-inset-*` 避开挖孔和系统手势区域。
