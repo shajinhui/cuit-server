@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import { checkSession } from '@/app/sessionLifecycle'
+import { checkSession, restoreOfflineAccess } from '@/app/sessionLifecycle'
 import { useSessionStore } from '@/features/session'
 
 const router = createRouter({
@@ -25,6 +25,11 @@ const router = createRouter({
       name: 'profile',
       component: () => import('@/pages/ProfilePage.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/pages/AboutPage.vue'),
     },
     {
       path: '/plan-completion',
@@ -64,9 +69,23 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
 })
 
+let backgroundSessionVerification: Promise<void> | undefined
+
 router.beforeEach(async (to) => {
   const session = useSessionStore()
-  const authenticated = await checkSession()
+  const needsSession = to.name === 'login' || Boolean(to.meta.requiresAuth)
+  if (!needsSession) return true
+
+  if (session.status === 'unknown') {
+    const canStartOffline = await restoreOfflineAccess()
+    if (canStartOffline) {
+      verifySessionInBackground()
+    } else {
+      await checkSession()
+    }
+  }
+
+  const authenticated = session.status === 'authenticated'
   const canReadOfflineData = session.status === 'offline'
   if (to.name === 'login' && (authenticated || canReadOfflineData)) {
     return { name: 'schedule' }
@@ -76,5 +95,27 @@ router.beforeEach(async (to) => {
   }
   return true
 })
+
+function verifySessionInBackground() {
+  if (backgroundSessionVerification) return
+
+  backgroundSessionVerification = checkSession(true)
+    .then(async () => {
+      const session = useSessionStore()
+      if (session.status !== 'anonymous') return
+
+      await router.isReady()
+      const currentRoute = router.currentRoute.value
+      if (!currentRoute.meta.requiresAuth) return
+
+      await router.replace({
+        name: 'login',
+        query: { redirect: currentRoute.fullPath },
+      })
+    })
+    .finally(() => {
+      backgroundSessionVerification = undefined
+    })
+}
 
 export default router

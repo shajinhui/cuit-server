@@ -13,8 +13,18 @@ export const useSessionStore = defineStore('session', {
     error: '',
   }),
   actions: {
-    async check(hasOfflineData: () => Promise<boolean> = async () => false) {
-      if (this.status !== 'unknown') return this.status === 'authenticated'
+    async restoreOfflineAccess(hasOfflineData: () => Promise<boolean>) {
+      if (this.status !== 'unknown') return this.status === 'offline'
+      if (!(await hasOfflineData())) return false
+
+      this.status = 'offline'
+      return true
+    },
+    async check(
+      hasOfflineData: () => Promise<boolean> = async () => false,
+      force = false,
+    ) {
+      if (!force && this.status !== 'unknown') return this.status === 'authenticated'
       try {
         const result = await getSessionStatus()
         if (result.authenticated) {

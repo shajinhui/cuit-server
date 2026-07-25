@@ -30,6 +30,27 @@ describe('session store', () => {
     expect(store.status).toBe('authenticated')
   })
 
+  it('restores offline access from local data without waiting for the remote session', async () => {
+    const hasOfflineData = vi.fn().mockResolvedValue(true)
+    const store = useSessionStore()
+
+    await expect(store.restoreOfflineAccess(hasOfflineData)).resolves.toBe(true)
+    expect(store.status).toBe('offline')
+    expect(hasOfflineData).toHaveBeenCalledOnce()
+    expect(getSessionStatusMock).not.toHaveBeenCalled()
+  })
+
+  it('can verify the remote session after starting from offline data', async () => {
+    getSessionStatusMock.mockResolvedValue({ authenticated: true })
+    const hasOfflineData = vi.fn().mockResolvedValue(true)
+    const store = useSessionStore()
+
+    await store.restoreOfflineAccess(hasOfflineData)
+    await expect(store.check(hasOfflineData, true)).resolves.toBe(true)
+    expect(store.status).toBe('authenticated')
+    expect(getSessionStatusMock).toHaveBeenCalledOnce()
+  })
+
   it('uses offline state only when remote status is unavailable and local data exists', async () => {
     getSessionStatusMock.mockRejectedValue(new Error('network unavailable'))
     const hasOfflineData = vi.fn().mockResolvedValue(true)

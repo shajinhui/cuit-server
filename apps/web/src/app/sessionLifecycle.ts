@@ -27,9 +27,13 @@ export function registerSessionLifecycle(pinia: Pinia) {
   )
 }
 
-export async function checkSession() {
+export async function restoreOfflineAccess() {
+  return useSessionStore().restoreOfflineAccess(hasOfflineUserData)
+}
+
+export async function checkSession(force = false) {
   const session = useSessionStore()
-  const authenticated = await session.check(hasOfflineUserData)
+  const authenticated = await session.check(hasOfflineUserData, force)
   if (session.status === 'anonymous') await clearUserData()
   return authenticated
 }

@@ -46,10 +46,6 @@ onBeforeUnmount(() => {
   window.clearTimeout(noticeTimer)
 })
 
-function showPlaceholder(label: string) {
-  showNotice(`${label}暂未接入`)
-}
-
 function showNotice(message: string) {
   notice.value = message
   window.clearTimeout(noticeTimer)
@@ -164,7 +160,7 @@ function maskStudentNumber(studentNo: string) {
             <path d="m7.5 4.5 5 5.5-5 5.5" />
           </svg>
         </button>
-        <button type="button" @click="showPlaceholder('关于我们')">
+        <button type="button" @click="router.push({ name: 'about' })">
           <img :src="aboutIcon" alt="" />
           <span>关于我们</span>
           <svg class="profile-menu__chevron" aria-hidden="true" viewBox="0 0 20 20">

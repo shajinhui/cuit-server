@@ -1,0 +1,238 @@
+.about-page {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding-bottom: calc(28px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  color: #1c1c1e;
+  background: #f2f2f7;
+}
+
+.about-topbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: grid;
+  min-height: calc(60px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 22px 8px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  background: rgba(242, 242, 247, 0.86);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.about-topbar h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.about-back-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  color: #1c1c1e;
+  background: rgba(255, 255, 255, 0.84);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.06);
+  transition:
+    transform 140ms var(--ease-out),
+    opacity 120ms ease;
+}
+
+.about-back-button:active {
+  transform: scale(0.96);
+}
+
+.about-back-button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.about-content {
+  padding: 24px 22px 0;
+}
+
+.about-hero {
+  display: flex;
+  padding: 26px 0 30px;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.about-hero img {
+  width: 92px;
+  height: 92px;
+  border-radius: 23px;
+  box-shadow:
+    0 16px 34px rgba(28, 28, 30, 0.12),
+    0 0 0 0.5px rgba(60, 60, 67, 0.1);
+}
+
+.about-hero h2 {
+  margin: 17px 0 0;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.about-hero p {
+  margin: 7px 0 0;
+  color: #8e8e93;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.about-card,
+.about-links {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 22px;
+  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.025);
+}
+
+.about-card {
+  padding: 20px;
+}
+
+.about-card h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.about-card p {
+  margin: 10px 0 0;
+  color: #48484a;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.about-card .about-card__note {
+  margin-top: 12px;
+  color: #8e8e93;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.about-links {
+  margin-top: 16px;
+}
+
+.about-links a {
+  display: grid;
+  min-height: 72px;
+  padding: 10px 16px;
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 13px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 120ms ease;
+}
+
+.about-links a:active {
+  background: rgba(116, 116, 128, 0.1);
+}
+
+.about-links__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: #fff;
+  background: #1c1c1e;
+  border-radius: 11px;
+}
+
+.about-links__icon svg {
+  width: 25px;
+  height: 25px;
+  fill: currentcolor;
+}
+
+.about-links__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.about-links__copy strong {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.about-links__copy small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #8e8e93;
+  font-size: 13px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.about-links__external {
+  width: 19px;
+  height: 19px;
+  color: #8e8e93;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.about-version {
+  margin: 22px 0 0;
+  color: #8e8e93;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.about-back-button:focus-visible,
+.about-links a:focus-visible {
+  outline-color: rgba(0, 122, 255, 0.48);
+}
+
+@media (max-width: 370px) {
+  .about-content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .about-hero {
+    padding-top: 20px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .about-topbar,
+  .about-back-button,
+  .about-card,
+  .about-links {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

@@ -41,16 +41,6 @@ export function useScheduleCalendar(store: ScheduleStore) {
     if (store.currentWeek <= 0) return store.weekError ? '当前周不可用' : ''
     return selectedWeek.value === store.currentWeek ? '本周' : '非本周'
   })
-  const cachedAtLabel = computed(() => {
-    if (!store.cachedAt) return '上次同步时'
-    return new Date(store.cachedAt).toLocaleString('zh-CN', {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  })
-
   watch(
     [() => store.table, () => store.currentWeek],
     ([table, currentWeek]) => {
@@ -87,7 +77,6 @@ export function useScheduleCalendar(store: ScheduleStore) {
   }
 
   return {
-    cachedAtLabel,
     courses,
     dateTitle,
     resetWeekSelection,
