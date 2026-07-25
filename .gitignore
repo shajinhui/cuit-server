@@ -12,6 +12,7 @@ node_modules/
 bin/
 dist/
 dev-dist/
+.ota/
 coverage.out
 
 # Local generated files

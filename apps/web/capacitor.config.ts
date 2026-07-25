@@ -10,6 +10,14 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   plugins: {
+    CapacitorUpdater: {
+      autoUpdate: 'off',
+      appReadyTimeout: 10_000,
+      autoDeleteFailed: true,
+      autoDeletePrevious: true,
+      resetWhenUpdate: true,
+      statsUrl: '',
+    },
     SystemBars: {
       insetsHandling: 'css',
       style: 'LIGHT',

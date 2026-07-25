@@ -7,6 +7,7 @@ import App from './app/App.vue'
 import { registerNativeRuntime } from './app/nativeRuntime'
 import router from './app/router'
 import { registerSessionLifecycle } from './app/sessionLifecycle'
+import { registerAndroidLiveUpdates } from './features/app-updates'
 import { registerPwaInstall } from './features/pwa-install'
 import './styles/main.css'
 
@@ -23,3 +24,4 @@ app.use(pinia)
 registerSessionLifecycle(pinia)
 
 app.use(router).mount('#app')
+registerAndroidLiveUpdates()

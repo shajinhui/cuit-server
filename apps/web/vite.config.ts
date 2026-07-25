@@ -6,11 +6,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const isAndroidBuild = mode === 'android'
 
   return {
+    base: isAndroidBuild ? './' : '/',
     plugins: [
       vue(),
       VitePWA({
+        disable: isAndroidBuild,
         registerType: 'autoUpdate',
         includeAssets: ['icons/app-icon-192.png', 'icons/app-icon-512.png'],
         manifest: {
