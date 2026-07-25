@@ -13,10 +13,10 @@
 > 本项目是非官方学生项目，与成都信息工程大学及学校教务系统运营方无隶属或授权关系。
 
 <p align="center">
-  <img src="apps/web/src/assets/campus-app-login-v3.png" width="22%" alt="登录页面">
-  <img src="apps/web/src/assets/campus-app-schedule-v2.png" width="22%" alt="课表页面">
-  <img src="apps/web/src/assets/campus-app-tools-v2.png" width="22%" alt="校园工具页面">
-  <img src="apps/web/src/assets/campus-app-profile-v2.png" width="22%" alt="个人中心页面">
+  <img src="apps/web/docs/app-listing/screenshots/01-login.jpg" width="22%" alt="登录页面">
+  <img src="apps/web/docs/app-listing/screenshots/IMG_1635.png" width="22%" alt="课表页面">
+  <img src="apps/web/docs/app-listing/screenshots/03-tools.jpg" width="22%" alt="校园工具页面">
+  <img src="apps/web/docs/app-listing/screenshots/04-profile.jpg" width="22%" alt="个人中心页面">
 </p>
 
 ## 功能
