@@ -8,11 +8,18 @@
 }
 
 .schedule-page {
+  --schedule-gutter: 22px;
   display: flex;
   flex-direction: column;
   height: 100dvh;
   min-height: 0;
   padding-top: calc(4px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+}
+
+/* 精确抵消 .page-padding 的 22px，同时保留横屏/刘海的 safe-area-inset-left/right */
+.schedule-page.page-padding {
+  padding-right: calc(var(--schedule-gutter) + env(safe-area-inset-right, 0px));
+  padding-left: calc(var(--schedule-gutter) + env(safe-area-inset-left, 0px));
 }
 
 .schedule-header {
@@ -247,8 +254,11 @@
 
 .week-strip {
   display: grid;
-  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
-  margin: 12px -16px 16px;
+  grid-template-columns: 40px repeat(7, minmax(0, 1fr));
+  margin-top: 12px;
+  margin-right: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-right, 0px));
+  margin-bottom: 16px;
+  margin-left: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-left, 0px));
 }
 
 .week-strip__month,
@@ -304,8 +314,8 @@
   position: relative;
   flex: 1;
   min-height: 0;
-  margin-right: -16px;
-  margin-left: -16px;
+  margin-right: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-right, 0px));
+  margin-left: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-left, 0px));
   overflow: hidden;
 }
 
@@ -361,7 +371,7 @@
 
 .schedule-grid {
   display: grid;
-  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
+  grid-template-columns: 40px repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(11, minmax(0, 1fr));
   height: 100%;
   min-width: 0;
@@ -1023,19 +1033,13 @@
 }
 
 @media (max-width: 380px) {
+  /* 仅更新变量，week-strip 和 schedule-board 的负边距自动跟随 */
   .schedule-page {
-    padding-right: 16px;
-    padding-left: 16px;
+    --schedule-gutter: 16px;
   }
 
   .schedule-header__actions {
     gap: 0;
-  }
-
-  .week-strip,
-  .schedule-board {
-    margin-right: -10px;
-    margin-left: -10px;
   }
 
   .course-block {
