@@ -56,7 +56,7 @@ func TestParseGradesKeepsAllColumns(t *testing.T) {
 	if first.CourseCategory != "体育类" || first.Credits != "1" {
 		t.Fatalf("unexpected course metadata: %+v", first)
 	}
-	if first.UsualScore != "70" || first.FinalExamScore != "80" || first.OverallScore != "75" || first.FinalScore != "75" || first.GradePoint != "2.5" {
+	if first.UsualScore != "70" || first.FinalExamScore != "80" || first.MakeupScore != "" || first.OverallScore != "75" || first.FinalScore != "75" || first.GradePoint != "2.5" {
 		t.Fatalf("unexpected scores: %+v", first)
 	}
 
@@ -66,8 +66,32 @@ func TestParseGradesKeepsAllColumns(t *testing.T) {
 	}
 }
 
+func TestParseGradesSupportsMakeupScoreColumn(t *testing.T) {
+	grades, err := ParseGrades([]byte(sampleMakeupGradeHTML))
+	if err != nil {
+		t.Fatalf("ParseGrades returned error: %v", err)
+	}
+	if len(grades) != 2 {
+		t.Fatalf("unexpected grade count: %d", len(grades))
+	}
+	if grades[0].CourseName != "高等数学1C" || grades[0].MakeupScore != "44" ||
+		grades[0].OverallScore != "56" || grades[0].FinalScore != "56" ||
+		grades[0].GradePoint != "0" {
+		t.Fatalf("unexpected makeup grade: %+v", grades[0])
+	}
+	if grades[1].CourseName != "大学英语1" || grades[1].MakeupScore != "" ||
+		grades[1].OverallScore != "65" {
+		t.Fatalf("empty makeup score should be preserved: %+v", grades[1])
+	}
+}
+
 func TestParseGradesReportsUnexpectedRowAndColumn(t *testing.T) {
-	body := []byte(`<table class="gridtable"><tbody><tr><td colspan="11">暂无数据</td></tr></tbody></table>`)
+	body := []byte(`<table class="gridtable">
+<thead><tr>
+<th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th>
+<th>学分</th><th>平时成绩</th><th>期末成绩</th><th>总评成绩</th><th>最终</th><th>绩点</th>
+</tr></thead>
+<tbody><tr><td colspan="11">暂无数据</td></tr></tbody></table>`)
 	_, err := ParseGrades(body)
 	if err == nil || !strings.Contains(err.Error(), "row=1 columns=1") {
 		t.Fatalf("unexpected error: %v", err)
@@ -75,7 +99,12 @@ func TestParseGradesReportsUnexpectedRowAndColumn(t *testing.T) {
 }
 
 func TestParseGradesAllowsEmptyRowsInEmptyTable(t *testing.T) {
-	body := []byte(`<table class="gridtable"><tbody><tr>
+	body := []byte(`<table class="gridtable">
+<thead><tr>
+<th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th>
+<th>学分</th><th>平时成绩</th><th>期末成绩</th><th>总评成绩</th><th>最终</th><th>绩点</th>
+</tr></thead>
+<tbody><tr>
 	</tr></tbody></table>`)
 	grades, err := ParseGrades(body)
 	if err != nil {
@@ -101,6 +130,26 @@ const sampleGradeHTML = `
 <tr>
 <td>2025-2026 2</td><td>COURSE002</td><td>COURSE002.001</td><td>示例课程</td><td>公共课</td>
 <td>0.25</td><td>85</td><td></td><td>85</td><td>85</td><td>3.5</td>
+</tr>
+</tbody>
+</table>
+</div>`
+
+const sampleMakeupGradeHTML = `
+<div class="grid">
+<table class="gridtable">
+<thead><tr>
+<th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th>
+<th>学分</th><th>平时成绩</th><th>期末成绩</th><th>补考成绩</th><th>总评成绩</th><th>最终</th><th>绩点</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>2024-2025 1</td><td>MS001C</td><td>MS001C.241011</td><td>高等数学1C</td><td>数理基础类</td>
+<td>4.5</td><td>73</td><td>44</td><td>44</td><td>56</td><td>56</td><td>0</td>
+</tr>
+<tr>
+<td>2024-2025 1</td><td>FL001A</td><td>FL001A.241011</td><td>大学英语1</td><td>外语类</td>
+<td>3</td><td>71</td><td>61</td><td></td><td>65</td><td>65</td><td>1.5</td>
 </tr>
 </tbody>
 </table>

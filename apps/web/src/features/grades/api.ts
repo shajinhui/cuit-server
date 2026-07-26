@@ -9,6 +9,7 @@ export interface Grade {
   Credits: string
   UsualScore: string
   FinalExamScore: string
+  MakeupScore: string
   OverallScore: string
   FinalScore: string
   GradePoint: string

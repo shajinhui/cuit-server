@@ -43,6 +43,7 @@ function createGrade(overrides: Partial<Grade> = {}): Grade {
     Credits: '',
     UsualScore: '',
     FinalExamScore: '',
+    MakeupScore: '',
     OverallScore: '',
     FinalScore: '',
     GradePoint: '',

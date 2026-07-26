@@ -61,6 +61,10 @@ func ParseGrades(body []byte) ([]Grade, error) {
 	if table.Length() == 0 {
 		return nil, jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, "grade table not found")
 	}
+	columns, err := parseGradeColumns(table)
+	if err != nil {
+		return nil, err
+	}
 	grades := make([]Grade, 0)
 	var parseErr error
 	table.Find("tbody tr").EachWithBreak(func(index int, row *goquery.Selection) bool {
@@ -68,35 +72,121 @@ func ParseGrades(body []byte) ([]Grade, error) {
 		if cells.Length() == 0 && normalizeText(row.Text()) == "" {
 			return true
 		}
-		if cells.Length() != 11 {
+		if cells.Length() != columns.count {
 			message := fmt.Sprintf("unexpected grade column count: row=%d columns=%d", index+1, cells.Length())
 			parseErr = jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, message)
 			return false
 		}
-		values := make([]string, 11)
-		cells.Each(func(index int, cell *goquery.Selection) {
-			values[index] = normalizeText(cell.Text())
-		})
-		grades = append(grades, gradeFromValues(values))
+		grades = append(grades, gradeFromCells(cells, columns))
 		return true
 	})
 	return grades, parseErr
 }
 
-func gradeFromValues(values []string) Grade {
-	return Grade{
-		SchoolYearTerm: values[0],
-		CourseCode:     values[1],
-		CourseSequence: values[2],
-		CourseName:     values[3],
-		CourseCategory: values[4],
-		Credits:        values[5],
-		UsualScore:     values[6],
-		FinalExamScore: values[7],
-		OverallScore:   values[8],
-		FinalScore:     values[9],
-		GradePoint:     values[10],
+type gradeColumns struct {
+	count          int
+	schoolYearTerm int
+	courseCode     int
+	courseSequence int
+	courseName     int
+	courseCategory int
+	credits        int
+	usualScore     int
+	finalExamScore int
+	makeupScore    int
+	overallScore   int
+	finalScore     int
+	gradePoint     int
+}
+
+func parseGradeColumns(table *goquery.Selection) (gradeColumns, error) {
+	headerCells := table.Find("thead").First().Find("th")
+	if headerCells.Length() == 0 {
+		return gradeColumns{}, jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, "grade table header not found")
 	}
+	headers := make([]string, headerCells.Length())
+	headerCells.Each(func(index int, cell *goquery.Selection) {
+		headers[index] = normalizeText(cell.Text())
+	})
+
+	required := func(names ...string) (int, error) {
+		for index, header := range headers {
+			for _, name := range names {
+				if header == name {
+					return index, nil
+				}
+			}
+		}
+		return -1, jwxterr.WithMessage(
+			jwxterr.ErrGradeQueryFailed,
+			fmt.Sprintf("grade column not found: %s", names[0]),
+		)
+	}
+	optional := func(names ...string) int {
+		index, _ := required(names...)
+		return index
+	}
+
+	columns := gradeColumns{count: len(headers), makeupScore: optional("补考成绩")}
+	var err error
+	if columns.schoolYearTerm, err = required("学年学期"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.courseCode, err = required("课程代码"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.courseSequence, err = required("课程序号"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.courseName, err = required("课程名称"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.courseCategory, err = required("课程类别"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.credits, err = required("学分"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.usualScore, err = required("平时成绩"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.finalExamScore, err = required("期末成绩"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.overallScore, err = required("总评成绩"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.finalScore, err = required("最终", "最终成绩"); err != nil {
+		return gradeColumns{}, err
+	}
+	if columns.gradePoint, err = required("绩点"); err != nil {
+		return gradeColumns{}, err
+	}
+	return columns, nil
+}
+
+func gradeFromCells(cells *goquery.Selection, columns gradeColumns) Grade {
+	return Grade{
+		SchoolYearTerm: gradeCellText(cells, columns.schoolYearTerm),
+		CourseCode:     gradeCellText(cells, columns.courseCode),
+		CourseSequence: gradeCellText(cells, columns.courseSequence),
+		CourseName:     gradeCellText(cells, columns.courseName),
+		CourseCategory: gradeCellText(cells, columns.courseCategory),
+		Credits:        gradeCellText(cells, columns.credits),
+		UsualScore:     gradeCellText(cells, columns.usualScore),
+		FinalExamScore: gradeCellText(cells, columns.finalExamScore),
+		MakeupScore:    gradeCellText(cells, columns.makeupScore),
+		OverallScore:   gradeCellText(cells, columns.overallScore),
+		FinalScore:     gradeCellText(cells, columns.finalScore),
+		GradePoint:     gradeCellText(cells, columns.gradePoint),
+	}
+}
+
+func gradeCellText(cells *goquery.Selection, index int) string {
+	if index < 0 || index >= cells.Length() {
+		return ""
+	}
+	return normalizeText(cells.Eq(index).Text())
 }
 
 func normalizeText(text string) string {

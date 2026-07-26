@@ -123,6 +123,7 @@ watch(
               <span>{{ grade.Credits || '—' }} 学分</span>
               <span>平时 {{ grade.UsualScore || '—' }}</span>
               <span>期末 {{ grade.FinalExamScore || '—' }}</span>
+              <span v-if="grade.MakeupScore">补考 {{ grade.MakeupScore }}</span>
               <span>绩点 {{ grade.GradePoint || '—' }}</span>
             </div>
           </div>
