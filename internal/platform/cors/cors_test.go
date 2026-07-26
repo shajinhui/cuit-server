@@ -51,7 +51,7 @@ func TestPreflightStopsBeforeAPIHandler(t *testing.T) {
 		nil,
 		ut.Header{Key: "Origin", Value: testFrontendOrigin},
 		ut.Header{Key: "Access-Control-Request-Method", Value: http.MethodPost},
-		ut.Header{Key: "Access-Control-Request-Headers", Value: "content-type"},
+		ut.Header{Key: "Access-Control-Request-Headers", Value: "authorization,content-type"},
 	).Result()
 
 	if response.StatusCode() != http.StatusNoContent {
@@ -59,6 +59,9 @@ func TestPreflightStopsBeforeAPIHandler(t *testing.T) {
 	}
 	if called {
 		t.Fatal("preflight reached API handler")
+	}
+	if got := string(response.Header.Peek("Access-Control-Allow-Headers")); got != "Content-Type, Authorization" {
+		t.Fatalf("unexpected allow headers: %q", got)
 	}
 }
 

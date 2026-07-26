@@ -162,5 +162,14 @@ curl --fail \
   "http://127.0.0.1:8888/api/v1/admin/stats?days=30"
 ```
 
+部署 Web 后也可以打开图形化统计面板：
+
+```text
+https://fanxiaogao05.dpdns.org/admin/stats
+```
+
+在页面中手动输入 `ADMIN_STATS_TOKEN`。令牌只保存在当前浏览器标签页的
+`sessionStorage` 中，退出统计或关闭标签页后清除，不会进入 Web 构建产物。
+
 统计数据只包含按接口聚合的请求量、状态码分类、耗时，以及内部用户 ID
 对应的日活记录；不会保存学号、Cookie、请求体或成绩内容。

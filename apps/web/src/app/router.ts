@@ -32,6 +32,11 @@ const router = createRouter({
       component: () => import('@/pages/AboutPage.vue'),
     },
     {
+      path: '/admin/stats',
+      name: 'admin-stats',
+      component: () => import('@/pages/AdminStatsPage.vue'),
+    },
+    {
       path: '/plan-completion',
       name: 'plan-completion',
       component: () => import('@/pages/PlanCompletionPage.vue'),
