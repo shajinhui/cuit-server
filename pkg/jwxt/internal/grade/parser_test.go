@@ -85,6 +85,32 @@ func TestParseGradesSupportsMakeupScoreColumn(t *testing.T) {
 	}
 }
 
+func TestParseGradesAllowsMissingUsualScoreColumn(t *testing.T) {
+	body := []byte(`<table class="gridtable">
+<thead><tr>
+<th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th>
+<th>学分</th><th>期末成绩</th><th>总评成绩</th><th>最终</th><th>绩点</th>
+</tr></thead>
+<tbody><tr>
+<td>2026-2027 1</td><td>COURSE003</td><td>COURSE003.001</td><td>新学期课程</td><td>专业课</td>
+<td>2</td><td>88</td><td>88</td><td>88</td><td>3.8</td>
+</tr></tbody></table>`)
+
+	grades, err := ParseGrades(body)
+	if err != nil {
+		t.Fatalf("ParseGrades returned error: %v", err)
+	}
+	if len(grades) != 1 {
+		t.Fatalf("unexpected grade count: %d", len(grades))
+	}
+	grade := grades[0]
+	if grade.UsualScore != "" || grade.FinalExamScore != "88" ||
+		grade.OverallScore != "88" || grade.FinalScore != "88" ||
+		grade.GradePoint != "3.8" {
+		t.Fatalf("unexpected score mapping without usual score: %+v", grade)
+	}
+}
+
 func TestParseGradesReportsUnexpectedRowAndColumn(t *testing.T) {
 	body := []byte(`<table class="gridtable">
 <thead><tr>

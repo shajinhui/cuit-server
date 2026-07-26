@@ -129,6 +129,9 @@ func parseCourses(body []byte) ([]Course, error) {
 	var parseErr error
 	table.Find("tbody tr").EachWithBreak(func(rowIndex int, row *goquery.Selection) bool {
 		cells := row.Find("td")
+		if cells.Length() == 0 {
+			return true
+		}
 		if cells.Length() != 8 {
 			parseErr = jwxterr.WithMessage(jwxterr.ErrCourseTableQueryFailed, fmt.Sprintf("unexpected course column count: row=%d columns=%d", rowIndex+1, cells.Length()))
 			return false

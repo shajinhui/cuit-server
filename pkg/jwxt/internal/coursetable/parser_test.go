@@ -105,6 +105,28 @@ table0.marshalTable(2,1,6);
 	}
 }
 
+func TestParseCourseTableAllowsEmptyBodyRows(t *testing.T) {
+	body := []byte(`
+<script>
+var unitCount = 12;
+table0.marshalTable(2,1,19);
+</script>
+<table class="gridtable">
+<thead><tr>
+<th>序号</th><th>课程代码</th><th>课程名称</th><th>学分</th><th>课程序号</th><th>教学班</th><th>教师</th><th>操作</th>
+</tr></thead>
+<tbody><tr></tr></tbody>
+</table>`)
+
+	table, err := ParseCourseTable(body, "7")
+	if err != nil {
+		t.Fatalf("ParseCourseTable returned error for an empty row: %v", err)
+	}
+	if len(table.Courses) != 0 || table.WeekCount != 19 || table.SectionsPerDay != 12 {
+		t.Fatalf("unexpected empty course table: %+v", table)
+	}
+}
+
 const sampleCourseTableHTML = `
 <script>
 var table0 = new CourseTable(2026,84);

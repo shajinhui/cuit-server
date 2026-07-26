@@ -142,7 +142,11 @@ func parseGradeColumns(table *goquery.Selection) (gradeColumns, error) {
 		return index
 	}
 
-	columns := gradeColumns{count: len(headers), makeupScore: optional("补考成绩")}
+	columns := gradeColumns{
+		count:       len(headers),
+		usualScore:  optional("平时成绩"),
+		makeupScore: optional("补考成绩"),
+	}
 	var err error
 	if columns.schoolYearTerm, err = required("学年学期"); err != nil {
 		return gradeColumns{}, err
@@ -160,9 +164,6 @@ func parseGradeColumns(table *goquery.Selection) (gradeColumns, error) {
 		return gradeColumns{}, err
 	}
 	if columns.credits, err = required("学分"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.usualScore, err = required("平时成绩"); err != nil {
 		return gradeColumns{}, err
 	}
 	if columns.finalExamScore, err = required("期末成绩"); err != nil {
