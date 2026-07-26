@@ -115,6 +115,21 @@ func TestParseGradesAllowsEmptyRowsInEmptyTable(t *testing.T) {
 	}
 }
 
+func TestParseGradesAllowsEmptyTableWithoutScoreColumns(t *testing.T) {
+	body := []byte(`<table class="gridtable">
+<thead><tr>
+<th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th><th>学分</th>
+</tr></thead>
+<tbody><tr><td colspan="6"> </td></tr></tbody></table>`)
+	grades, err := ParseGrades(body)
+	if err != nil {
+		t.Fatalf("ParseGrades returned error for an empty table without score columns: %v", err)
+	}
+	if len(grades) != 0 {
+		t.Fatalf("unexpected grades parsed from an empty table: %+v", grades)
+	}
+}
+
 const sampleGradeHTML = `
 <div class="grid">
 <table id="grid123" class="gridtable">

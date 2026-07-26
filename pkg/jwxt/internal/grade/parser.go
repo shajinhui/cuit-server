@@ -61,6 +61,9 @@ func ParseGrades(body []byte) ([]Grade, error) {
 	if table.Length() == 0 {
 		return nil, jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, "grade table not found")
 	}
+	if !hasGradeRows(table) {
+		return []Grade{}, nil
+	}
 	columns, err := parseGradeColumns(table)
 	if err != nil {
 		return nil, err
@@ -81,6 +84,18 @@ func ParseGrades(body []byte) ([]Grade, error) {
 		return true
 	})
 	return grades, parseErr
+}
+
+func hasGradeRows(table *goquery.Selection) bool {
+	hasRows := false
+	table.Find("tbody tr").EachWithBreak(func(_ int, row *goquery.Selection) bool {
+		if normalizeText(row.Text()) == "" {
+			return true
+		}
+		hasRows = true
+		return false
+	})
+	return hasRows
 }
 
 type gradeColumns struct {
