@@ -10,11 +10,17 @@ import {
 } from '@/features/analytics'
 import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import AppSelect from '@/shared/ui/AppSelect.vue'
 
 defineOptions({ name: 'AdminStatsPage' })
 
 const tokenStorageKey = 'cuit-admin-stats-token'
 const numberFormatter = new Intl.NumberFormat('zh-CN')
+const periodOptions = [
+  { value: 7, label: '近 7 天' },
+  { value: 30, label: '近 30 天' },
+  { value: 90, label: '近 90 天' },
+]
 const tokenInput = ref('')
 const periodDays = ref(30)
 const stats = ref<ServiceStats>()
@@ -194,11 +200,15 @@ function formatLatency(value: number): string {
         <div class="admin-dashboard-actions">
           <label>
             <span class="visually-hidden">统计周期</span>
-            <select v-model="periodDays" :disabled="loading" @change="refreshStats">
-              <option :value="7">近 7 天</option>
-              <option :value="30">近 30 天</option>
-              <option :value="90">近 90 天</option>
-            </select>
+            <AppSelect
+              v-model="periodDays"
+              class="admin-period-select"
+              :options="periodOptions"
+              title="选择统计周期"
+              aria-label="选择统计周期"
+              :disabled="loading"
+              @change="refreshStats"
+            />
           </label>
           <button type="button" aria-label="刷新统计" :disabled="loading" @click="refreshStats">
             <svg aria-hidden="true" viewBox="0 0 24 24" :class="{ 'is-spinning': loading }">

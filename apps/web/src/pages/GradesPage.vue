@@ -10,6 +10,7 @@ import {
   useGradesStore,
 } from '@/features/grades'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import AppSelect from '@/shared/ui/AppSelect.vue'
 
 defineOptions({ name: 'GradesPage' })
 
@@ -20,6 +21,12 @@ usePageTheme('#f6f6f8')
 
 const publishedCount = computed(() => countPublishedGrades(store.grades))
 const failedCount = computed(() => countFailedGrades(store.grades))
+const semesterOptions = computed(() =>
+  store.semesters.map((semester) => ({
+    value: semester.ID,
+    label: `${semester.SchoolYear}学年 第${semester.Term}学期`,
+  })),
+)
 const updateStatus = computed(() => {
   if (store.loading) return '更新中…'
   if (store.error) return '更新失败'
@@ -38,6 +45,11 @@ watch(
     }
   },
 )
+
+function chooseSemester(value: string | number) {
+  store.selectedSemesterID = String(value)
+  void store.loadGrades()
+}
 
 </script>
 
@@ -77,14 +89,17 @@ watch(
         </div>
       </header>
 
-      <label class="semester-select">
+      <div class="semester-select">
         <span>当前学期</span>
-        <select v-model="store.selectedSemesterID" :disabled="store.loading" @change="store.loadGrades">
-          <option v-for="semester in store.semesters" :key="semester.ID" :value="semester.ID">
-            {{ semester.SchoolYear }}学年 第{{ semester.Term }}学期
-          </option>
-        </select>
-      </label>
+        <AppSelect
+          :model-value="store.selectedSemesterID"
+          :options="semesterOptions"
+          title="选择成绩学期"
+          aria-label="选择成绩学期"
+          :disabled="store.loading"
+          @change="chooseSemester"
+        />
+      </div>
 
       <section class="grade-summary" aria-label="成绩统计">
         <article>

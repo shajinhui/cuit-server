@@ -49,15 +49,14 @@
 }
 
 .schedule-week-select {
-  position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  margin: -7px 0;
+  min-height: 44px;
+  margin: -13px 0;
 }
 
-.schedule-week-select select {
-  min-height: 32px;
+.schedule-week-select .app-select__trigger {
+  min-height: 44px;
   padding: 0 18px 0 0;
   color: inherit;
   font-weight: 500;
@@ -69,27 +68,14 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.schedule-week-select select:active,
-.schedule-week-select select:disabled {
+.schedule-week-select .app-select__trigger:active,
+.schedule-week-select .app-select__trigger:disabled {
   opacity: 0.62;
 }
 
-.schedule-week-select select:focus,
-.schedule-week-select select:focus-visible {
-  outline: 0;
-  box-shadow: none;
-}
-
-.schedule-week-select svg {
-  position: absolute;
-  right: 1px;
+.schedule-week-select .app-select__chevron {
   width: 12px;
   height: 12px;
-  pointer-events: none;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
   stroke-width: 1.5;
 }
 
@@ -180,18 +166,27 @@
   backdrop-filter: blur(22px) saturate(150%);
 }
 
-.schedule-semester-option {
+.schedule-header__actions .schedule-semester-option {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  height: auto;
   min-height: 58px;
   padding: 9px 36px 9px 12px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
   border-radius: 13px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.schedule-semester-option:active {
+.schedule-header__actions .schedule-semester-option:active {
   background: rgba(255, 255, 255, 0.5);
+  transform: none;
 }
 
 .schedule-semester-option span {
@@ -224,19 +219,66 @@
   height: 12px;
   pointer-events: none;
   stroke-width: 1.6;
+  transition: transform 180ms var(--ease-out);
 }
 
-.schedule-semester-option select {
-  position: absolute;
-  inset: 0;
+.schedule-header__actions .schedule-semester-option svg.is-open {
+  transform: rotate(90deg);
+}
+
+.schedule-semester-list {
+  display: grid;
+  gap: 2px;
+  max-height: min(52dvh, 330px);
+  padding: 4px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(47, 60, 76, 0.1);
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.schedule-semester-list::-webkit-scrollbar {
+  display: none;
+}
+
+.schedule-header__actions .schedule-semester-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  height: 100%;
+  height: auto;
+  min-height: 42px;
+  padding: 9px 10px;
+  color: rgba(16, 23, 34, 0.72);
+  font-size: 13px;
+  font-weight: 520;
+  line-height: 1.25;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
   cursor: pointer;
-  opacity: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.schedule-semester-option select:focus-visible {
-  outline: 0;
+.schedule-header__actions .schedule-semester-list__item:active {
+  background: rgba(255, 255, 255, 0.52);
+  transform: none;
+}
+
+.schedule-header__actions .schedule-semester-list__item.is-selected {
+  color: #0088ff;
+  font-weight: 650;
+  background: rgba(0, 136, 255, 0.09);
+}
+
+.schedule-header__actions .schedule-semester-list__item svg {
+  position: static;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: #0088ff;
+  stroke-width: 2;
 }
 
 .schedule-more-menu-enter-active,
@@ -840,7 +882,7 @@
 }
 
 .add-course-form input,
-.add-course-form select {
+.add-course-form .app-select__trigger {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -850,19 +892,24 @@
   background: transparent;
   border: 0;
   border-radius: 10px;
-  outline: 0;
   box-shadow: none;
+}
+
+.add-course-form input {
+  outline: 0;
 }
 
 .add-course-form input::placeholder {
   color: rgba(60, 60, 67, 0.44);
 }
 
-.add-course-form input:focus,
-.add-course-form select:focus,
-.add-course-form select:focus-visible {
+.add-course-form input:focus {
   outline: 0;
   box-shadow: none;
+}
+
+.add-course-form .app-select__chevron {
+  color: rgba(60, 60, 67, 0.46);
 }
 
 .add-course-form__split-row {
@@ -899,7 +946,7 @@
   box-shadow: inset 0.5px 0 rgba(60, 60, 67, 0.13);
 }
 
-.add-course-form__split-row select {
+.add-course-form__split-row .app-select__trigger {
   text-align: left;
 }
 

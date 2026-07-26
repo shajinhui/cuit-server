@@ -10,6 +10,7 @@ import {
 } from '@/features/classrooms'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import AppSelect from '@/shared/ui/AppSelect.vue'
 
 defineOptions({ name: 'ClassroomsPage' })
 
@@ -36,6 +37,24 @@ const sectionPairs = [1, 3, 5, 7, 9, 11]
 usePageTheme('#f2f2f7')
 
 const groupedRooms = computed(() => groupClassroomsByBuilding(store.rooms))
+const semesterOptions = computed(() =>
+  store.semesters.map((semester) => ({
+    value: semester.ID,
+    label: `${semester.SchoolYear} · 第${semester.Term}学期`,
+  })),
+)
+const weekSelectOptions = weekOptions.map((week) => ({ value: week, label: `第 ${week} 周` }))
+const campusOptions = computed(() =>
+  store.campuses.map((campus) => ({ value: campus.ID, label: campus.Name })),
+)
+const buildingOptions = computed(() => [
+  { value: '', label: '全部教学楼' },
+  ...store.buildings.map((building) => ({ value: building.ID, label: building.Name })),
+])
+const classroomTypeOptions = computed(() => [
+  { value: '', label: '全部类型' },
+  ...store.classroomTypes.map((type) => ({ value: type.ID, label: type.Name })),
+])
 const scheduleBusy = computed(() => store.loadingResults || store.refreshingSchedule)
 const canSearch = computed(
   () =>
@@ -97,13 +116,13 @@ watch(advancedOpen, async (open) => {
   document.body.style.overflow = bodyOverflowBeforeSheet
 })
 
-async function chooseSemester(event: Event) {
-  await store.changeSemester((event.target as HTMLSelectElement).value)
+async function chooseSemester(value: string | number) {
+  await store.changeSemester(String(value))
   await store.loadBuildings()
 }
 
-async function chooseCampus(event: Event) {
-  await store.changeCampus((event.target as HTMLSelectElement).value)
+async function chooseCampus(value: string | number) {
+  await store.changeCampus(String(value))
   await store.loadBuildings()
 }
 
@@ -134,7 +153,7 @@ function handleSheetKeydown(event: KeyboardEvent) {
   }
   if (event.key !== 'Tab' || !sheetRef.value) return
 
-  const focusable = [...sheetRef.value.querySelectorAll<HTMLElement>('button, select, input, [tabindex]:not([tabindex="-1"])')]
+  const focusable = [...sheetRef.value.querySelectorAll<HTMLElement>('button, input, [tabindex]:not([tabindex="-1"])')]
     .filter((element) => !element.hasAttribute('disabled'))
   const first = focusable[0]
   const last = focusable.at(-1)
@@ -344,47 +363,41 @@ function handleSheetKeydown(event: KeyboardEvent) {
             <div class="classroom-sheet__fields classroom-sheet__fields--primary">
               <label>
                 <span>学期</span>
-                <span class="classroom-select-control">
-                  <select
-                    :value="store.selectedSemesterID"
-                    aria-label="选择学期"
-                    :disabled="store.loadingOptions || scheduleBusy"
-                    @change="chooseSemester"
-                  >
-                    <option v-for="semester in store.semesters" :key="semester.ID" :value="semester.ID">
-                      {{ semester.SchoolYear }} · 第{{ semester.Term }}学期
-                    </option>
-                  </select>
-                  <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-                </span>
+                <AppSelect
+                  class="classroom-select-control"
+                  :model-value="store.selectedSemesterID"
+                  :options="semesterOptions"
+                  title="选择学期"
+                  aria-label="选择学期"
+                  :disabled="store.loadingOptions || scheduleBusy"
+                  @change="chooseSemester"
+                />
               </label>
 
               <div class="classroom-sheet__pair">
                 <label>
                   <span>教学周</span>
-                  <span class="classroom-select-control">
-                    <select v-model.number="store.week" aria-label="选择教学周" :disabled="scheduleBusy">
-                      <option v-for="week in weekOptions" :key="week" :value="week">第 {{ week }} 周</option>
-                    </select>
-                    <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-                  </span>
+                  <AppSelect
+                    v-model="store.week"
+                    class="classroom-select-control"
+                    :options="weekSelectOptions"
+                    title="选择教学周"
+                    aria-label="选择教学周"
+                    :disabled="scheduleBusy"
+                  />
                 </label>
 
                 <label>
                   <span>校区</span>
-                  <span class="classroom-select-control">
-                    <select
-                      :value="store.selectedCampusID"
-                      aria-label="选择校区"
-                      :disabled="store.loadingOptions || scheduleBusy"
-                      @change="chooseCampus"
-                    >
-                      <option v-for="campus in store.campuses" :key="campus.ID" :value="campus.ID">
-                        {{ campus.Name }}
-                      </option>
-                    </select>
-                    <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-                  </span>
+                  <AppSelect
+                    class="classroom-select-control"
+                    :model-value="store.selectedCampusID"
+                    :options="campusOptions"
+                    title="选择校区"
+                    aria-label="选择校区"
+                    :disabled="store.loadingOptions || scheduleBusy"
+                    @change="chooseCampus"
+                  />
                 </label>
               </div>
 
@@ -411,36 +424,26 @@ function handleSheetKeydown(event: KeyboardEvent) {
             <div class="classroom-sheet__fields">
               <label>
                 <span>教学楼</span>
-                <span class="classroom-select-control">
-                  <select
-                    v-model="store.selectedBuildingID"
-                    aria-label="选择教学楼"
-                    :disabled="store.loadingOptions || scheduleBusy"
-                  >
-                    <option value="">全部教学楼</option>
-                    <option v-for="building in store.buildings" :key="building.ID" :value="building.ID">
-                      {{ building.Name }}
-                    </option>
-                  </select>
-                  <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-                </span>
+                <AppSelect
+                  v-model="store.selectedBuildingID"
+                  class="classroom-select-control"
+                  :options="buildingOptions"
+                  title="选择教学楼"
+                  aria-label="选择教学楼"
+                  :disabled="store.loadingOptions || scheduleBusy"
+                />
               </label>
 
               <label>
                 <span>教室类型</span>
-                <span class="classroom-select-control">
-                  <select
-                    v-model="store.selectedClassroomTypeID"
-                    aria-label="选择教室类型"
-                    :disabled="scheduleBusy"
-                  >
-                    <option value="">全部类型</option>
-                    <option v-for="type in store.classroomTypes" :key="type.ID" :value="type.ID">
-                      {{ type.Name }}
-                    </option>
-                  </select>
-                  <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-                </span>
+                <AppSelect
+                  v-model="store.selectedClassroomTypeID"
+                  class="classroom-select-control"
+                  :options="classroomTypeOptions"
+                  title="选择教室类型"
+                  aria-label="选择教室类型"
+                  :disabled="scheduleBusy"
+                />
               </label>
 
               <label>
