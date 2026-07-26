@@ -4,6 +4,8 @@ export interface AndroidUpdateManifest {
   channel: 'stable'
   version: string
   nativeVersion: string
+  title?: string
+  releaseNotes?: string
   url: string
   fallbackUrl?: string
   checksum: string
@@ -33,6 +35,14 @@ export function parseAndroidUpdateManifest(
     !SEMVER_PATTERN.test(candidate.version) ||
     typeof candidate.nativeVersion !== 'string' ||
     !SEMVER_PATTERN.test(candidate.nativeVersion) ||
+    (candidate.title !== undefined &&
+      (typeof candidate.title !== 'string' ||
+        candidate.title.trim().length === 0 ||
+        candidate.title.length > 80)) ||
+    (candidate.releaseNotes !== undefined &&
+      (typeof candidate.releaseNotes !== 'string' ||
+        candidate.releaseNotes.trim().length === 0 ||
+        candidate.releaseNotes.length > 500)) ||
     typeof candidate.url !== 'string' ||
     typeof candidate.checksum !== 'string' ||
     !SHA256_PATTERN.test(candidate.checksum) ||

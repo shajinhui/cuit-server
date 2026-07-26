@@ -1,6 +1,7 @@
 import { App } from '@capacitor/app'
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
+import { readonly, ref, shallowRef } from 'vue'
 
 import { parseAndroidUpdateManifest, shouldDownloadAndroidUpdate } from './model'
 
@@ -13,6 +14,17 @@ const REQUEST_TIMEOUT_MS = 10_000
 let registered = false
 let readyPromise: Promise<boolean> | undefined
 let updateCheck: Promise<void> | undefined
+let dismissedVersion: string | undefined
+
+interface ReadyAndroidUpdate {
+  bundleId: string
+  version: string
+  title: string
+  releaseNotes: string
+}
+
+const readyUpdate = shallowRef<ReadyAndroidUpdate | null>(null)
+const applyingUpdate = ref(false)
 
 async function confirmAppReady(): Promise<boolean> {
   try {
@@ -108,13 +120,46 @@ async function performUpdateCheck(): Promise<void> {
         pendingBundle?.version,
       )
     ) {
+      if (
+        manifest.nativeVersion === nativeVersion &&
+        manifest.version !== currentBundle.version &&
+        pendingBundle?.version === manifest.version
+      ) {
+        showReadyUpdate(
+          pendingBundle.id,
+          manifest.version,
+          manifest.title,
+          manifest.releaseNotes,
+        )
+      }
       return
     }
 
     const downloadedBundle = await downloadUpdate(manifest)
     await CapacitorUpdater.next({ id: downloadedBundle.id })
+    showReadyUpdate(
+      downloadedBundle.id,
+      manifest.version,
+      manifest.title,
+      manifest.releaseNotes,
+    )
   } catch (error) {
     console.warn('Android 热更新检查失败，继续使用当前版本。', error)
+  }
+}
+
+function showReadyUpdate(
+  bundleId: string,
+  version: string,
+  title?: string,
+  releaseNotes?: string,
+) {
+  if (dismissedVersion === version) return
+  readyUpdate.value = {
+    bundleId,
+    version,
+    title: title?.trim() || '新版本已准备好',
+    releaseNotes: releaseNotes?.trim() || '包含最新功能与体验优化。',
   }
 }
 
@@ -137,4 +182,32 @@ export function registerAndroidLiveUpdates(): void {
     if (isActive) checkForUpdate()
   })
   window.addEventListener('online', checkForUpdate)
+}
+
+export function useAndroidLiveUpdate() {
+  return {
+    applyingUpdate: readonly(applyingUpdate),
+    readyUpdate: readonly(readyUpdate),
+    applyReadyUpdate,
+    dismissReadyUpdate,
+  }
+}
+
+function dismissReadyUpdate() {
+  if (applyingUpdate.value || !readyUpdate.value) return
+  dismissedVersion = readyUpdate.value.version
+  readyUpdate.value = null
+}
+
+async function applyReadyUpdate() {
+  if (applyingUpdate.value || !readyUpdate.value) return
+  applyingUpdate.value = true
+
+  try {
+    // set() 会立即切换到这个已校验包，并销毁当前 JS 上下文完成重载。
+    await CapacitorUpdater.set({ id: readyUpdate.value.bundleId })
+  } catch (error) {
+    applyingUpdate.value = false
+    console.warn('Android 热更新立即应用失败，将在下次启动时继续更新。', error)
+  }
 }

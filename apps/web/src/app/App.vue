@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import { AppUpdatePrompt } from '@/features/app-updates'
 import { PwaInstallPrompt } from '@/features/pwa-install'
 
 import BottomNavigation from './components/BottomNavigation.vue'
@@ -35,4 +36,5 @@ const showBottomNavigation = computed(() => navigationRoutes.has(String(route.na
     :allow-promotion="showBottomNavigation"
     :with-bottom-navigation="showBottomNavigation"
   />
+  <AppUpdatePrompt />
 </template>

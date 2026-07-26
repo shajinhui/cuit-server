@@ -125,6 +125,9 @@ const manifest = {
   channel: 'stable',
   version: bundleVersion,
   nativeVersion,
+  title: process.env.OTA_RELEASE_TITLE?.trim() || '新版本已准备好',
+  releaseNotes:
+    process.env.OTA_RELEASE_NOTES?.trim() || '包含最新功能与体验优化。',
   url: `${publicURL}/app-updates/android/bundles/${encodeURIComponent(outputFilename)}`,
   ...(deploymentURL && deploymentURL !== publicURL
     ? {
