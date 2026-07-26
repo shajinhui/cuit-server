@@ -194,6 +194,12 @@ func listClassrooms(
 	baseURL *url.URL,
 	query AvailableClassroomQuery,
 ) ([]Classroom, error) {
+	// 浏览器会先进入公共课表页，再由页面内的表格组件调用 search.action。
+	// 入口请求会在 EAMS 会话中建立后续教室搜索所需的页面上下文。
+	if _, err := getEntry(ctx, client, resolvePath(baseURL, publicCourseTableEntryPath)); err != nil {
+		return nil, err
+	}
+
 	firstBody, err := queryClassroomPage(ctx, client, baseURL, query, 1)
 	if err != nil {
 		return nil, err
@@ -310,7 +316,7 @@ func queryRoomOccupancyBatch(
 	if err != nil {
 		return nil, err
 	}
-	return ParseRoomOccupancies(body, len(rooms))
+	return ParseRoomOccupancies(body, rooms)
 }
 
 func filterAvailableClassrooms(

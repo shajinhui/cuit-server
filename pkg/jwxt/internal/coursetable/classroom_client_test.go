@@ -75,9 +75,16 @@ func TestGetClassroomOptionsDoesNotRequestFixedOptions(t *testing.T) {
 
 func TestGetAvailableClassroomsMatchesEAMSProtocol(t *testing.T) {
 	searchRequests := 0
+	entryLoaded := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case publicCourseTableEntryPath:
+			entryLoaded = true
+			_, _ = w.Write([]byte(`<html><body>公共课表</body></html>`))
 		case classroomSearchPath:
+			if !entryLoaded {
+				t.Fatal("classroom entry must be loaded before search")
+			}
 			searchRequests++
 			assertClassroomSearchRequest(t, r)
 			pageNo, _ := strconv.Atoi(r.URL.Query().Get("pageNo"))
@@ -120,9 +127,16 @@ func TestGetAvailableClassroomsMatchesEAMSProtocol(t *testing.T) {
 }
 
 func TestGetClassroomScheduleReturnsWholeCampusSnapshot(t *testing.T) {
+	entryLoaded := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case publicCourseTableEntryPath:
+			entryLoaded = true
+			_, _ = w.Write([]byte(`<html><body>公共课表</body></html>`))
 		case classroomSearchPath:
+			if !entryLoaded {
+				t.Fatal("classroom entry must be loaded before search")
+			}
 			query := r.URL.Query()
 			if query.Get("semester.id") != "905" || query.Get("classroom.campus.id") != "1" {
 				t.Fatalf("unexpected snapshot classroom query: %s", r.URL.RawQuery)

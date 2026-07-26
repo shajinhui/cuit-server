@@ -30,7 +30,11 @@ func TestParseClassroomPage(t *testing.T) {
 }
 
 func TestParseRoomOccupanciesKeepsTableOrderAndWeeks(t *testing.T) {
-	occupancies, err := ParseRoomOccupancies([]byte(sampleRoomOccupancyHTML), 2)
+	rooms, _, err := ParseClassroomPage([]byte(sampleClassroomPageHTML))
+	if err != nil {
+		t.Fatal(err)
+	}
+	occupancies, err := ParseRoomOccupancies([]byte(sampleRoomOccupancyHTML), rooms)
 	if err != nil {
 		t.Fatalf("ParseRoomOccupancies returned error: %v", err)
 	}
@@ -52,6 +56,48 @@ func TestParseRoomOccupanciesKeepsTableOrderAndWeeks(t *testing.T) {
 	}
 	if !reflect.DeepEqual(second.weeks, []int{2}) {
 		t.Fatalf("unexpected second occupancy weeks: %#v", second.weeks)
+	}
+}
+
+func TestParseRoomOccupanciesMatchesClassroomsByHeading(t *testing.T) {
+	rooms, _, err := ParseClassroomPage([]byte(sampleClassroomPageHTML))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reversedRooms := []Classroom{rooms[1], rooms[0]}
+
+	occupancies, err := ParseRoomOccupancies([]byte(sampleRoomOccupancyHTML), reversedRooms)
+	if err != nil {
+		t.Fatalf("ParseRoomOccupancies returned error: %v", err)
+	}
+	if len(occupancies) != 2 || len(occupancies[0]) != 1 || len(occupancies[1]) != 1 {
+		t.Fatalf("unexpected occupancy counts: %#v", occupancies)
+	}
+
+	if occupancies[0][0].weekday != 3 {
+		t.Fatalf("H2102 received another classroom's occupancy: %+v", occupancies[0][0])
+	}
+	if occupancies[1][0].weekday != 1 {
+		t.Fatalf("H2101 received another classroom's occupancy: %+v", occupancies[1][0])
+	}
+}
+
+func TestParseRoomOccupanciesKeepsH2101ThursdaySectionsOneToFour(t *testing.T) {
+	rooms := []Classroom{{ID: "67", Code: "H2101", Name: "H2101"}}
+	occupancies, err := ParseRoomOccupancies([]byte(sampleH2101OccupancyHTML), rooms)
+	if err != nil {
+		t.Fatalf("ParseRoomOccupancies returned error: %v", err)
+	}
+	if len(occupancies) != 1 || len(occupancies[0]) != 1 {
+		t.Fatalf("unexpected H2101 occupancies: %#v", occupancies)
+	}
+
+	period := occupancies[0][0]
+	if period.weekday != 4 || period.startSection != 1 || period.endSection != 4 {
+		t.Fatalf("unexpected H2101 occupancy position: %+v", period)
+	}
+	if !reflect.DeepEqual(period.weeks, []int{1, 2, 3, 4, 5, 6, 7, 8}) {
+		t.Fatalf("unexpected H2101 occupancy weeks: %#v", period.weeks)
 	}
 }
 
@@ -81,7 +127,7 @@ func TestFilterAvailableClassroomsRequiresEverySectionToBeFree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	occupancies, err := ParseRoomOccupancies([]byte(sampleRoomOccupancyHTML), 2)
+	occupancies, err := ParseRoomOccupancies([]byte(sampleRoomOccupancyHTML), rooms)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -147,5 +193,24 @@ activity = new TaskActivity(actTeacherId.join(','),actTeacherName.join(','),"901
 index = 2*unitCount+2;
 table1.activities[index][table1.activities[index].length]=activity;
 table1.marshalTable(2,1,6);
+</script>
+</div>`
+
+const sampleH2101OccupancyHTML = `
+<div id="ExportA">
+<h2>教室H2101课程安排</h2>
+<script>
+var table0 = new CourseTable(2025,84);
+var unitCount = 12;
+activity = new TaskActivity(actTeacherId.join(','),actTeacherName.join(','),"900(COURSE001.001)","数字电路与逻辑设计C","","","011111111000000000000000000000000000000000000000000000000000000000000000000000000000",null,null,assistantName,"","","","");
+index = 3*unitCount+0;
+table0.activities[index][table0.activities[index].length]=activity;
+index = 3*unitCount+1;
+table0.activities[index][table0.activities[index].length]=activity;
+index = 3*unitCount+2;
+table0.activities[index][table0.activities[index].length]=activity;
+index = 3*unitCount+3;
+table0.activities[index][table0.activities[index].length]=activity;
+table0.marshalTable(2,1,20);
 </script>
 </div>`

@@ -151,24 +151,38 @@ func parseOptions(selection *goquery.Selection) []ClassroomOption {
 	return options
 }
 
-// ParseRoomOccupancies 按请求中的 ids 顺序返回每间教室的占用时间。
-func ParseRoomOccupancies(body []byte, roomCount int) ([][]occupiedPeriod, error) {
+// ParseRoomOccupancies 按 rooms 顺序返回每间教室的占用时间。
+//
+// 教务处批量课表响应中的 table0、table1 不保证与请求 ids 的顺序一致，
+// 因此优先使用每张课表前的“教室XXX课程安排”标题建立对应关系。
+func ParseRoomOccupancies(body []byte, rooms []Classroom) ([][]occupiedPeriod, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
 	if err != nil {
 		return nil, jwxterr.WithMessage(jwxterr.ErrCourseTableQueryFailed, "invalid classroom course table response")
 	}
 
+	roomCount := len(rooms)
 	occupancies := make([][]occupiedPeriod, roomCount)
 	seen := make([]bool, roomCount)
 	var parseErr error
-	doc.Find("script").EachWithBreak(func(_ int, script *goquery.Selection) bool {
-		content := script.Text()
+	currentRoomIndex := -1
+	doc.Find("h2, script").EachWithBreak(func(_ int, element *goquery.Selection) bool {
+		if goquery.NodeName(element) == "h2" {
+			currentRoomIndex = classroomIndexFromHeading(element.Text(), rooms)
+			return true
+		}
+
+		content := element.Text()
 		indexMatch := roomTableIndexPattern.FindStringSubmatch(content)
 		if len(indexMatch) != 2 {
 			return true
 		}
 		tableIndex, _ := strconv.Atoi(indexMatch[1])
-		if tableIndex < 0 || tableIndex >= roomCount || seen[tableIndex] {
+		roomIndex := currentRoomIndex
+		if roomIndex < 0 {
+			roomIndex = tableIndex
+		}
+		if roomIndex < 0 || roomIndex >= roomCount || seen[roomIndex] {
 			parseErr = jwxterr.WithMessage(jwxterr.ErrCourseTableQueryFailed, "invalid classroom table index")
 			return false
 		}
@@ -177,9 +191,9 @@ func ParseRoomOccupancies(body []byte, roomCount int) ([][]occupiedPeriod, error
 			parseErr = err
 			return false
 		}
-		// 批量响应以 table0、table1 的顺序对应请求中的第1、2个 ids。
-		occupancies[tableIndex] = periods
-		seen[tableIndex] = true
+		occupancies[roomIndex] = periods
+		seen[roomIndex] = true
+		currentRoomIndex = -1
 		return true
 	})
 	if parseErr != nil {
@@ -194,6 +208,23 @@ func ParseRoomOccupancies(body []byte, roomCount int) ([][]occupiedPeriod, error
 		}
 	}
 	return occupancies, nil
+}
+
+func classroomIndexFromHeading(heading string, rooms []Classroom) int {
+	roomLabel := normalizeText(heading)
+	roomLabel = strings.TrimPrefix(roomLabel, "教室")
+	roomLabel = strings.TrimSuffix(roomLabel, "课程安排")
+	roomLabel = normalizeText(roomLabel)
+	if roomLabel == "" {
+		return -1
+	}
+
+	for index, room := range rooms {
+		if roomLabel == normalizeText(room.Code) || roomLabel == normalizeText(room.Name) {
+			return index
+		}
+	}
+	return -1
 }
 
 func parseOccupiedPeriods(script string) ([]occupiedPeriod, error) {

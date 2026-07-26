@@ -5,9 +5,10 @@ import type { Classroom, ClassroomOccupancy, ClassroomSchedule } from './api'
 
 const classroomScheduleKeyPrefix = 'classroom-schedule:'
 const classroomInitializationKey = 'classroom-initialization'
+const classroomScheduleCacheVersion = 2
 
 export interface CachedClassroomSchedule {
-  version: 1
+  version: 2
   semesterID: string
   campusID: string
   schedule: ClassroomSchedule
@@ -60,7 +61,7 @@ export async function writeClassroomScheduleCache(
 ): Promise<CachedClassroomSchedule> {
   const database = await openOfflineDatabase()
   const value: CachedClassroomSchedule = {
-    version: 1,
+    version: classroomScheduleCacheVersion,
     semesterID: schedule.SemesterID,
     campusID: schedule.CampusID,
     // Pinia 数据是响应式代理，先转成普通 JSON，确保 IndexedDB 可以结构化克隆。
@@ -248,7 +249,7 @@ function isCachedClassroomSchedule(
 
   const cached = value as Partial<CachedClassroomSchedule>
   return (
-    cached.version === 1 &&
+    cached.version === classroomScheduleCacheVersion &&
     cached.semesterID === semesterID &&
     cached.campusID === campusID &&
     typeof cached.cachedAt === 'number' &&

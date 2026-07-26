@@ -89,6 +89,41 @@ describe('findAvailableClassrooms', () => {
     ).toEqual(['68'])
   })
 
+  it('不会把第1周周四1至4节均被占用的教室显示为空', () => {
+    const occupiedOnThursday: ClassroomSchedule = {
+      SemesterID: '905',
+      CampusID: '1',
+      Rooms: rooms.map((room) => ({
+        Classroom: room,
+        Occupancies: [
+          { Weekday: 4, StartSection: 1, EndSection: 4, Weeks: [1, 2, 3, 4] },
+        ],
+      })),
+    }
+
+    expect(
+      findAvailableClassrooms(occupiedOnThursday, {
+        week: 1,
+        weekday: 4,
+        sections: [1, 2],
+      }),
+    ).toEqual([])
+    expect(
+      findAvailableClassrooms(occupiedOnThursday, {
+        week: 1,
+        weekday: 4,
+        sections: [3, 4],
+      }),
+    ).toEqual([])
+    expect(
+      findAvailableClassrooms(occupiedOnThursday, {
+        week: 1,
+        weekday: 4,
+        sections: [1, 2, 3, 4],
+      }),
+    ).toEqual([])
+  })
+
   it('在本地应用教学楼、类型和容量筛选', () => {
     expect(
       findAvailableClassrooms(schedule, {
