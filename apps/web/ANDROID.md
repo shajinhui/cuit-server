@@ -20,10 +20,11 @@ Capacitor 的本地页面使用 `https://fanxiaogao05.dpdns.org` 作为 hostname
 
 1. App 先加载 APK 内置页面，不等待网络。
 2. 启动或回到前台后，通过原生 HTTP 从 `https://fanxiaogao05.dpdns.org/app-updates/android/latest.json` 后台检查更新；这不会被 Capacitor 本地资源服务器拦截。
-3. 新包通过 SHA-256 校验后静默下载，并排队到 App 下次进入后台或冷启动时切换。
-4. 新包启动后 10 秒内未完成 `notifyAppReady()`，插件自动回滚到上一个可用版本。
+3. 新包通过 SHA-256 校验并静默下载完成后，弹窗提供“立即更新”和“稍后”。
+4. “立即更新”会立刻重载并切换 Web 包；“稍后”会在 App 下次进入后台或冷启动时切换。
+5. 新包启动后 10 秒内未完成 `notifyAppReady()`，插件自动回滚到上一个可用版本。
 
-更新过程没有安装弹窗，也不会在用户操作中强制刷新。切换 Web 包时仍会重建 WebView，因此未保存的临时表单不能只放在内存中。
+更新过程没有系统安装弹窗，也不会在用户选择“稍后”时强制刷新。切换 Web 包时仍会重建 WebView，因此未保存的临时表单不能只放在内存中。
 
 Cloudflare Pages 继续执行 `pnpm run build`。构建会同时输出普通 PWA 和 Android 更新包；自定义域名作为国内网络首选下载地址，Pages 提供的 `CF_PAGES_URL` 作为该次不可变部署的备用地址。只有 `nativeVersion` 与 APK 完全一致的设备才会接收更新。
 

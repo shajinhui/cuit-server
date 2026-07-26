@@ -14,6 +14,8 @@ const validManifest: AndroidUpdateManifest = {
   channel: 'stable',
   version: '0.2.0-web.abc123',
   nativeVersion: '0.2.0',
+  title: '新版本已准备好',
+  releaseNotes: '新增历年试卷功能。',
   url: 'https://fanxiaogao05.dpdns.org/app-updates/android/bundles/update.zip',
   fallbackUrl:
     'https://abc123.cuit-server.pages.dev/app-updates/android/bundles/update.zip',
@@ -53,6 +55,21 @@ describe('parseAndroidUpdateManifest', () => {
     expect(
       parseAndroidUpdateManifest(
         { ...validManifest, version: 'web-latest' },
+        manifestURL,
+      ),
+    ).toBeNull()
+  })
+
+  it('rejects empty or oversized update copy', () => {
+    expect(
+      parseAndroidUpdateManifest(
+        { ...validManifest, title: '   ' },
+        manifestURL,
+      ),
+    ).toBeNull()
+    expect(
+      parseAndroidUpdateManifest(
+        { ...validManifest, releaseNotes: 'a'.repeat(501) },
         manifestURL,
       ),
     ).toBeNull()

@@ -12,6 +12,7 @@
 @import './grades.css';
 @import './login.css';
 @import './pwa-install.css';
+@import './app-update.css';
 
 :root {
   font-family:
