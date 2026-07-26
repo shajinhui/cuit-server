@@ -9,6 +9,7 @@
 node_modules/
 
 # Build outputs
+build/
 bin/
 dist/
 dev-dist/

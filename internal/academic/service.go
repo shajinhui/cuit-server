@@ -244,6 +244,20 @@ func (s *Service) Authenticated(ctx context.Context, sessionID string) (bool, er
 	return authenticated, nil
 }
 
+// ResolveUserID 只向服务内部的匿名统计模块暴露数据库主键，不返回学号或会话内容。
+func (s *Service) ResolveUserID(ctx context.Context, sessionID string) (int64, error) {
+	entry, _, err := s.sessionEntry(ctx, sessionID)
+	if err != nil {
+		return 0, err
+	}
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.revoked {
+		return 0, ErrUnauthenticated
+	}
+	return entry.user.ID, nil
+}
+
 func (s *Service) Logout(ctx context.Context, sessionID string) error {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cuit-server/internal/academic"
+	"cuit-server/internal/analytics"
 	"cuit-server/internal/platform/cors"
 	"cuit-server/internal/platform/database"
 	"cuit-server/internal/schedule"
@@ -66,11 +67,32 @@ func main() {
 
 	h := server.Default(server.WithHostPorts(address))
 	h.Use(accesslog.New())
+	analyticsRepository := analytics.NewRepository(db)
+	analyticsCollector := analytics.NewCollector(
+		analyticsRepository,
+		jwxtService,
+		"campus_session",
+		time.Minute,
+	)
+	analyticsCollector.Start()
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := analyticsCollector.Stop(ctx); err != nil {
+			log.Printf("停止统计收集器失败: %v", err)
+		}
+	}()
+	h.Use(analyticsCollector.Middleware())
 	if allowedOrigin != "" {
 		h.Use(cors.New(allowedOrigin))
 	}
 	academicHandler.Register(h)
 	scheduleHandler.Register(h)
+	if adminToken := strings.TrimSpace(os.Getenv("ADMIN_STATS_TOKEN")); adminToken != "" {
+		analytics.NewHandler(analyticsCollector, adminToken).Register(h)
+	} else {
+		log.Print("统计接口未启用：未配置 ADMIN_STATS_TOKEN")
+	}
 	h.GET("/api/v1/health", func(_ context.Context, c *app.RequestContext) {
 		c.JSON(http.StatusOK, map[string]any{"code": 0, "message": "success", "data": map[string]string{"status": "ok"}})
 	})

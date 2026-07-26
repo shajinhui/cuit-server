@@ -52,6 +52,14 @@ sudo editor /etc/cuit-server/cuit-server.env
 
 把生成结果写入 `JWXT_CREDENTIAL_KEY`。密钥不得提交到 Git，也不要在更换版本时重新生成，否则已有教务密码密文将无法解密。
 
+再生成仅用于查看匿名聚合统计的管理员令牌：
+
+```bash
+openssl rand -hex 32
+```
+
+把结果写入 `ADMIN_STATS_TOKEN`。没有配置该变量时，统计接口不会注册。
+
 启动并检查 API：
 
 ```bash
@@ -145,3 +153,14 @@ R2 或额外上传步骤。
 sudo journalctl -u cuit-server -f
 sudo journalctl -u cloudflared -f
 ```
+
+查看最近 30 天接口调用和用户增长：
+
+```bash
+curl --fail \
+  -H "Authorization: Bearer $ADMIN_STATS_TOKEN" \
+  "http://127.0.0.1:8888/api/v1/admin/stats?days=30"
+```
+
+统计数据只包含按接口聚合的请求量、状态码分类、耗时，以及内部用户 ID
+对应的日活记录；不会保存学号、Cookie、请求体或成绩内容。

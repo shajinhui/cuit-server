@@ -34,6 +34,20 @@ JWXT 业务响应包含：
 Cache-Control: no-store
 ```
 
+## 管理员统计
+
+仅在服务端配置 `ADMIN_STATS_TOKEN` 后注册以下接口。它用于查看接口调用量、
+错误量、耗时、新增用户、DAU/WAU/MAU 和热门接口，不保存学号、Cookie、
+请求体或教务数据。
+
+```http
+GET /api/v1/admin/stats?days=30
+Authorization: Bearer <ADMIN_STATS_TOKEN>
+```
+
+`days` 可选，范围为 `1` 到 `365`，默认为 `30`。该接口应仅由管理员直接调用，
+令牌不得放入 Web 或 Android 客户端。
+
 ## 2. 登录与会话
 
 登录成功后，服务端通过 `campus_session` Cookie 识别当前用户：
