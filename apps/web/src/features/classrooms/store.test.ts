@@ -94,7 +94,7 @@ describe('classrooms store', () => {
     readClassroomScheduleCacheMock.mockResolvedValue(null)
     writeClassroomInitializationCacheMock.mockResolvedValue()
     writeClassroomScheduleCacheMock.mockImplementation(async (schedule, cachedAt) => ({
-      version: 1,
+      version: 2,
       semesterID: schedule.SemesterID,
       campusID: schedule.CampusID,
       schedule,
@@ -141,7 +141,7 @@ describe('classrooms store', () => {
       cachedAt,
     })
     readClassroomScheduleCacheMock.mockResolvedValue({
-      version: 1,
+      version: 2,
       semesterID: currentSemester.ID,
       campusID: '1',
       schedule: classroomSchedule,
@@ -209,7 +209,7 @@ describe('classrooms store', () => {
   it('reuses the local semester snapshot without querying the backend again', async () => {
     const cachedAt = new Date('2026-07-24T09:00:00+08:00').getTime()
     readClassroomScheduleCacheMock.mockResolvedValue({
-      version: 1,
+      version: 2,
       semesterID: currentSemester.ID,
       campusID: '1',
       schedule: classroomSchedule,
