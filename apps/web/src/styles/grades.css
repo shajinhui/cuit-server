@@ -69,19 +69,6 @@
   margin-top: 24px;
 }
 
-.semester-select::after {
-  position: absolute;
-  right: 21px;
-  bottom: 22px;
-  width: 8px;
-  height: 8px;
-  pointer-events: none;
-  content: '';
-  border-right: 1.8px solid #5e6066;
-  border-bottom: 1.8px solid #5e6066;
-  transform: rotate(45deg);
-}
-
 .semester-select > span {
   display: block;
   margin: 0 0 8px 3px;
@@ -90,19 +77,16 @@
   letter-spacing: 0.4px;
 }
 
-.semester-select select {
-  appearance: none;
-  -webkit-appearance: none;
+.semester-select .app-select__trigger {
   width: 100%;
   height: 52px;
-  padding: 0 46px 0 17px;
+  padding: 0 17px;
   color: #25252a;
   font-size: 16px;
   font-weight: 540;
   background: rgba(255, 255, 255, 0.7);
   border: 0.5px solid rgba(255, 255, 255, 0.96);
   border-radius: 18px;
-  outline: 0;
   box-shadow:
     0 0.5px 0 rgba(0, 0, 0, 0.1),
     0 8px 24px rgba(40, 43, 49, 0.055);
@@ -110,11 +94,8 @@
   backdrop-filter: blur(24px) saturate(150%);
 }
 
-.semester-select select:focus {
-  border-color: rgba(120, 120, 128, 0.28);
-  box-shadow:
-    0 0 0 3px rgba(118, 118, 128, 0.08),
-    0 8px 24px rgba(40, 43, 49, 0.055);
+.semester-select .app-select__chevron {
+  color: #5e6066;
 }
 
 .grade-summary {

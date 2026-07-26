@@ -14,6 +14,7 @@ import {
 } from '@/features/exams'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import AppSelect from '@/shared/ui/AppSelect.vue'
 
 defineOptions({ name: 'ExamsPage' })
 
@@ -28,6 +29,12 @@ const selectedSemester = computed(() =>
 )
 const selectedBatch = computed(() =>
   store.batches.find((batch) => batch.ID === store.selectedBatchID),
+)
+const semesterOptions = computed(() =>
+  store.semesters.map((semester) => ({
+    value: semester.ID,
+    label: `${semester.SchoolYear} · 第${semester.Term}学期`,
+  })),
 )
 const displayGroups = computed(() =>
   groupExamsByDate(store.exams).map((group) => ({
@@ -72,8 +79,8 @@ watch(
   },
 )
 
-function chooseSemester(event: Event) {
-  void store.changeSemester((event.target as HTMLSelectElement).value)
+function chooseSemester(value: string | number) {
+  void store.changeSemester(String(value))
 }
 
 function chooseBatch(batchID: 'final' | 'makeup') {
@@ -143,19 +150,15 @@ function creditLabel(credits: string) {
         <section class="exam-filter-card" aria-label="考试筛选条件">
           <label class="exam-semester-field">
             <span>学期</span>
-            <span class="exam-select-control">
-              <select
-                :value="store.selectedSemesterID"
-                aria-label="选择学期"
-                :disabled="store.loadingExams"
-                @change="chooseSemester"
-              >
-                <option v-for="semester in store.semesters" :key="semester.ID" :value="semester.ID">
-                  {{ semester.SchoolYear }} · 第{{ semester.Term }}学期
-                </option>
-              </select>
-              <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-            </span>
+            <AppSelect
+              class="exam-select-control"
+              :model-value="store.selectedSemesterID"
+              :options="semesterOptions"
+              title="选择考试学期"
+              aria-label="选择考试学期"
+              :disabled="store.loadingExams"
+              @change="chooseSemester"
+            />
           </label>
 
           <fieldset class="exam-batch-picker">

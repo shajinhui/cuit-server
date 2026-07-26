@@ -13,6 +13,7 @@ import {
 } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import AppSelect from '@/shared/ui/AppSelect.vue'
 import AppShell from '@/shared/ui/AppShell.vue'
 
 defineOptions({ name: 'SchedulePage' })
@@ -22,6 +23,7 @@ const store = useScheduleStore()
 const session = useSessionStore()
 const notice = ref('')
 const moreMenuOpen = ref(false)
+const semesterListOpen = ref(false)
 const moreMenuRef = ref<HTMLElement | null>(null)
 const addCourseOpen = ref(false)
 const addingCourse = ref(false)
@@ -60,6 +62,9 @@ const selectedSemesterLabel = computed(() => {
   return semester ? semesterName(semester.SchoolYear, semester.Term) : '选择学期'
 })
 const selectedWeekday = computed(() => selectedDate.value.getDay() || 7)
+const weekSelectOptions = computed(() =>
+  weekOptions.value.map((week) => ({ value: week, label: `第 ${week} 周` })),
+)
 
 watch(
   () => session.status,
@@ -70,13 +75,18 @@ watch(
   },
 )
 
-function chooseWeek(event: Event) {
-  const nextWeek = Number.parseInt((event.target as HTMLSelectElement).value, 10)
-  selectWeek(nextWeek)
+function chooseWeek(value: string | number) {
+  selectWeek(Number(value))
 }
 
 function toggleMoreMenu() {
   moreMenuOpen.value = !moreMenuOpen.value
+  if (!moreMenuOpen.value) semesterListOpen.value = false
+}
+
+function toggleSemesterList() {
+  if (store.loading || store.semesters.length === 0) return
+  semesterListOpen.value = !semesterListOpen.value
 }
 
 function openAddCourse() {
@@ -85,7 +95,7 @@ function openAddCourse() {
     return
   }
 
-  moreMenuOpen.value = false
+  closeMoreMenu()
   addCourseError.value = ''
   addCourseOpen.value = true
 }
@@ -118,13 +128,17 @@ async function addManualCourse(input: ManualCourseInput) {
 
 function closeMoreMenuFromOutside(event: PointerEvent) {
   if (!moreMenuRef.value?.contains(event.target as Node)) {
-    moreMenuOpen.value = false
+    closeMoreMenu()
   }
 }
 
-async function switchSemester(event: Event) {
-  const semesterID = (event.target as HTMLSelectElement).value
+function closeMoreMenu() {
   moreMenuOpen.value = false
+  semesterListOpen.value = false
+}
+
+async function switchSemester(semesterID: string) {
+  closeMoreMenu()
   if (!semesterID || semesterID === store.selectedSemesterID) return
 
   await store.load({ semesterID })
@@ -166,17 +180,15 @@ async function refreshSchedule() {
         <div>
           <h1>{{ dateTitle }}</h1>
           <p class="schedule-week-control">
-            <label class="schedule-week-select">
-              <select
-                :value="selectedWeek || 1"
-                aria-label="选择教学周"
-                :disabled="store.loading && !store.table"
-                @change="chooseWeek"
-              >
-                <option v-for="week in weekOptions" :key="week" :value="week">第 {{ week }} 周</option>
-              </select>
-              <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>
-            </label>
+            <AppSelect
+              class="schedule-week-select"
+              :model-value="selectedWeek || 1"
+              :options="weekSelectOptions"
+              title="选择教学周"
+              aria-label="选择教学周"
+              :disabled="store.loading && !store.table"
+              @change="chooseWeek"
+            />
             <span v-if="selectedWeekStatus" role="status" :title="store.syncError || store.weekError">
               {{ selectedWeekStatus }}
             </span>
@@ -218,23 +230,55 @@ async function refreshSchedule() {
                 class="schedule-more-menu"
                 aria-label="更多课表操作"
               >
-                <label class="schedule-semester-option">
+                <button
+                  type="button"
+                  class="schedule-semester-option"
+                  aria-controls="schedule-semester-list"
+                  :aria-expanded="semesterListOpen"
+                  :disabled="store.loading || store.semesters.length === 0"
+                  @click="toggleSemesterList"
+                >
                   <span>
                     <strong>切换学期</strong>
                     <small>{{ selectedSemesterLabel }}</small>
                   </span>
-                  <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m4 2 4 4-4 4" /></svg>
-                  <select
-                    :value="store.selectedSemesterID"
-                    aria-label="切换学期"
-                    :disabled="store.loading || store.semesters.length === 0"
-                    @change="switchSemester"
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 12 12"
+                    :class="{ 'is-open': semesterListOpen }"
                   >
-                    <option v-for="semester in store.semesters" :key="semester.ID" :value="semester.ID">
-                      {{ semesterName(semester.SchoolYear, semester.Term) }}
-                    </option>
-                  </select>
-                </label>
+                    <path d="m4 2 4 4-4 4" />
+                  </svg>
+                </button>
+
+                <div
+                  v-if="semesterListOpen"
+                  id="schedule-semester-list"
+                  class="schedule-semester-list"
+                  role="listbox"
+                  aria-label="选择学期"
+                >
+                  <button
+                    v-for="semester in store.semesters"
+                    :key="semester.ID"
+                    type="button"
+                    class="schedule-semester-list__item"
+                    role="option"
+                    :aria-selected="semester.ID === store.selectedSemesterID"
+                    :class="{ 'is-selected': semester.ID === store.selectedSemesterID }"
+                    :disabled="store.loading"
+                    @click="switchSemester(semester.ID)"
+                  >
+                    <span>{{ semesterName(semester.SchoolYear, semester.Term) }}</span>
+                    <svg
+                      v-if="semester.ID === store.selectedSemesterID"
+                      aria-hidden="true"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="m3.5 8.5 3 3 6-7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </Transition>
           </div>

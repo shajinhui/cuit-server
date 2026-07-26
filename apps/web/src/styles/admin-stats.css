@@ -237,7 +237,7 @@
 
 .admin-token-form button:disabled,
 .admin-dashboard-actions button:disabled,
-.admin-dashboard-actions select:disabled {
+.admin-dashboard-actions .app-select__trigger:disabled {
   cursor: default;
   opacity: 0.55;
 }
@@ -287,16 +287,16 @@
   gap: 9px;
 }
 
-.admin-dashboard-actions select {
-  height: 40px;
-  padding: 0 34px 0 13px;
+.admin-dashboard-actions .admin-period-select .app-select__trigger {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
   color: #435069;
   font-size: 13px;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(92, 105, 133, 0.13);
   border-radius: 12px;
-  outline: 0;
   box-shadow: 0 3px 10px rgba(32, 48, 78, 0.04);
 }
 
@@ -684,7 +684,7 @@
     flex: 1;
   }
 
-  .admin-dashboard-actions select {
+  .admin-dashboard-actions .admin-period-select {
     width: 100%;
   }
 

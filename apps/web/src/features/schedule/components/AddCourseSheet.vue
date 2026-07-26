@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import AppSelect from '@/shared/ui/AppSelect.vue'
+
 import type { ManualCourseInput, ManualCourseRepeat } from '../model/manualCourse'
 
 defineOptions({ name: 'AddCourseSheet' })
@@ -21,6 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const weekdayOptions = weekdays.map((label, index) => ({ value: index + 1, label }))
 const repeats: Array<{ value: ManualCourseRepeat; label: string }> = [
   { value: 'weekly', label: '每周' },
   { value: 'odd', label: '单周' },
@@ -42,6 +45,12 @@ const maximumSection = computed(() => Math.max(props.sectionsPerDay, 11))
 const weekOptions = computed(() => Array.from({ length: maximumWeek.value }, (_, index) => index + 1))
 const sectionOptions = computed(() =>
   Array.from({ length: maximumSection.value }, (_, index) => index + 1),
+)
+const sectionSelectOptions = computed(() =>
+  sectionOptions.value.map((section) => ({ value: section, label: `第 ${section} 节` })),
+)
+const weekSelectOptions = computed(() =>
+  weekOptions.value.map((week) => ({ value: week, label: `第 ${week} 周` })),
 )
 const errorMessage = computed(() => props.error || localError.value)
 
@@ -142,28 +151,31 @@ function submit() {
             <div class="add-course-form__group">
               <label>
                 <span>星期</span>
-                <select v-model.number="weekday" name="course-weekday">
-                  <option v-for="(label, index) in weekdays" :key="label" :value="index + 1">
-                    {{ label }}
-                  </option>
-                </select>
+                <AppSelect
+                  v-model="weekday"
+                  :options="weekdayOptions"
+                  title="选择星期"
+                  aria-label="选择星期"
+                />
               </label>
               <div class="add-course-form__split-row">
                 <label>
                   <span>开始节次</span>
-                  <select v-model.number="startSection" name="course-start-section">
-                    <option v-for="section in sectionOptions" :key="section" :value="section">
-                      第 {{ section }} 节
-                    </option>
-                  </select>
+                  <AppSelect
+                    v-model="startSection"
+                    :options="sectionSelectOptions"
+                    title="选择开始节次"
+                    aria-label="选择开始节次"
+                  />
                 </label>
                 <label>
                   <span>结束节次</span>
-                  <select v-model.number="endSection" name="course-end-section">
-                    <option v-for="section in sectionOptions" :key="section" :value="section">
-                      第 {{ section }} 节
-                    </option>
-                  </select>
+                  <AppSelect
+                    v-model="endSection"
+                    :options="sectionSelectOptions"
+                    title="选择结束节次"
+                    aria-label="选择结束节次"
+                  />
                 </label>
               </div>
             </div>
@@ -172,19 +184,21 @@ function submit() {
               <div class="add-course-form__split-row">
                 <label>
                   <span>开始周</span>
-                  <select v-model.number="startWeek" name="course-start-week">
-                    <option v-for="week in weekOptions" :key="week" :value="week">
-                      第 {{ week }} 周
-                    </option>
-                  </select>
+                  <AppSelect
+                    v-model="startWeek"
+                    :options="weekSelectOptions"
+                    title="选择开始周"
+                    aria-label="选择开始周"
+                  />
                 </label>
                 <label>
                   <span>结束周</span>
-                  <select v-model.number="endWeek" name="course-end-week">
-                    <option v-for="week in weekOptions" :key="week" :value="week">
-                      第 {{ week }} 周
-                    </option>
-                  </select>
+                  <AppSelect
+                    v-model="endWeek"
+                    :options="weekSelectOptions"
+                    title="选择结束周"
+                    aria-label="选择结束周"
+                  />
                 </label>
               </div>
               <div class="add-course-form__repeat" role="group" aria-label="上课周次规则">

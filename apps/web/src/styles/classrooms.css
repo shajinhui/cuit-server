@@ -174,13 +174,10 @@ body:has(.classroom-page) {
 }
 
 .classroom-select-control {
-  position: relative;
   display: block;
 }
 
-.classroom-select-control select {
-  appearance: none;
-  -webkit-appearance: none;
+.classroom-select-control .app-select__trigger {
   width: 100%;
   height: 48px;
   padding: 0 38px 0 14px;
@@ -193,27 +190,18 @@ body:has(.classroom-page) {
   background: #f2f2f7;
   border: 0;
   border-radius: 14px;
-  outline: 0;
 }
 
-.classroom-select-control select:disabled {
+.classroom-select-control .app-select__trigger:disabled {
   color: #8e8e93;
   opacity: 0.72;
 }
 
-.classroom-select-control svg {
-  position: absolute;
-  top: 50%;
-  right: 14px;
+.classroom-select-control .app-select__chevron {
   width: 12px;
   height: 12px;
-  pointer-events: none;
-  fill: none;
   stroke: #8e8e93;
-  stroke-linecap: round;
-  stroke-linejoin: round;
   stroke-width: 1.7;
-  transform: translateY(-50%);
 }
 
 .classroom-weekday-picker,
@@ -802,7 +790,7 @@ body:has(.classroom-page) {
   margin-top: 8px;
 }
 
-.classroom-sheet__fields .classroom-select-control select,
+.classroom-sheet__fields .classroom-select-control .app-select__trigger,
 .classroom-capacity-input {
   height: 48px;
   background: #f2f2f7;
@@ -978,7 +966,7 @@ body:has(.classroom-page) {
 
   .classroom-weekday-picker button,
   .classroom-section-picker button,
-  .classroom-select-control select,
+  .classroom-select-control .app-select__trigger,
   .classroom-capacity-input {
     border: 1px solid rgba(28, 28, 30, 0.22);
   }

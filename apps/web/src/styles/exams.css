@@ -175,16 +175,13 @@ body:has(.exam-page) {
 }
 
 .exam-select-control {
-  position: relative;
   display: block;
 }
 
-.exam-select-control select {
-  appearance: none;
-  -webkit-appearance: none;
+.exam-select-control .app-select__trigger {
   width: 100%;
   height: 44px;
-  padding: 0 38px 0 14px;
+  padding: 0 14px;
   overflow: hidden;
   color: #1c1c1e;
   font-size: 15px;
@@ -194,27 +191,18 @@ body:has(.exam-page) {
   background: #f2f2f7;
   border: 0;
   border-radius: 13px;
-  outline: 0;
 }
 
-.exam-select-control select:disabled {
+.exam-select-control .app-select__trigger:disabled {
   color: #8e8e93;
   opacity: 0.72;
 }
 
-.exam-select-control svg {
-  position: absolute;
-  top: 50%;
-  right: 14px;
+.exam-select-control .app-select__chevron {
   width: 12px;
   height: 12px;
-  pointer-events: none;
-  fill: none;
   stroke: #8e8e93;
-  stroke-linecap: round;
-  stroke-linejoin: round;
   stroke-width: 1.7;
-  transform: translateY(-50%);
 }
 
 .exam-batch-picker {
@@ -768,7 +756,7 @@ body:has(.exam-page) {
 }
 
 .exam-page button:focus-visible,
-.exam-page select:focus-visible {
+.exam-page .app-select__trigger:focus-visible {
   outline-color: rgba(0, 136, 255, 0.55);
 }
 
