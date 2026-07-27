@@ -271,13 +271,6 @@ function handleSheetKeydown(event: KeyboardEvent) {
               <span v-if="store.loadingResults" role="status">正在准备学期数据…</span>
               <template v-else-if="store.hasSearched && cachedAtLabel">
                 <span>{{ store.usingCachedSchedule ? '本地数据' : '已缓存' }} · {{ cachedAtLabel }}</span>
-                <button
-                  type="button"
-                  :disabled="store.refreshingSchedule"
-                  @click="store.refreshSchedule"
-                >
-                  {{ store.refreshingSchedule ? '更新中…' : '更新' }}
-                </button>
               </template>
             </div>
           </header>

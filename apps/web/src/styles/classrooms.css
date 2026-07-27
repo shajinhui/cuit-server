@@ -431,21 +431,6 @@ body:has(.classroom-page) {
   white-space: nowrap;
 }
 
-.classroom-results-heading__status button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 4px;
-  color: #0088ff;
-  font-size: 12px;
-  font-weight: 600;
-  background: transparent;
-  border: 0;
-}
-
-.classroom-results-heading__status button:disabled {
-  color: #8e8e93;
-}
-
 .classroom-result-notice {
   margin: -2px 2px 10px;
   color: #636366;
