@@ -66,22 +66,22 @@
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: clamp(10px, 3vw, 12px);
   margin-top: 20px;
 }
 
 .tools-grid button {
   display: flex;
-  min-height: 128px;
-  padding: 16px 10px 14px;
+  min-height: clamp(112px, 31vw, 128px);
+  padding: clamp(12px, 3.7vw, 16px) 10px clamp(11px, 3.2vw, 14px);
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 9px;
+  gap: clamp(6px, 2vw, 9px);
   color: #242428;
   background: rgba(255, 255, 255, 0.58);
   border: 0.5px solid rgba(255, 255, 255, 0.82);
-  border-radius: 22px;
+  border-radius: clamp(20px, 5.2vw, 22px);
   box-shadow:
     0 0.5px 0 rgba(0, 0, 0, 0.09),
     0 12px 30px rgba(38, 42, 48, 0.065);
@@ -103,8 +103,8 @@
 }
 
 .tools-grid img {
-  width: 66px;
-  height: 66px;
+  width: clamp(54px, 15.5vw, 66px);
+  height: clamp(54px, 15.5vw, 66px);
   object-fit: contain;
 }
 
@@ -115,13 +115,20 @@
 }
 
 .tools-grid .tool-label {
-  font-size: 17px;
+  font-size: clamp(15px, 4vw, 17px);
   font-weight: 590;
 }
 
 .tools-grid small {
   color: #8e8e93;
-  font-size: 11px;
+  font-size: clamp(10px, 2.6vw, 11px);
   font-weight: 500;
   letter-spacing: 0.04em;
+}
+
+@media (max-width: 380px) {
+  .tools-page.page-padding {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
 }
