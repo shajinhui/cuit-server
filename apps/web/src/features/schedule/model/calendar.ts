@@ -97,6 +97,7 @@ export function buildCourseBlocks(
 ): CourseBlock[] {
   const blocks: CourseBlock[] = []
   for (const course of courses ?? []) {
+    const identity = course.LessonID || course.Code || course.Name
     const groupedActivities = new Map<string, NonNullable<Course['Activities']>>()
     for (const activity of course.Activities ?? []) {
       if (
@@ -114,6 +115,7 @@ export function buildCourseBlocks(
       groupedActivities.set(key, activities)
     }
 
+    const courseBlocks: CourseBlock[] = []
     for (const activities of groupedActivities.values()) {
       const firstActivity = activities[0]
       const arrangements = buildArrangements(activities)
@@ -126,9 +128,7 @@ export function buildCourseBlocks(
           : [nearestArrangement(arrangements, selectedWeek)]
       const activityWeeks = uniqueNumbers(arrangements.flatMap((arrangement) => arrangement.weeks))
       const muted = selectedWeek > 0 && activeArrangements.length === 0
-      const identity = course.LessonID || course.Code || course.Name
-
-      blocks.push({
+      courseBlocks.push({
         id: `${identity}-${firstActivity.Weekday}-${firstActivity.StartSection}-${firstActivity.EndSection}`,
         name: course.Name || '未命名课程',
         room: uniqueStrings(visibleArrangements.map((arrangement) => arrangement.room)).join(' / '),
@@ -149,6 +149,7 @@ export function buildCourseBlocks(
         muted,
       })
     }
+    blocks.push(...mergeContinuousCourseBlocks(courseBlocks, identity))
   }
   for (const course of manualCourses) {
     const muted = selectedWeek > 0 && !course.weeks.includes(selectedWeek)
@@ -226,9 +227,13 @@ function buildArrangements(activities: NonNullable<Course['Activities']>): Cours
     })
   }
 
-  return [...arrangements.values()].sort(
-    (left, right) => (left.weeks[0] ?? 0) - (right.weeks[0] ?? 0),
-  )
+  return [...arrangements.values()].sort((left, right) => {
+    const weekDifference = (left.weeks[0] ?? 0) - (right.weeks[0] ?? 0)
+    if (weekDifference !== 0) return weekDifference
+    const roomDifference = left.room.localeCompare(right.room)
+    if (roomDifference !== 0) return roomDifference
+    return left.teachers.join('\u0000').localeCompare(right.teachers.join('\u0000'))
+  })
 }
 
 function mergeWeeks(left: number[], right: number[]) {
@@ -251,4 +256,44 @@ function nearestArrangement(arrangements: CourseArrangement[], selectedWeek: num
 function distanceToWeeks(weeks: number[], selectedWeek: number) {
   if (selectedWeek <= 0 || weeks.length === 0) return 0
   return Math.min(...weeks.map((week) => Math.abs(week - selectedWeek)))
+}
+
+function mergeContinuousCourseBlocks(courseBlocks: CourseBlock[], identity: string) {
+  const merged: CourseBlock[] = []
+  const sortedBlocks = [...courseBlocks].sort(
+    (left, right) => left.day - right.day || left.start - right.start,
+  )
+
+  for (const block of sortedBlocks) {
+    const previous = merged[merged.length - 1]
+    if (!previous || !canMergeCourseBlocks(previous, block)) {
+      merged.push(block)
+      continue
+    }
+
+    const previousEnd = previous.start + previous.span - 1
+    const blockEnd = block.start + block.span - 1
+    previous.span = Math.max(previousEnd, blockEnd) - previous.start + 1
+    previous.id = `${identity}-${previous.day}-${previous.start}-${previous.start + previous.span - 1}`
+  }
+
+  return merged
+}
+
+function canMergeCourseBlocks(left: CourseBlock, right: CourseBlock) {
+  const leftEnd = left.start + left.span - 1
+  return (
+    left.day === right.day &&
+    right.start <= leftEnd + 1 &&
+    arrangementSignature(left.arrangements) === arrangementSignature(right.arrangements)
+  )
+}
+
+function arrangementSignature(arrangements: CourseArrangement[]) {
+  return arrangements
+    .map(
+      (arrangement) =>
+        `${arrangement.room}\u0000${arrangement.teachers.join('\u0000')}\u0000${arrangement.weeks.join(',')}`,
+    )
+    .join('\u0001')
 }
