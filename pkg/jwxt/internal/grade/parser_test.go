@@ -85,15 +85,15 @@ func TestParseGradesSupportsMakeupScoreColumn(t *testing.T) {
 	}
 }
 
-func TestParseGradesAllowsMissingUsualScoreColumn(t *testing.T) {
+func TestParseGradesAllowsMissingScoreColumns(t *testing.T) {
 	body := []byte(`<table class="gridtable">
 <thead><tr>
 <th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th>
-<th>学分</th><th>期末成绩</th><th>总评成绩</th><th>最终</th><th>绩点</th>
+<th>学分</th><th>总评成绩</th><th>最终</th><th>绩点</th>
 </tr></thead>
 <tbody><tr>
 <td>2026-2027 1</td><td>COURSE003</td><td>COURSE003.001</td><td>新学期课程</td><td>专业课</td>
-<td>2</td><td>88</td><td>88</td><td>88</td><td>3.8</td>
+<td>2</td><td>88</td><td>88</td><td>3.8</td>
 </tr></tbody></table>`)
 
 	grades, err := ParseGrades(body)
@@ -104,22 +104,65 @@ func TestParseGradesAllowsMissingUsualScoreColumn(t *testing.T) {
 		t.Fatalf("unexpected grade count: %d", len(grades))
 	}
 	grade := grades[0]
-	if grade.UsualScore != "" || grade.FinalExamScore != "88" ||
+	if grade.UsualScore != "" || grade.FinalExamScore != "" ||
 		grade.OverallScore != "88" || grade.FinalScore != "88" ||
 		grade.GradePoint != "3.8" {
-		t.Fatalf("unexpected score mapping without usual score: %+v", grade)
+		t.Fatalf("unexpected score mapping with missing columns: %+v", grade)
 	}
 }
 
-func TestParseGradesReportsUnexpectedRowAndColumn(t *testing.T) {
+func TestParseGradesAllowsVariableRowLengths(t *testing.T) {
+	body := []byte(`<table class="gridtable">
+<thead><tr>
+<th>课程名称</th><th>学分</th><th>期末成绩</th><th>最终成绩</th><th>绩点</th>
+</tr></thead>
+<tbody>
+<tr><td>短行课程</td><td>2</td><td>80</td></tr>
+<tr><td>长行课程</td><td>1</td><td>90</td><td>90</td><td>4</td><td>额外字段</td></tr>
+</tbody></table>`)
+
+	grades, err := ParseGrades(body)
+	if err != nil {
+		t.Fatalf("ParseGrades returned error for variable row lengths: %v", err)
+	}
+	if len(grades) != 2 {
+		t.Fatalf("unexpected grade count: %d", len(grades))
+	}
+	if grades[0].CourseName != "短行课程" || grades[0].FinalExamScore != "80" ||
+		grades[0].FinalScore != "" || grades[0].GradePoint != "" {
+		t.Fatalf("unexpected short row: %+v", grades[0])
+	}
+	if grades[1].CourseName != "长行课程" || grades[1].FinalScore != "90" ||
+		grades[1].GradePoint != "4" {
+		t.Fatalf("unexpected long row: %+v", grades[1])
+	}
+}
+
+func TestParseGradesTreatsPlaceholderRowAsEmpty(t *testing.T) {
 	body := []byte(`<table class="gridtable">
 <thead><tr>
 <th>学年学期</th><th>课程代码</th><th>课程序号</th><th>课程名称</th><th>课程类别</th>
 <th>学分</th><th>平时成绩</th><th>期末成绩</th><th>总评成绩</th><th>最终</th><th>绩点</th>
 </tr></thead>
 <tbody><tr><td colspan="11">暂无数据</td></tr></tbody></table>`)
+
+	grades, err := ParseGrades(body)
+	if err != nil {
+		t.Fatalf("ParseGrades returned error for placeholder row: %v", err)
+	}
+	if len(grades) != 0 {
+		t.Fatalf("unexpected grades parsed from placeholder row: %+v", grades)
+	}
+}
+
+func TestParseGradesRejectsUnrecognizedTable(t *testing.T) {
+	body := []byte(`<table class="gridtable">
+<thead><tr><th>未知字段</th></tr></thead>
+<tbody><tr><td>未知内容</td></tr></tbody>
+</table>`)
+
 	_, err := ParseGrades(body)
-	if err == nil || !strings.Contains(err.Error(), "row=1 columns=1") {
+	if err == nil || !strings.Contains(err.Error(), "grade columns not recognized") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

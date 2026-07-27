@@ -7,7 +7,6 @@ package grade
 
 import (
 	"bytes"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -69,27 +68,23 @@ func ParseGrades(body []byte) ([]Grade, error) {
 		return nil, err
 	}
 	grades := make([]Grade, 0)
-	var parseErr error
-	table.Find("tbody tr").EachWithBreak(func(index int, row *goquery.Selection) bool {
+	table.Find("tbody tr").Each(func(_ int, row *goquery.Selection) {
 		cells := row.Find("td")
-		if cells.Length() == 0 && normalizeText(row.Text()) == "" {
-			return true
+		if isEmptyGradeRow(row, cells) {
+			return
 		}
-		if cells.Length() != columns.count {
-			message := fmt.Sprintf("unexpected grade column count: row=%d columns=%d", index+1, cells.Length())
-			parseErr = jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, message)
-			return false
+		grade := gradeFromCells(cells, columns)
+		if !isEmptyGrade(grade) {
+			grades = append(grades, grade)
 		}
-		grades = append(grades, gradeFromCells(cells, columns))
-		return true
 	})
-	return grades, parseErr
+	return grades, nil
 }
 
 func hasGradeRows(table *goquery.Selection) bool {
 	hasRows := false
 	table.Find("tbody tr").EachWithBreak(func(_ int, row *goquery.Selection) bool {
-		if normalizeText(row.Text()) == "" {
+		if isEmptyGradeRow(row, row.Find("td")) {
 			return true
 		}
 		hasRows = true
@@ -99,7 +94,6 @@ func hasGradeRows(table *goquery.Selection) bool {
 }
 
 type gradeColumns struct {
-	count          int
 	schoolYearTerm int
 	courseCode     int
 	courseSequence int
@@ -124,61 +118,50 @@ func parseGradeColumns(table *goquery.Selection) (gradeColumns, error) {
 		headers[index] = normalizeText(cell.Text())
 	})
 
-	required := func(names ...string) (int, error) {
+	find := func(names ...string) int {
 		for index, header := range headers {
 			for _, name := range names {
 				if header == name {
-					return index, nil
+					return index
 				}
 			}
 		}
-		return -1, jwxterr.WithMessage(
-			jwxterr.ErrGradeQueryFailed,
-			fmt.Sprintf("grade column not found: %s", names[0]),
-		)
-	}
-	optional := func(names ...string) int {
-		index, _ := required(names...)
-		return index
+		return -1
 	}
 
 	columns := gradeColumns{
-		count:       len(headers),
-		usualScore:  optional("平时成绩"),
-		makeupScore: optional("补考成绩"),
+		schoolYearTerm: find("学年学期", "学期"),
+		courseCode:     find("课程代码", "课程编号"),
+		courseSequence: find("课程序号"),
+		courseName:     find("课程名称", "课程"),
+		courseCategory: find("课程类别", "课程性质"),
+		credits:        find("学分"),
+		usualScore:     find("平时成绩", "平时", "过程成绩", "平时分"),
+		finalExamScore: find("期末成绩", "期末", "考试成绩"),
+		makeupScore:    find("补考成绩", "补考"),
+		overallScore:   find("总评成绩", "总评"),
+		finalScore:     find("最终", "最终成绩", "成绩"),
+		gradePoint:     find("绩点"),
 	}
-	var err error
-	if columns.schoolYearTerm, err = required("学年学期"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.courseCode, err = required("课程代码"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.courseSequence, err = required("课程序号"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.courseName, err = required("课程名称"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.courseCategory, err = required("课程类别"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.credits, err = required("学分"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.finalExamScore, err = required("期末成绩"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.overallScore, err = required("总评成绩"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.finalScore, err = required("最终", "最终成绩"); err != nil {
-		return gradeColumns{}, err
-	}
-	if columns.gradePoint, err = required("绩点"); err != nil {
-		return gradeColumns{}, err
+	if !columns.hasRecognizedColumn() {
+		return gradeColumns{}, jwxterr.WithMessage(jwxterr.ErrGradeQueryFailed, "grade columns not recognized")
 	}
 	return columns, nil
+}
+
+func (columns gradeColumns) hasRecognizedColumn() bool {
+	return columns.schoolYearTerm >= 0 ||
+		columns.courseCode >= 0 ||
+		columns.courseSequence >= 0 ||
+		columns.courseName >= 0 ||
+		columns.courseCategory >= 0 ||
+		columns.credits >= 0 ||
+		columns.usualScore >= 0 ||
+		columns.finalExamScore >= 0 ||
+		columns.makeupScore >= 0 ||
+		columns.overallScore >= 0 ||
+		columns.finalScore >= 0 ||
+		columns.gradePoint >= 0
 }
 
 func gradeFromCells(cells *goquery.Selection, columns gradeColumns) Grade {
@@ -196,6 +179,36 @@ func gradeFromCells(cells *goquery.Selection, columns gradeColumns) Grade {
 		FinalScore:     gradeCellText(cells, columns.finalScore),
 		GradePoint:     gradeCellText(cells, columns.gradePoint),
 	}
+}
+
+func isEmptyGradeRow(row *goquery.Selection, cells *goquery.Selection) bool {
+	text := normalizeText(row.Text())
+	if text == "" {
+		return true
+	}
+	if cells.Length() != 1 {
+		return false
+	}
+	placeholder := strings.ReplaceAll(text, " ", "")
+	return strings.Contains(placeholder, "暂无") ||
+		strings.Contains(placeholder, "无数据") ||
+		strings.Contains(placeholder, "未查询到") ||
+		strings.Contains(placeholder, "没有")
+}
+
+func isEmptyGrade(grade Grade) bool {
+	return grade.SchoolYearTerm == "" &&
+		grade.CourseCode == "" &&
+		grade.CourseSequence == "" &&
+		grade.CourseName == "" &&
+		grade.CourseCategory == "" &&
+		grade.Credits == "" &&
+		grade.UsualScore == "" &&
+		grade.FinalExamScore == "" &&
+		grade.MakeupScore == "" &&
+		grade.OverallScore == "" &&
+		grade.FinalScore == "" &&
+		grade.GradePoint == ""
 }
 
 func gradeCellText(cells *goquery.Selection, index int) string {
