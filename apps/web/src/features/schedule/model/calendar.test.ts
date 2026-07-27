@@ -123,13 +123,27 @@ describe('schedule calendar model', () => {
       createActivity({
         Weekday: 4,
         StartSection: 1,
-        EndSection: 2,
+        EndSection: 1,
         RoomName: 'H1502',
         Weeks: [5, 6, 7, 8],
       }),
       createActivity({
         Weekday: 4,
         StartSection: 1,
+        EndSection: 1,
+        RoomName: 'H1307',
+        Weeks: [9, 10, 11, 12],
+      }),
+      createActivity({
+        Weekday: 4,
+        StartSection: 2,
+        EndSection: 2,
+        RoomName: 'H1502',
+        Weeks: [5, 6, 7, 8],
+      }),
+      createActivity({
+        Weekday: 4,
+        StartSection: 2,
         EndSection: 2,
         RoomName: 'H1307',
         Weeks: [9, 10, 11, 12],
@@ -157,10 +171,10 @@ describe('schedule calendar model', () => {
     ])
   })
 
-  it('keeps different time slots from the same course as separate cards', () => {
+  it('keeps non-continuous time slots from the same course as separate cards', () => {
     const course = createCourse('大学英语', [
       createActivity({ Weekday: 2, StartSection: 1, EndSection: 2 }),
-      createActivity({ Weekday: 2, StartSection: 3, EndSection: 4 }),
+      createActivity({ Weekday: 2, StartSection: 5, EndSection: 6 }),
     ])
 
     expect(buildCourseBlocks([course], 1)).toHaveLength(2)
