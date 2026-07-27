@@ -18,7 +18,7 @@ export interface WeekDate {
   active: boolean
 }
 
-export interface CourseBlock {
+export interface CourseSlotCourse {
   id: string
   name: string
   room: string
@@ -29,11 +29,16 @@ export interface CourseBlock {
   weeks: number[]
   arrangements: CourseArrangement[]
   source: 'jwxt' | 'manual'
+  tone: CourseTone
+  muted: boolean
+}
+
+export interface CourseBlock extends CourseSlotCourse {
   day: number
   start: number
   span: number
-  tone: CourseTone
-  muted: boolean
+  courses: CourseSlotCourse[]
+  conflict: boolean
 }
 
 export interface CourseArrangement {
@@ -147,6 +152,8 @@ export function buildCourseBlocks(
         span: firstActivity.EndSection - firstActivity.StartSection + 1,
         tone: toneForCourse(course.Code || identity),
         muted,
+        courses: [],
+        conflict: false,
       })
     }
     blocks.push(...mergeContinuousCourseBlocks(courseBlocks, identity))
@@ -175,9 +182,13 @@ export function buildCourseBlocks(
       span: course.endSection - course.startSection + 1,
       tone: toneForCourse(course.id),
       muted,
+      courses: [],
+      conflict: false,
     })
   }
-  return blocks.sort((left, right) => Number(left.muted) - Number(right.muted))
+  return groupCourseSlots(blocks, selectedWeek).sort(
+    (left, right) => Number(left.muted) - Number(right.muted),
+  )
 }
 
 export function buildTimeSlots(courses: CourseBlock[]): TimeSlot[] {
@@ -296,4 +307,70 @@ function arrangementSignature(arrangements: CourseArrangement[]) {
         `${arrangement.room}\u0000${arrangement.teachers.join('\u0000')}\u0000${arrangement.weeks.join(',')}`,
     )
     .join('\u0001')
+}
+
+function groupCourseSlots(blocks: CourseBlock[], selectedWeek: number) {
+  const slots = new Map<string, CourseBlock[]>()
+  for (const block of blocks) {
+    const key = `${block.day}-${block.start}-${block.span}`
+    const courses = slots.get(key) ?? []
+    courses.push(block)
+    slots.set(key, courses)
+  }
+
+  return [...slots.values()].map((slotBlocks) => {
+    if (slotBlocks.length === 1) {
+      const onlyBlock = slotBlocks[0]
+      return {
+        ...onlyBlock,
+        courses: [toSlotCourse(onlyBlock)],
+        conflict: false,
+      }
+    }
+
+    const activeBlocks = slotBlocks.filter((block) => !block.muted)
+    const primary =
+      activeBlocks[0] ??
+      slotBlocks.reduce((nearest, block) =>
+        distanceToWeeks(block.weeks, selectedWeek) < distanceToWeeks(nearest.weeks, selectedWeek)
+          ? block
+          : nearest,
+      )
+    const courses = slotBlocks.map(toSlotCourse).sort((left, right) => {
+      const mutedDifference = Number(left.muted) - Number(right.muted)
+      if (mutedDifference !== 0) return mutedDifference
+      return (left.weeks[0] ?? 0) - (right.weeks[0] ?? 0) || left.name.localeCompare(right.name)
+    })
+
+    return {
+      ...primary,
+      id: `slot-${primary.day}-${primary.start}-${primary.span}-${courses
+        .map((course) => course.id)
+        .sort()
+        .join('|')}`,
+      courses,
+      conflict: selectedWeek > 0 && activeBlocks.length > 1,
+    }
+  })
+}
+
+function toSlotCourse(block: CourseBlock): CourseSlotCourse {
+  return {
+    id: block.id,
+    name: block.name,
+    room: block.room,
+    code: block.code,
+    credits: block.credits,
+    teachingClass: block.teachingClass,
+    teachers: [...block.teachers],
+    weeks: [...block.weeks],
+    arrangements: block.arrangements.map((arrangement) => ({
+      room: arrangement.room,
+      teachers: [...arrangement.teachers],
+      weeks: [...arrangement.weeks],
+    })),
+    source: block.source,
+    tone: block.tone,
+    muted: block.muted,
+  }
 }

@@ -499,7 +499,7 @@
   overflow-wrap: anywhere;
 }
 
-.course-block.is-muted {
+.course-block.has-status {
   padding-bottom: 18px;
 }
 
@@ -554,6 +554,11 @@
   white-space: nowrap;
   background: rgba(255, 255, 255, 0.52);
   border-radius: 4px;
+}
+
+.course-block__status--conflict {
+  color: #8f3038;
+  background: rgba(255, 244, 244, 0.74);
 }
 
 .course-detail-backdrop {

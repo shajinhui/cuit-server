@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 
-import type { CourseBlock } from '../model/calendar'
+import type { CourseBlock, CourseSlotCourse } from '../model/calendar'
 
 defineOptions({ name: 'CourseDetailSheet' })
 
@@ -25,6 +25,16 @@ const timeLabel = computed(() => {
 
 const detailRows = computed(() => {
   if (!props.course) return []
+
+  if (props.course.courses.length > 1) {
+    return [
+      { label: '上课时间', value: timeLabel.value },
+      {
+        label: '课程安排',
+        value: props.course.courses.map(formatSlotCourse).join('\n\n'),
+      },
+    ]
+  }
 
   const arrangementRows =
     props.course.arrangements.length > 1
@@ -60,6 +70,14 @@ watch(
 
 function close() {
   emit('close')
+}
+
+function formatSlotCourse(course: CourseSlotCourse) {
+  const arrangements = course.arrangements
+    .map((arrangement) => `${formatWeeks(arrangement.weeks)} · ${arrangement.room}`)
+    .join('；')
+  const teachers = course.teachers.length > 0 ? ` · ${course.teachers.join('、')}` : ''
+  return `${course.name}\n${arrangements}${teachers}`
 }
 
 function formatWeeks(weeks: number[]) {
@@ -111,8 +129,15 @@ function formatWeeks(weeks: number[]) {
             />
             <div>
               <p>
-                {{ course.source === 'manual' ? '本机添加' : '课程详情' }}
-                <span v-if="course.muted">非本周</span>
+                {{
+                  course.courses.length > 1
+                    ? '时段详情'
+                    : course.source === 'manual'
+                      ? '本机添加'
+                      : '课程详情'
+                }}
+                <span v-if="course.conflict">课程冲突</span>
+                <span v-else-if="course.muted">非本周</span>
               </p>
               <h2 id="course-detail-title">{{ course.name }}</h2>
             </div>

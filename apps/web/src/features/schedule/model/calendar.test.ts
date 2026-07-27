@@ -193,6 +193,72 @@ describe('schedule calendar model', () => {
       arrangements: [{ room: 'H2101', teachers: [], weeks: [] }],
     })
   })
+
+  it('shows the course active in the selected week when courses share one time slot', () => {
+    const english = createCourse('大学英语1', [
+      createActivity({
+        Weekday: 2,
+        StartSection: 5,
+        EndSection: 6,
+        RoomName: 'H4502',
+        Weeks: Array.from({ length: 12 }, (_, index) => index + 3),
+      }),
+    ])
+    const politics = createCourse('形势与政策Ⅰ', [
+      createActivity({
+        Weekday: 2,
+        StartSection: 5,
+        EndSection: 6,
+        RoomName: 'H1202',
+        Weeks: [16, 17],
+      }),
+    ])
+
+    const englishWeek = buildCourseBlocks([english, politics], 6)
+    const politicsWeek = buildCourseBlocks([english, politics], 16)
+    const inactiveWeek = buildCourseBlocks([english, politics], 1)
+
+    expect(englishWeek).toHaveLength(1)
+    expect(englishWeek[0]).toMatchObject({
+      name: '大学英语1',
+      room: 'H4502',
+      conflict: false,
+      muted: false,
+    })
+    expect(englishWeek[0].courses.map((course) => course.name)).toEqual([
+      '大学英语1',
+      '形势与政策Ⅰ',
+    ])
+    expect(politicsWeek).toHaveLength(1)
+    expect(politicsWeek[0]).toMatchObject({
+      name: '形势与政策Ⅰ',
+      room: 'H1202',
+      conflict: false,
+      muted: false,
+    })
+    expect(inactiveWeek).toHaveLength(1)
+    expect(inactiveWeek[0]).toMatchObject({
+      name: '大学英语1',
+      room: 'H4502',
+      conflict: false,
+      muted: true,
+    })
+  })
+
+  it('marks a real same-week overlap as a course conflict', () => {
+    const first = createCourse('课程A', [
+      createActivity({ Weekday: 3, StartSection: 3, EndSection: 4, Weeks: [4, 5] }),
+    ])
+    const second = createCourse('课程B', [
+      createActivity({ Weekday: 3, StartSection: 3, EndSection: 4, Weeks: [5, 6] }),
+    ])
+
+    const blocks = buildCourseBlocks([first, second], 5)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]).toMatchObject({ name: '课程A', conflict: true, muted: false })
+    expect(blocks[0].courses.map((course) => course.name)).toEqual(['课程A', '课程B'])
+  })
 })
 
 function createCourse(name: string, activities: CourseActivity[]): Course {
