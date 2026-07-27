@@ -37,17 +37,29 @@ const emit = defineEmits<{
       :key="course.id"
       type="button"
       class="course-block"
-      :class="[`course-block--${course.tone}`, { 'is-muted': course.muted }]"
+      :class="[
+        `course-block--${course.tone}`,
+        {
+          'is-muted': course.muted,
+          'has-status': course.muted || course.conflict,
+        },
+      ]"
       :style="{
         gridColumn: course.day + 1,
         gridRow: `${course.start} / span ${course.span}`,
       }"
-      :aria-label="`${course.name}，${course.room}，查看课程详情`"
+      :aria-label="`${course.name}，${course.room}${course.conflict ? '，课程冲突' : ''}，查看课程详情`"
       @click="emit('select', course)"
     >
       <strong class="course-block__name">{{ course.name }}</strong>
       <span class="course-block__room">@{{ course.room }}</span>
-      <small v-if="course.muted" class="course-block__status">非本周</small>
+      <small
+        v-if="course.conflict"
+        class="course-block__status course-block__status--conflict"
+      >
+        课程冲突
+      </small>
+      <small v-else-if="course.muted" class="course-block__status">非本周</small>
     </button>
   </div>
 </template>
