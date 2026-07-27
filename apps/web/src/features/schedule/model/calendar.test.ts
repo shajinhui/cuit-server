@@ -107,7 +107,76 @@ describe('schedule calendar model', () => {
       teachingClass: '软件工程 1 班',
       teachers: ['李老师', '张老师'],
       weeks: [1, 2, 3, 5],
+      arrangements: [
+        {
+          room: 'H1208',
+          teachers: ['张老师'],
+          weeks: [1, 2, 3, 5],
+        },
+      ],
       source: 'jwxt',
+    })
+  })
+
+  it('combines room and week variants that share the same course time', () => {
+    const course = createCourse('C语言程序设计', [
+      createActivity({
+        Weekday: 4,
+        StartSection: 1,
+        EndSection: 2,
+        RoomName: 'H1502',
+        Weeks: [5, 6, 7, 8],
+      }),
+      createActivity({
+        Weekday: 4,
+        StartSection: 1,
+        EndSection: 2,
+        RoomName: 'H1307',
+        Weeks: [9, 10, 11, 12],
+      }),
+    ])
+
+    const beforeCourseStarts = buildCourseBlocks([course], 1)
+    const firstArrangement = buildCourseBlocks([course], 6)
+    const secondArrangement = buildCourseBlocks([course], 10)
+
+    expect(beforeCourseStarts).toHaveLength(1)
+    expect(beforeCourseStarts[0]).toMatchObject({
+      room: 'H1502',
+      start: 1,
+      span: 2,
+      muted: true,
+    })
+    expect(firstArrangement).toHaveLength(1)
+    expect(firstArrangement[0]).toMatchObject({ room: 'H1502', muted: false })
+    expect(secondArrangement).toHaveLength(1)
+    expect(secondArrangement[0]).toMatchObject({ room: 'H1307', muted: false })
+    expect(secondArrangement[0].arrangements).toEqual([
+      { room: 'H1502', teachers: [], weeks: [5, 6, 7, 8] },
+      { room: 'H1307', teachers: [], weeks: [9, 10, 11, 12] },
+    ])
+  })
+
+  it('keeps different time slots from the same course as separate cards', () => {
+    const course = createCourse('大学英语', [
+      createActivity({ Weekday: 2, StartSection: 1, EndSection: 2 }),
+      createActivity({ Weekday: 2, StartSection: 3, EndSection: 4 }),
+    ])
+
+    expect(buildCourseBlocks([course], 1)).toHaveLength(2)
+  })
+
+  it('preserves an every-week arrangement when duplicate activities are combined', () => {
+    const course = createCourse('每周课程', [
+      createActivity({ RoomName: 'H2101', Weeks: [] }),
+      createActivity({ RoomName: 'H2101', Weeks: [5, 6] }),
+    ])
+
+    expect(buildCourseBlocks([course], 12)[0]).toMatchObject({
+      room: 'H2101',
+      weeks: [],
+      muted: false,
+      arrangements: [{ room: 'H2101', teachers: [], weeks: [] }],
     })
   })
 })

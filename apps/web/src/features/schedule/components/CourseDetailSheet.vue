@@ -26,10 +26,24 @@ const timeLabel = computed(() => {
 const detailRows = computed(() => {
   if (!props.course) return []
 
+  const arrangementRows =
+    props.course.arrangements.length > 1
+      ? [
+          {
+            label: '上课安排',
+            value: props.course.arrangements
+              .map((arrangement) => `${formatWeeks(arrangement.weeks)} · ${arrangement.room}`)
+              .join('\n'),
+          },
+        ]
+      : [
+          { label: '上课地点', value: props.course.room },
+          { label: '教学周', value: formatWeeks(props.course.weeks) },
+        ]
+
   return [
-    { label: '上课地点', value: props.course.room },
     { label: '上课时间', value: timeLabel.value },
-    { label: '教学周', value: formatWeeks(props.course.weeks) },
+    ...arrangementRows,
     { label: '任课教师', value: props.course.teachers.join('、') || '教师待定' },
     ...(props.course.code ? [{ label: '课程代码', value: props.course.code }] : []),
     ...(props.course.credits ? [{ label: '学分', value: props.course.credits }] : []),
