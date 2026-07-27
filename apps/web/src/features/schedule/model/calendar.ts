@@ -27,12 +27,19 @@ export interface CourseBlock {
   teachingClass: string
   teachers: string[]
   weeks: number[]
+  arrangements: CourseArrangement[]
   source: 'jwxt' | 'manual'
   day: number
   start: number
   span: number
   tone: CourseTone
   muted: boolean
+}
+
+export interface CourseArrangement {
+  room: string
+  teachers: string[]
+  weeks: number[]
 }
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
@@ -90,7 +97,8 @@ export function buildCourseBlocks(
 ): CourseBlock[] {
   const blocks: CourseBlock[] = []
   for (const course of courses ?? []) {
-    for (const [activityIndex, activity] of (course.Activities ?? []).entries()) {
+    const groupedActivities = new Map<string, NonNullable<Course['Activities']>>()
+    for (const activity of course.Activities ?? []) {
       if (
         activity.Weekday < 1 ||
         activity.Weekday > 7 ||
@@ -100,22 +108,44 @@ export function buildCourseBlocks(
         continue
       }
 
-      const activityWeeks = activity.Weeks ?? []
-      const muted = selectedWeek > 0 && activityWeeks.length > 0 && !activityWeeks.includes(selectedWeek)
+      const key = `${activity.Weekday}-${activity.StartSection}-${activity.EndSection}`
+      const activities = groupedActivities.get(key) ?? []
+      activities.push(activity)
+      groupedActivities.set(key, activities)
+    }
+
+    for (const activities of groupedActivities.values()) {
+      const firstActivity = activities[0]
+      const arrangements = buildArrangements(activities)
+      const activeArrangements = arrangements.filter((arrangement) =>
+        isArrangementActive(arrangement, selectedWeek),
+      )
+      const visibleArrangements =
+        activeArrangements.length > 0
+          ? activeArrangements
+          : [nearestArrangement(arrangements, selectedWeek)]
+      const activityWeeks = uniqueNumbers(arrangements.flatMap((arrangement) => arrangement.weeks))
+      const muted = selectedWeek > 0 && activeArrangements.length === 0
+      const identity = course.LessonID || course.Code || course.Name
+
       blocks.push({
-        id: `${course.LessonID || course.Code}-${activityIndex}-${activity.Weekday}-${activity.StartSection}`,
+        id: `${identity}-${firstActivity.Weekday}-${firstActivity.StartSection}-${firstActivity.EndSection}`,
         name: course.Name || '未命名课程',
-        room: activity.RoomName || '地点待定',
+        room: uniqueStrings(visibleArrangements.map((arrangement) => arrangement.room)).join(' / '),
         code: course.Code,
         credits: course.Credits,
         teachingClass: course.TeachingClass,
-        teachers: uniqueStrings([...(course.Teachers ?? []), ...(activity.Teachers ?? [])]),
+        teachers: uniqueStrings([
+          ...(course.Teachers ?? []),
+          ...arrangements.flatMap((arrangement) => arrangement.teachers),
+        ]),
         weeks: [...activityWeeks],
+        arrangements,
         source: 'jwxt',
-        day: activity.Weekday,
-        start: activity.StartSection,
-        span: activity.EndSection - activity.StartSection + 1,
-        tone: toneForCourse(course.Code || course.LessonID || course.Name),
+        day: firstActivity.Weekday,
+        start: firstActivity.StartSection,
+        span: firstActivity.EndSection - firstActivity.StartSection + 1,
+        tone: toneForCourse(course.Code || identity),
         muted,
       })
     }
@@ -131,6 +161,13 @@ export function buildCourseBlocks(
       teachingClass: '',
       teachers: [],
       weeks: [...course.weeks],
+      arrangements: [
+        {
+          room: course.room || '地点待定',
+          teachers: [],
+          weeks: [...course.weeks],
+        },
+      ],
       source: 'manual',
       day: course.weekday,
       start: course.startSection,
@@ -164,4 +201,54 @@ function toneForCourse(identity: string): CourseTone {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
+}
+
+function uniqueNumbers(values: number[]) {
+  return [...new Set(values)].sort((left, right) => left - right)
+}
+
+function buildArrangements(activities: NonNullable<Course['Activities']>): CourseArrangement[] {
+  const arrangements = new Map<string, CourseArrangement>()
+
+  for (const activity of activities) {
+    const room = activity.RoomName || '地点待定'
+    const teachers = uniqueStrings(activity.Teachers ?? [])
+    const key = `${room}\u0000${teachers.join('\u0000')}`
+    const existing = arrangements.get(key)
+    if (existing) {
+      existing.weeks = mergeWeeks(existing.weeks, activity.Weeks ?? [])
+      continue
+    }
+    arrangements.set(key, {
+      room,
+      teachers,
+      weeks: uniqueNumbers(activity.Weeks ?? []),
+    })
+  }
+
+  return [...arrangements.values()].sort(
+    (left, right) => (left.weeks[0] ?? 0) - (right.weeks[0] ?? 0),
+  )
+}
+
+function mergeWeeks(left: number[], right: number[]) {
+  if (left.length === 0 || right.length === 0) return []
+  return uniqueNumbers([...left, ...right])
+}
+
+function isArrangementActive(arrangement: CourseArrangement, selectedWeek: number) {
+  return selectedWeek <= 0 || arrangement.weeks.length === 0 || arrangement.weeks.includes(selectedWeek)
+}
+
+function nearestArrangement(arrangements: CourseArrangement[], selectedWeek: number) {
+  return arrangements.reduce((nearest, arrangement) => {
+    const nearestDistance = distanceToWeeks(nearest.weeks, selectedWeek)
+    const arrangementDistance = distanceToWeeks(arrangement.weeks, selectedWeek)
+    return arrangementDistance < nearestDistance ? arrangement : nearest
+  })
+}
+
+function distanceToWeeks(weeks: number[], selectedWeek: number) {
+  if (selectedWeek <= 0 || weeks.length === 0) return 0
+  return Math.min(...weeks.map((week) => Math.abs(week - selectedWeek)))
 }

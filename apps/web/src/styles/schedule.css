@@ -727,6 +727,7 @@
 .course-detail-card__details dd {
   margin: 0;
   overflow-wrap: anywhere;
+  white-space: pre-line;
   color: #26343d;
   font-size: 14px;
   font-weight: 600;
