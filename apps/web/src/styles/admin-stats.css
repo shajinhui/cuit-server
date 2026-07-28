@@ -49,7 +49,7 @@
 
 .admin-brand strong {
   font-size: 15px;
-  font-weight: 680;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -132,7 +132,7 @@
   margin: 0;
   color: #1677ff;
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: 0.13em;
 }
 
@@ -141,7 +141,7 @@
   margin: 9px 0 0;
   color: #172033;
   font-size: clamp(29px, 5vw, 38px);
-  font-weight: 720;
+  font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.035em;
 }
@@ -169,7 +169,7 @@
   margin: 0 0 8px 2px;
   color: #4f5a70;
   font-size: 12px;
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .admin-token-field {
@@ -225,7 +225,7 @@
   gap: 9px;
   color: #fff;
   font-size: 14px;
-  font-weight: 660;
+  font-weight: 700;
   background: #1677ff;
   border: 0;
   border-radius: 14px;
@@ -365,7 +365,7 @@
   overflow: hidden;
   color: #1b2538;
   font-size: clamp(23px, 2.4vw, 29px);
-  font-weight: 690;
+  font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.035em;
   text-overflow: ellipsis;
@@ -436,7 +436,7 @@
   align-items: center;
   color: #7b869a;
   font-size: 10px;
-  font-weight: 650;
+  font-weight: 600;
   background: #edf0f5;
   border-radius: 999px;
 }
@@ -478,7 +478,7 @@
   overflow: hidden;
   color: #253148;
   font-size: 19px;
-  font-weight: 680;
+  font-weight: 700;
   letter-spacing: -0.025em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -506,7 +506,7 @@
   margin: 0;
   color: #1e293d;
   font-size: 16px;
-  font-weight: 670;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -620,7 +620,7 @@
   padding: 0 8px;
   align-items: center;
   font-size: 9px;
-  font-weight: 680;
+  font-weight: 700;
   border-radius: 6px;
 }
 
@@ -709,7 +709,7 @@
 
 .admin-route-table .has-errors {
   color: #d64552;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .admin-method {
@@ -720,7 +720,7 @@
   justify-content: center;
   color: #526078;
   font-size: 9px;
-  font-weight: 750;
+  font-weight: 700;
   background: #edf0f5;
   border-radius: 6px;
 }
@@ -750,7 +750,7 @@
   margin: 0;
   color: #4d5970;
   font-size: 14px;
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .admin-empty-state span {

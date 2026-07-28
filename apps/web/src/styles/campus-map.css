@@ -32,7 +32,7 @@
 .campus-map-topbar h1 {
   margin: 0;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.2px;
 }
@@ -120,7 +120,7 @@
   padding: 0 12px;
   color: #636366;
   font-size: 15px;
-  font-weight: 620;
+  font-weight: 600;
   background: transparent;
   border: 0;
   border-radius: 20px;
@@ -243,7 +243,7 @@
   margin-top: 16px;
   padding: 0 18px;
   color: #0878e8;
-  font-weight: 620;
+  font-weight: 600;
   background: rgba(255, 255, 255, 0.88);
   border: 0;
   border-radius: 20px;
@@ -277,7 +277,7 @@
   margin: 0;
   padding: 4px;
   flex: 1;
-  grid-template-columns: 44px minmax(112px, 1fr) 44px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
   background: rgba(255, 255, 255, 0.68);
   border-radius: 26px;
   box-shadow:
@@ -319,7 +319,7 @@
 
 .campus-map-zoom .campus-map-zoom__value {
   display: flex;
-  min-width: 112px;
+  min-width: 0;
   flex-direction: column;
   gap: 1px;
   color: #34343a;
@@ -327,28 +327,35 @@
 }
 
 .campus-map-zoom__value strong {
+  overflow: hidden;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .campus-map-zoom__value span {
+  overflow: hidden;
   color: #8e8e93;
   font-size: 10px;
-  font-weight: 520;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .campus-map-save-button {
   display: flex;
-  width: 76px;
+  width: auto;
+  min-width: 0;
   min-height: 52px;
   padding: 0 11px;
-  flex: 0 0 76px;
+  flex: 0 1 auto;
   align-items: center;
   justify-content: center;
   gap: 6px;
   color: #34343a;
   font-size: 12px;
-  font-weight: 620;
+  font-weight: 600;
   background: rgba(255, 255, 255, 0.68);
   border: 0;
   border-radius: 26px;
@@ -447,17 +454,11 @@
   }
 
   .campus-map-zoom {
-    grid-template-columns: 44px minmax(64px, 1fr) 44px;
-  }
-
-  .campus-map-zoom .campus-map-zoom__value {
-    min-width: 64px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
   }
 
   .campus-map-save-button {
-    width: 68px;
     padding: 0 8px;
-    flex-basis: 68px;
     gap: 4px;
   }
 }
