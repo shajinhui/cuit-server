@@ -7,13 +7,17 @@ defineOptions({ name: 'CourseDetailSheet' })
 
 const props = defineProps<{
   course: CourseBlock | null
+  removing?: boolean
+  removeError?: string
 }>()
 
 const emit = defineEmits<{
   close: []
+  remove: [courseID: string]
 }>()
 
 const detailCard = ref<HTMLElement | null>(null)
+const pendingRemoval = ref<CourseSlotCourse | null>(null)
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 const timeLabel = computed(() => {
@@ -61,15 +65,36 @@ const detailRows = computed(() => {
   ]
 })
 
+const removableCourses = computed(() => {
+  if (!props.course) return []
+  return props.course.courses.filter((course) => course.source === 'manual')
+})
+
 watch(
   () => props.course,
   (course) => {
+    pendingRemoval.value = null
     if (course) void nextTick(() => detailCard.value?.focus({ preventScroll: true }))
   },
 )
 
 function close() {
+  if (props.removing) return
+  pendingRemoval.value = null
   emit('close')
+}
+
+function requestRemoval(course: CourseSlotCourse) {
+  pendingRemoval.value = course
+}
+
+function cancelRemoval() {
+  if (!props.removing) pendingRemoval.value = null
+}
+
+function confirmRemoval() {
+  if (!pendingRemoval.value || props.removing) return
+  emit('remove', pendingRemoval.value.id)
 }
 
 function formatSlotCourse(course: CourseSlotCourse) {
@@ -141,7 +166,7 @@ function formatWeeks(weeks: number[]) {
               </p>
               <h2 id="course-detail-title">{{ course.name }}</h2>
             </div>
-            <button type="button" aria-label="关闭课程详情" @click="close">
+            <button type="button" aria-label="关闭课程详情" :disabled="removing" @click="close">
               <svg aria-hidden="true" viewBox="0 0 20 20">
                 <path d="m6 6 8 8M14 6l-8 8" />
               </svg>
@@ -154,6 +179,44 @@ function formatWeeks(weeks: number[]) {
               <dd>{{ row.value }}</dd>
             </div>
           </dl>
+
+          <div v-if="removableCourses.length > 0" class="course-detail-card__actions">
+            <template v-if="pendingRemoval">
+              <p>
+                确定删除“{{ pendingRemoval.name }}”吗？
+                <small>删除后无法恢复。</small>
+              </p>
+              <div>
+                <button type="button" :disabled="removing" @click="cancelRemoval">取消</button>
+                <button
+                  type="button"
+                  class="is-destructive"
+                  :disabled="removing"
+                  @click="confirmRemoval"
+                >
+                  {{ removing ? '正在删除…' : '确认删除' }}
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <button
+                v-for="manualCourse in removableCourses"
+                :key="manualCourse.id"
+                type="button"
+                class="course-detail-card__delete"
+                @click="requestRemoval(manualCourse)"
+              >
+                {{
+                  removableCourses.length > 1
+                    ? `删除“${manualCourse.name}”`
+                    : '删除本机课程'
+                }}
+              </button>
+            </template>
+            <p v-if="removeError" class="course-detail-card__remove-error" role="alert">
+              {{ removeError }}
+            </p>
+          </div>
         </section>
       </div>
     </Transition>

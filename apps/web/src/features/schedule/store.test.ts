@@ -14,6 +14,7 @@ import {
   type CachedSchedule,
 } from './cache'
 import { useScheduleStore } from './store'
+import type { ManualCourse } from './model/manualCourse'
 
 vi.mock('@/shared/api/semesters', () => ({ listSemesters: vi.fn() }))
 vi.mock('./api', () => ({
@@ -100,6 +101,33 @@ describe('schedule store loading', () => {
     expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID)
     expect(store.selectedSemesterID).toBe(currentSemester.ID)
   })
+
+  it('removes a manual course from local persistence and state', async () => {
+    readScheduleCacheMock.mockResolvedValue(null)
+    const store = useScheduleStore()
+    const course = createManualCourse()
+    store.manualCourses = [course]
+    store.manualCoursesLoaded = true
+
+    const removedCourse = await store.removeManualCourse(course.id)
+
+    expect(writeManualCoursesMock).toHaveBeenCalledWith([])
+    expect(removedCourse).toEqual(course)
+    expect(store.manualCourses).toEqual([])
+  })
+
+  it('keeps a manual course in state when local persistence fails', async () => {
+    readScheduleCacheMock.mockResolvedValue(null)
+    writeManualCoursesMock.mockRejectedValueOnce(new Error('write failed'))
+    const store = useScheduleStore()
+    const course = createManualCourse()
+    store.manualCourses = [course]
+    store.manualCoursesLoaded = true
+
+    await expect(store.removeManualCourse(course.id)).rejects.toThrow('write failed')
+
+    expect(store.manualCourses).toEqual([course])
+  })
 })
 
 function createTable(semesterID: string, courseName = '示例课程'): CourseTable {
@@ -130,5 +158,18 @@ function createCache(semester: Semester, table: CourseTable): CachedSchedule {
     table,
     currentWeek: 3,
     cachedAt: 1,
+  }
+}
+
+function createManualCourse(): ManualCourse {
+  return {
+    id: 'manual-1',
+    semesterID: currentSemester.ID,
+    name: '本机课程',
+    room: 'H2101',
+    weekday: 1,
+    startSection: 1,
+    endSection: 2,
+    weeks: [1, 2, 3],
   }
 }

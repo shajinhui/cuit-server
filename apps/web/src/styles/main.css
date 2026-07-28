@@ -38,9 +38,14 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#app {
+  touch-action: pan-y;
+}
+
 html {
   background: #fbfcf9;
-  touch-action: pan-y;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -52,6 +57,20 @@ body {
   min-height: 100dvh;
   background: #fbfcf9;
   overscroll-behavior-x: none;
+}
+
+/*
+ * iOS may treat fixed/teleported layers as a separate touch target and stop
+ * applying the root page's gesture policy. Keep vertical scrolling available
+ * while preventing sheets, dialogs and popovers from re-enabling pinch zoom.
+ */
+[role='dialog'],
+[role='listbox'],
+.classroom-sheet-overlay,
+.course-detail-backdrop,
+.add-course-sheet-backdrop,
+.pwa-install-guide-backdrop,
+.app-update-backdrop {
   touch-action: pan-y;
 }
 

@@ -29,6 +29,8 @@ const addCourseOpen = ref(false)
 const addingCourse = ref(false)
 const addCourseError = ref('')
 const selectedCourse = ref<CourseBlock | null>(null)
+const removingCourse = ref(false)
+const removeCourseError = ref('')
 let noticeTimer: number | undefined
 
 const {
@@ -105,10 +107,13 @@ function closeAddCourse() {
 }
 
 function openCourseDetails(course: CourseBlock) {
+  removeCourseError.value = ''
   selectedCourse.value = course
 }
 
 function closeCourseDetails() {
+  if (removingCourse.value) return
+  removeCourseError.value = ''
   selectedCourse.value = null
 }
 
@@ -123,6 +128,24 @@ async function addManualCourse(input: ManualCourseInput) {
     addCourseError.value = error instanceof Error ? error.message : '课程保存失败，请稍后重试'
   } finally {
     addingCourse.value = false
+  }
+}
+
+async function removeManualCourse(courseID: string) {
+  removingCourse.value = true
+  removeCourseError.value = ''
+  try {
+    const removedCourse = await store.removeManualCourse(courseID)
+    if (!removedCourse) {
+      removeCourseError.value = '没有找到这门本机课程'
+      return
+    }
+    selectedCourse.value = null
+    showNotice(`已删除“${removedCourse.name}”`)
+  } catch (error) {
+    removeCourseError.value = error instanceof Error ? error.message : '课程删除失败，请稍后重试'
+  } finally {
+    removingCourse.value = false
   }
 }
 
@@ -328,7 +351,13 @@ async function refreshSchedule() {
         />
       </div>
 
-      <CourseDetailSheet :course="selectedCourse" @close="closeCourseDetails" />
+      <CourseDetailSheet
+        :course="selectedCourse"
+        :removing="removingCourse"
+        :remove-error="removeCourseError"
+        @close="closeCourseDetails"
+        @remove="removeManualCourse"
+      />
 
       <AddCourseSheet
         :open="addCourseOpen"
