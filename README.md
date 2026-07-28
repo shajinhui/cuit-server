@@ -8,6 +8,7 @@
 - 在线访问：<https://fanxiaogao05.dpdns.org>
 - API 文档：[docs/API.md](docs/API.md)
 - 部署说明：[deploy/README.md](deploy/README.md)
+- SSH 后端更新：[deploy/SSH_BACKEND_UPDATE.md](deploy/SSH_BACKEND_UPDATE.md)
 - Android 构建：[apps/web/ANDROID.md](apps/web/ANDROID.md)
 
 > 本项目是非官方学生项目，与成都信息工程大学及学校教务系统运营方无隶属或授权关系。
@@ -37,6 +38,7 @@ flowchart LR
     User["PWA / Android"] --> API["Hertz API"]
     API --> Session["应用会话与业务服务"]
     Session --> SQLite["SQLite"]
+    Session --> Redis["Redis 查询缓存"]
     Session --> Client["每位用户独立的 JWXT Client"]
     Client --> CAS["CAS / 一网通办"]
     Client --> EAMS["EAMS 教务系统"]
@@ -52,7 +54,7 @@ flowchart LR
 | Android | Capacitor 8、Gradle |
 | API | Go、Hertz |
 | JWXT SDK | Resty v2、goquery、`net/http/cookiejar` |
-| 数据 | SQLite |
+| 数据 | SQLite、Redis |
 | 部署 | Cloudflare Pages、Cloudflare Tunnel、systemd |
 
 ## 目录
@@ -82,6 +84,7 @@ flowchart LR
 ### 环境要求
 
 - Go 1.25.12
+- Redis
 - Node.js 24
 - pnpm 10.26.1
 
@@ -101,7 +104,7 @@ openssl rand -base64 32
 go run ./apps/api
 ```
 
-API 默认监听 `http://127.0.0.1:8888`。首次启动会自动创建 `data/cuit-server.db` 并执行数据库迁移。
+API 默认监听 `http://127.0.0.1:8888`。首次启动会自动创建 `data/cuit-server.db` 并执行数据库迁移。Redis 未启动时 API 仍可运行，但会跳过共享查询缓存。
 
 ### 2. 启动 Web
 
@@ -136,6 +139,7 @@ pnpm run check
 - 不在前端保存教务密码、CAS Ticket 或学校 Cookie。
 - 教务密码在服务端加密后存入 SQLite，加密密钥仅由环境变量提供。
 - 应用 Session 只在数据库中保存 Token 哈希；浏览器使用 `HttpOnly` Cookie。
+- Redis 只缓存有有效期的查询结果，不保存密码、Cookie、Token、Ticket 或 JWXT Client。
 - 每位用户使用独立的 JWXT Client 和 CookieJar，同一用户的教务请求串行执行。
 - 日志不得记录密码、Cookie、Token、Ticket 或完整认证重定向地址。
 - `.env`、SQLite 数据库、Android 签名文件和真实账号不得提交到仓库。
