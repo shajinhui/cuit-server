@@ -38,6 +38,22 @@ usePageTheme('#f2f2f7')
       </section>
 
       <section class="about-links" aria-label="项目链接">
+        <RouterLink :to="{ name: 'privacy' }">
+          <span class="about-links__icon about-links__icon--privacy" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3 5.5 5.8v5.1c0 4.2 2.7 7.7 6.5 9.1 3.8-1.4 6.5-4.9 6.5-9.1V5.8L12 3Z" />
+              <path d="m9.2 11.7 1.8 1.8 3.9-4" />
+            </svg>
+          </span>
+          <span class="about-links__copy">
+            <strong>隐私政策</strong>
+            <small>了解信息处理、存储与您的权利</small>
+          </span>
+          <svg class="about-links__chevron" aria-hidden="true" viewBox="0 0 20 20">
+            <path d="m7.5 4.5 5 5.5-5 5.5" />
+          </svg>
+        </RouterLink>
+
         <a :href="repositoryURL" target="_blank" rel="noopener noreferrer">
           <span class="about-links__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
