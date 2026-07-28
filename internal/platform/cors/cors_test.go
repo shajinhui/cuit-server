@@ -34,6 +34,9 @@ func TestAllowedOriginCanSendCredentials(t *testing.T) {
 	if got := string(response.Header.Peek("Access-Control-Allow-Credentials")); got != "true" {
 		t.Fatalf("unexpected allow credentials: %q", got)
 	}
+	if got := string(response.Header.Peek("Access-Control-Expose-Headers")); got != "Retry-After" {
+		t.Fatalf("unexpected exposed headers: %q", got)
+	}
 }
 
 func TestPreflightStopsBeforeAPIHandler(t *testing.T) {

@@ -45,9 +45,11 @@ func NewHandler(service GradeService, secureCookie bool) *Handler {
 	return &Handler{service: service, secureCookie: secureCookie}
 }
 
-func (h *Handler) Register(server *server.Hertz) {
+func (h *Handler) Register(server *server.Hertz, loginMiddleware ...app.HandlerFunc) {
 	group := server.Group("/api/v1/jwxt")
-	group.POST("/session", h.login)
+	loginHandlers := append([]app.HandlerFunc{}, loginMiddleware...)
+	loginHandlers = append(loginHandlers, h.login)
+	group.POST("/session", loginHandlers...)
 	group.GET("/session", h.sessionStatus)
 	group.DELETE("/session", h.logout)
 	group.GET("/profile", h.getStudentProfile)

@@ -22,6 +22,9 @@ SQLite 文件默认位于 `data/cuit-server.db`，可通过 `SQLITE_PATH` 修改
 不可用时服务会跳过缓存并继续访问学校系统，不影响 SQLite 会话和登录主流程。
 缓存只保存有有效期的查询结果，不保存密码、Cookie、Ticket 或 JWXT Client。
 
+`LOGIN_MAX_CONCURRENCY` 控制同时执行的学校认证请求数量，默认值为 `200`。
+达到上限的登录请求不会排队，而是返回 `503` 和 `Retry-After: 5`。
+
 ## 接口
 
 ```text

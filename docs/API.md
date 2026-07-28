@@ -138,6 +138,22 @@ Content-Type: application/json
 
 注意：客户端不得记录或持久化明文密码。
 
+服务端最多同时处理 `LOGIN_MAX_CONCURRENCY` 个登录请求，默认值为 `200`。
+达到上限时不排队，直接返回：
+
+```http
+HTTP/1.1 503 Service Unavailable
+Retry-After: 5
+```
+
+```json
+{
+  "code": 50301,
+  "message": "当前登录人数较多，请稍后重试",
+  "data": null
+}
+```
+
 ### 2.2 查询会话状态
 
 ```http

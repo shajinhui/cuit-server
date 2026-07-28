@@ -6,12 +6,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"cuit-server/internal/academic"
 	"cuit-server/internal/analytics"
 	"cuit-server/internal/feedback"
+	"cuit-server/internal/platform/admission"
 	platformcache "cuit-server/internal/platform/cache"
 	"cuit-server/internal/platform/cors"
 	"cuit-server/internal/platform/database"
@@ -73,6 +75,15 @@ func main() {
 		log.Fatal(err)
 	}
 	repository := academic.NewSQLiteRepository(db)
+	loginMaxConcurrency, err := positiveEnvironmentInt("LOGIN_MAX_CONCURRENCY", 200)
+	if err != nil {
+		log.Fatal(err)
+	}
+	loginGate, err := admission.NewLoginGate(loginMaxConcurrency, 5*time.Second)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("登录并发上限: %d", loginMaxConcurrency)
 
 	jwxtService := academic.NewService(func() (academic.JWXTClient, error) {
 		// 每次教务登录都创建独立 Client，确保不同学生不会共享 CookieJar。
@@ -108,7 +119,7 @@ func main() {
 	if allowedOrigin != "" {
 		h.Use(cors.New(allowedOrigin))
 	}
-	academicHandler.Register(h)
+	academicHandler.Register(h, loginGate.Middleware())
 	scheduleHandler.Register(h)
 	feedbackHandler.Register(h)
 	if adminToken := strings.TrimSpace(os.Getenv("ADMIN_STATS_TOKEN")); adminToken != "" {
@@ -125,6 +136,18 @@ func main() {
 		c.JSON(http.StatusOK, map[string]any{"code": 0, "message": "success", "data": map[string]string{"status": "ok"}})
 	})
 	h.Spin()
+}
+
+func positiveEnvironmentInt(name string, fallback int) (int, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < 1 {
+		return 0, errors.New(name + " must be a positive integer")
+	}
+	return value, nil
 }
 
 func loadEnvironment() {

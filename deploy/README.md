@@ -64,6 +64,9 @@ openssl rand -hex 32
 
 把结果写入 `ADMIN_STATS_TOKEN`。没有配置该变量时，统计接口不会注册。
 
+`LOGIN_MAX_CONCURRENCY` 控制同时访问学校认证系统的登录请求数量，默认值为
+`200`。达到上限的请求会立即收到 `503`，不会在服务器中排队。
+
 启动并检查 API：
 
 ```bash

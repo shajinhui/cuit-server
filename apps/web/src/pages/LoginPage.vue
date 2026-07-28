@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { loginSession } from '@/app/sessionLifecycle'
 import { useSessionStore } from '@/features/session'
+import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 defineOptions({ name: 'LoginPage' })
@@ -15,15 +16,19 @@ const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const notice = ref('')
+const retrySeconds = ref(0)
 let noticeTimer: number | undefined
+let retryTimer: number | undefined
 
 usePageTheme('#f2f2f7')
 
 onBeforeUnmount(() => {
   window.clearTimeout(noticeTimer)
+  window.clearInterval(retryTimer)
 })
 
 async function submitLogin() {
+  if (retrySeconds.value > 0) return
   try {
     await loginSession(username.value, password.value)
     password.value = ''
@@ -31,9 +36,24 @@ async function submitLogin() {
       ? route.query.redirect
       : '/schedule'
     await router.replace(redirect)
-  } catch {
+  } catch (error) {
     password.value = ''
+    if (error instanceof ApiError && error.code === 50301) {
+      startRetryCountdown(error.retryAfterSeconds ?? 5)
+    }
   }
+}
+
+function startRetryCountdown(seconds: number) {
+  window.clearInterval(retryTimer)
+  retrySeconds.value = Math.max(1, Math.ceil(seconds))
+  retryTimer = window.setInterval(() => {
+    retrySeconds.value -= 1
+    if (retrySeconds.value <= 0) {
+      retrySeconds.value = 0
+      window.clearInterval(retryTimer)
+    }
+  }, 1000)
 }
 
 function showNotice(message: string) {
@@ -115,12 +135,14 @@ function showNotice(message: string) {
           <button
             type="submit"
             class="login-submit"
-            :disabled="session.loading"
+            :disabled="session.loading || retrySeconds > 0"
             :aria-busy="session.loading"
-            :aria-label="session.loading ? '正在登录' : '登录'"
+            :aria-label="session.loading ? '正在登录' : retrySeconds > 0 ? `请在 ${retrySeconds} 秒后重试` : '登录'"
           >
             <span class="login-submit-state" aria-hidden="true">
-              <span class="login-submit-label" :class="{ 'is-hidden': session.loading }">登录</span>
+              <span class="login-submit-label" :class="{ 'is-hidden': session.loading }">
+                {{ retrySeconds > 0 ? `请稍后重试（${retrySeconds}s）` : '登录' }}
+              </span>
               <span class="login-submit-loading" :class="{ 'is-visible': session.loading }">
                 <svg class="login-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /></svg>
                 正在登录…

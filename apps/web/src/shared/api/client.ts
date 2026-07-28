@@ -9,6 +9,7 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code: number,
+    readonly retryAfterSeconds?: number,
   ) {
     super(message)
   }
@@ -34,7 +35,13 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     throw new ApiError('服务响应格式异常', response.status, 50000)
   }
   if (!response.ok || payload.code !== 0) {
-    throw new ApiError(payload.message || '请求失败', response.status, payload.code)
+    const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
+    throw new ApiError(
+      payload.message || '请求失败',
+      response.status,
+      payload.code,
+      Number.isInteger(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+    )
   }
   return payload.data
 }
