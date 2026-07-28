@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">成信友友当前项目架构</title>
+  <desc id="desc">展示 Vue PWA 与 Capacitor Android 客户端、Cloudflare Pages 和 Tunnel、Hertz 模块化单体、SQLite、Redis、独立 JWXT SDK、学校认证与教务系统，以及交付链路。</desc>
+
+  <defs>
+    <filter id="softShadow" x="-15%" y="-15%" width="130%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#253142" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2d3138"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#377fba"/>
+    </marker>
+    <style>
+      text { font-family: "PingFang SC", "Helvetica Neue", Arial, sans-serif; }
+      .title { font-size: 44px; font-weight: 700; fill: #20242b; }
+      .subtitle { font-size: 18px; font-weight: 400; fill: #6f7680; letter-spacing: .5px; }
+      .section { font-size: 24px; font-weight: 600; fill: #20242b; }
+      .node-title { font-size: 21px; font-weight: 600; fill: #20242b; }
+      .node-text { font-size: 16px; font-weight: 400; fill: #555d68; }
+      .small { font-size: 14px; font-weight: 500; fill: #6c737e; }
+      .arrow-label { font-size: 14px; font-weight: 500; fill: #424850; }
+      .arrow { fill: none; stroke: #2d3138; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow); }
+      .arrow-blue { fill: none; stroke: #377fba; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowBlue); }
+      .arrow-dashed { fill: none; stroke: #59616b; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 8 7; marker-end: url(#arrow); }
+      .node { stroke: #444a52; stroke-width: 1.8; filter: url(#softShadow); }
+      .external { stroke: #444a52; stroke-width: 1.8; stroke-dasharray: 9 7; filter: url(#softShadow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1050" fill="#fbfcfd"/>
+  <text x="36" y="58" class="title">成信友友 · Architecture</text>
+  <text x="36" y="91" class="subtitle">模块化 Go 单体 + 独立 JWXT SDK + 多端客户端</text>
+  <line x1="36" y1="112" x2="1564" y2="112" stroke="#dde1e6" stroke-width="2"/>
+
+  <!-- User -->
+  <rect x="36" y="184" width="176" height="126" rx="26" fill="#ffd9d9" class="external"/>
+  <circle cx="124" cy="224" r="16" fill="#2d3138"/>
+  <path d="M91 278c2-27 17-42 33-42s31 15 33 42" fill="#2d3138"/>
+  <text x="124" y="300" text-anchor="middle" class="node-title">学生用户</text>
+
+  <!-- Client -->
+  <rect x="256" y="145" width="552" height="205" rx="28" fill="#fff1f1" stroke="#8e7474" stroke-width="1.8"/>
+  <text x="280" y="178" class="section">客户端</text>
+
+  <rect x="280" y="197" width="234" height="92" rx="22" fill="#ffdede" class="node"/>
+  <rect x="302" y="218" width="30" height="45" rx="6" fill="none" stroke="#2d3138" stroke-width="4"/>
+  <circle cx="317" cy="255" r="2.5" fill="#2d3138"/>
+  <text x="353" y="232" class="node-title">Vue 3 PWA</text>
+  <text x="353" y="260" class="node-text">Pinia · Router · Workbox</text>
+
+  <rect x="550" y="197" width="234" height="92" rx="22" fill="#ffdede" class="node"/>
+  <rect x="572" y="215" width="31" height="50" rx="8" fill="none" stroke="#2d3138" stroke-width="4"/>
+  <line x1="582" y1="221" x2="593" y2="221" stroke="#2d3138" stroke-width="3" stroke-linecap="round"/>
+  <text x="625" y="232" class="node-title">Android App</text>
+  <text x="625" y="260" class="node-text">Capacitor 8 · OTA</text>
+
+  <rect x="280" y="302" width="504" height="30" rx="15" fill="#ffe9e9" stroke="#aa8e8e" stroke-width="1.4"/>
+  <text x="532" y="323" text-anchor="middle" class="small">本机离线层：IndexedDB · App Shell · 手动课程</text>
+
+  <!-- Cloudflare Edge -->
+  <rect x="850" y="145" width="342" height="205" rx="28" fill="#f0eaff" stroke="#8072a6" stroke-width="1.8"/>
+  <text x="874" y="178" class="section">Cloudflare Edge</text>
+
+  <rect x="874" y="197" width="294" height="63" rx="19" fill="#dcd0ff" class="node"/>
+  <text x="1021" y="226" text-anchor="middle" class="node-title">Cloudflare Pages</text>
+  <text x="1021" y="248" text-anchor="middle" class="small">Web 静态资源 · Android OTA</text>
+
+  <rect x="874" y="275" width="294" height="57" rx="19" fill="#dcd0ff" class="node"/>
+  <text x="1021" y="309" text-anchor="middle" class="node-title">Cloudflare Tunnel</text>
+
+  <!-- Top arrows -->
+  <path d="M212 225 C235 225 246 225 274 225" class="arrow"/>
+  <path d="M874 214 C775 170 615 167 514 214" class="arrow-dashed"/>
+  <text x="694" y="173" text-anchor="middle" class="arrow-label">静态资源</text>
+  <path d="M874 239 H790" class="arrow-dashed"/>
+  <text x="832" y="230" text-anchor="middle" class="small">OTA</text>
+  <path d="M808 303 H870" class="arrow"/>
+  <text x="839" y="292" text-anchor="middle" class="arrow-label">HTTPS / API</text>
+  <path d="M1021 332 V370 H737 V448" class="arrow"/>
+
+  <!-- Data layer -->
+  <rect x="36" y="394" width="224" height="405" rx="28" fill="#fff2bd" stroke="#a8914d" stroke-width="1.8"/>
+  <text x="60" y="430" class="section">数据层</text>
+
+  <rect x="60" y="456" width="176" height="154" rx="22" fill="#ffe99a" class="node"/>
+  <ellipse cx="148" cy="491" rx="48" ry="14" fill="none" stroke="#2d3138" stroke-width="4"/>
+  <path d="M100 491v46c0 8 21 14 48 14s48-6 48-14v-46" fill="none" stroke="#2d3138" stroke-width="4"/>
+  <path d="M100 514c0 8 21 14 48 14s48-6 48-14" fill="none" stroke="#2d3138" stroke-width="3"/>
+  <text x="148" y="579" text-anchor="middle" class="node-title">SQLite</text>
+  <text x="148" y="601" text-anchor="middle" class="small">用户 · 凭据 · 统计 · 反馈</text>
+
+  <rect x="60" y="638" width="176" height="119" rx="22" fill="#fff6d0" class="external"/>
+  <rect x="100" y="668" width="96" height="19" rx="9" fill="#2d3138"/>
+  <rect x="100" y="694" width="96" height="19" rx="9" fill="#2d3138"/>
+  <text x="148" y="738" text-anchor="middle" class="node-title">Redis（可选）</text>
+
+  <!-- Backend -->
+  <rect x="282" y="394" width="910" height="405" rx="28" fill="#eaf5fd" stroke="#6d91aa" stroke-width="1.8"/>
+  <text x="306" y="430" class="section">Go 模块化单体 · Debian / systemd</text>
+
+  <rect x="306" y="452" width="862" height="54" rx="18" fill="#bfe1f8" class="node"/>
+  <text x="737" y="476" text-anchor="middle" class="node-title">Hertz API · 127.0.0.1:8888</text>
+  <text x="737" y="496" text-anchor="middle" class="small">Access Log · CORS · Analytics Middleware</text>
+
+  <rect x="306" y="528" width="260" height="108" rx="21" fill="#d6eafa" class="node"/>
+  <text x="436" y="558" text-anchor="middle" class="node-title">Academic</text>
+  <text x="436" y="584" text-anchor="middle" class="node-text">登录 · 学籍 · 成绩 · 考试</text>
+  <text x="436" y="609" text-anchor="middle" class="node-text">培养计划 · 学期</text>
+
+  <rect x="589" y="528" width="260" height="108" rx="21" fill="#d6eafa" class="node"/>
+  <text x="719" y="558" text-anchor="middle" class="node-title">Schedule</text>
+  <text x="719" y="584" text-anchor="middle" class="node-text">课表 · 空教室</text>
+  <text x="719" y="609" text-anchor="middle" class="node-text">教室占用 · 当前教学周</text>
+
+  <rect x="872" y="528" width="296" height="108" rx="21" fill="#d6eafa" class="node"/>
+  <text x="1020" y="558" text-anchor="middle" class="node-title">Feedback / Analytics</text>
+  <text x="1020" y="584" text-anchor="middle" class="node-text">用户反馈 · API 聚合指标</text>
+  <text x="1020" y="609" text-anchor="middle" class="node-text">管理员统计面板</text>
+
+  <rect x="306" y="660" width="246" height="103" rx="21" fill="#cbe5f7" class="node"/>
+  <text x="429" y="693" text-anchor="middle" class="node-title">Cache-Aside</text>
+  <text x="429" y="720" text-anchor="middle" class="node-text">TTL · singleflight</text>
+  <text x="429" y="744" text-anchor="middle" class="small">缓存故障不阻断主流程</text>
+
+  <rect x="575" y="660" width="276" height="103" rx="21" fill="#cbe5f7" class="node"/>
+  <text x="713" y="693" text-anchor="middle" class="node-title">会话与查询服务</text>
+  <text x="713" y="720" text-anchor="middle" class="node-text">加密凭据 · 用户串行锁</text>
+  <text x="713" y="744" text-anchor="middle" class="small">JWXT Client 空闲自动释放</text>
+
+  <rect x="874" y="660" width="294" height="103" rx="21" fill="#b9dcf3" class="node"/>
+  <text x="1021" y="693" text-anchor="middle" class="node-title">pkg/jwxt 独立 SDK</text>
+  <text x="1021" y="720" text-anchor="middle" class="node-text">Resty · goquery</text>
+  <text x="1021" y="744" text-anchor="middle" class="small">每位用户独立 CookieJar</text>
+
+  <!-- Internal arrows -->
+  <path d="M436 506v18" class="arrow-blue"/>
+  <path d="M719 506v18" class="arrow-blue"/>
+  <path d="M1020 506v18" class="arrow-blue"/>
+  <path d="M436 636v20" class="arrow-blue"/>
+  <path d="M719 636v20" class="arrow-blue"/>
+  <path d="M1020 636 C966 642 913 651 851 690" class="arrow-blue"/>
+  <path d="M552 712h19" class="arrow-blue"/>
+  <text x="561" y="699" text-anchor="middle" class="small">miss</text>
+  <path d="M851 712h19" class="arrow-blue"/>
+
+  <!-- Data arrows -->
+  <path d="M713 763 V782 H246 V579 H236" class="arrow"/>
+  <text x="472" y="777" text-anchor="middle" class="arrow-label">会话 / 加密凭据</text>
+  <path d="M306 712h-66" class="arrow"/>
+  <text x="273" y="700" text-anchor="middle" class="arrow-label">缓存</text>
+
+  <!-- School systems -->
+  <rect x="1234" y="394" width="330" height="405" rx="28" fill="#fff0e9" stroke="#9c7768" stroke-width="1.8" stroke-dasharray="10 7"/>
+  <text x="1258" y="430" class="section">学校外部系统</text>
+
+  <rect x="1258" y="461" width="282" height="82" rx="22" fill="#ffd9cc" class="external"/>
+  <text x="1399" y="494" text-anchor="middle" class="node-title">CAS / 一网通办</text>
+  <text x="1399" y="520" text-anchor="middle" class="node-text">统一身份认证</text>
+
+  <rect x="1258" y="566" width="282" height="103" rx="22" fill="#ffd9cc" class="external"/>
+  <text x="1399" y="604" text-anchor="middle" class="node-title">EAMS 教务系统</text>
+  <text x="1399" y="631" text-anchor="middle" class="node-text">课表 · 成绩 · 考试 · 教室</text>
+
+  <rect x="1258" y="692" width="282" height="72" rx="22" fill="#ffe4da" class="external"/>
+  <text x="1399" y="724" text-anchor="middle" class="node-title">教务处公开主页</text>
+  <text x="1399" y="749" text-anchor="middle" class="small">当前教学周</text>
+
+  <!-- School arrows -->
+  <path d="M1168 690 H1208 V502 H1254" class="arrow"/>
+  <text x="1205" y="579" text-anchor="end" class="arrow-label">认证</text>
+  <path d="M1168 724 H1218 V618 H1254" class="arrow"/>
+  <text x="1215" y="679" text-anchor="end" class="arrow-label">查询</text>
+  <path d="M719 528 V516 H1204 V730 H1254" class="arrow-dashed"/>
+  <text x="1090" y="507" text-anchor="middle" class="arrow-label">公开校历</text>
+
+  <!-- Delivery -->
+  <rect x="282" y="835" width="1282" height="166" rx="28" fill="#e9f8ea" stroke="#769579" stroke-width="1.8"/>
+  <text x="306" y="872" class="section">交付与辅助服务</text>
+
+  <rect x="306" y="897" width="274" height="75" rx="20" fill="#d4f2d7" class="external"/>
+  <text x="443" y="928" text-anchor="middle" class="node-title">GitHub Actions</text>
+  <text x="443" y="953" text-anchor="middle" class="small">Web CI · Android APK</text>
+
+  <rect x="605" y="897" width="264" height="75" rx="20" fill="#d4f2d7" class="external"/>
+  <text x="737" y="928" text-anchor="middle" class="node-title">Cloudflare Pages</text>
+  <text x="737" y="953" text-anchor="middle" class="small">PWA · OTA 包</text>
+
+  <rect x="894" y="897" width="274" height="75" rx="20" fill="#d4f2d7" class="external"/>
+  <text x="1031" y="928" text-anchor="middle" class="node-title">Go amd64 + SSH</text>
+  <text x="1031" y="953" text-anchor="middle" class="small">systemd 后端更新</text>
+
+  <rect x="1193" y="897" width="347" height="75" rx="20" fill="#d4f2d7" class="external"/>
+  <text x="1366" y="928" text-anchor="middle" class="node-title">Cloudflare Worker</text>
+  <text x="1366" y="953" text-anchor="middle" class="small">CAS / EAMS 连通性探测</text>
+
+  <path d="M580 935h21" class="arrow-dashed"/>
+
+  <!-- Note -->
+  <text x="36" y="1028" class="small">安全边界：浏览器不直接访问 CAS / EAMS；密码、Ticket 与学校 Cookie 不进入前端或 Redis。</text>
+</svg>
