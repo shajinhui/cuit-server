@@ -12,11 +12,15 @@ defineOptions({ name: 'LoginPage' })
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
+const privacyAcceptanceKey = 'privacy-policy-accepted'
+const privacyPolicyVersion = '2026-07-28'
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const notice = ref('')
 const retrySeconds = ref(0)
+const privacyAccepted = ref(readPrivacyAcceptance())
+const privacyAttention = ref(false)
 let noticeTimer: number | undefined
 let retryTimer: number | undefined
 
@@ -29,6 +33,11 @@ onBeforeUnmount(() => {
 
 async function submitLogin() {
   if (retrySeconds.value > 0) return
+  if (!privacyAccepted.value) {
+    privacyAttention.value = true
+    showNotice('请先阅读并同意隐私政策')
+    return
+  }
   try {
     await loginSession(username.value, password.value)
     password.value = ''
@@ -59,7 +68,32 @@ function startRetryCountdown(seconds: number) {
 function showNotice(message: string) {
   notice.value = message
   window.clearTimeout(noticeTimer)
-  noticeTimer = window.setTimeout(() => (notice.value = ''), 1800)
+  noticeTimer = window.setTimeout(() => {
+    notice.value = ''
+    privacyAttention.value = false
+  }, 1800)
+}
+
+function readPrivacyAcceptance() {
+  try {
+    return window.localStorage.getItem(privacyAcceptanceKey) === privacyPolicyVersion
+  } catch {
+    return false
+  }
+}
+
+function togglePrivacyAcceptance() {
+  privacyAccepted.value = !privacyAccepted.value
+  privacyAttention.value = false
+  try {
+    if (privacyAccepted.value) {
+      window.localStorage.setItem(privacyAcceptanceKey, privacyPolicyVersion)
+    } else {
+      window.localStorage.removeItem(privacyAcceptanceKey)
+    }
+  } catch {
+    // 存储不可用时仍允许本次会话完成明确选择。
+  }
 }
 </script>
 
@@ -138,6 +172,7 @@ function showNotice(message: string) {
             :disabled="session.loading || retrySeconds > 0"
             :aria-busy="session.loading"
             :aria-label="session.loading ? '正在登录' : retrySeconds > 0 ? `请在 ${retrySeconds} 秒后重试` : '登录'"
+            aria-describedby="login-privacy-consent"
           >
             <span class="login-submit-state" aria-hidden="true">
               <span class="login-submit-label" :class="{ 'is-hidden': session.loading }">
@@ -162,13 +197,32 @@ function showNotice(message: string) {
         </div>
       </section>
 
+      <div
+        id="login-privacy-consent"
+        class="login-privacy-consent"
+        :class="{ 'needs-attention': privacyAttention }"
+      >
+        <button
+          type="button"
+          class="login-privacy-check"
+          role="checkbox"
+          :aria-checked="privacyAccepted"
+          aria-label="同意隐私政策"
+          @click="togglePrivacyAcceptance"
+        >
+          <svg v-if="privacyAccepted" aria-hidden="true" viewBox="0 0 20 20">
+            <path d="m4.5 10.2 3.3 3.3 7.7-7.7" />
+          </svg>
+        </button>
+        <p>
+          我已阅读并同意
+          <button type="button" @click="router.push({ name: 'privacy' })">《隐私政策》</button>
+          ，知悉登录将处理学号、密码及学业信息。
+        </p>
+      </div>
+
       <p class="login-legal">
-        <span>登录即表示你已阅读并同意</span>
-        <span class="login-legal-actions">
-          <button type="button" @click="showNotice('用户协议正在完善中')">用户协议</button>
-          <span aria-hidden="true">·</span>
-          <button type="button" @click="showNotice('隐私政策正在完善中')">隐私政策</button>
-        </span>
+        <button type="button" @click="showNotice('用户协议正在完善中')">用户协议</button>
       </p>
     </section>
 

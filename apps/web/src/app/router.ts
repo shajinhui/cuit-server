@@ -32,6 +32,11 @@ const router = createRouter({
       component: () => import('@/pages/AboutPage.vue'),
     },
     {
+      path: '/privacy',
+      name: 'privacy',
+      component: () => import('@/pages/PrivacyPage.vue'),
+    },
+    {
       path: '/feedback',
       name: 'feedback',
       component: () => import('@/pages/FeedbackPage.vue'),

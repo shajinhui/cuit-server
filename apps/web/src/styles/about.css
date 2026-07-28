@@ -149,6 +149,10 @@
   transition: background-color 120ms ease;
 }
 
+.about-links > :not(:first-child) {
+  border-top: 1px solid rgba(60, 60, 67, 0.1);
+}
+
 .about-links a:active {
   background: rgba(116, 116, 128, 0.1);
 }
@@ -167,6 +171,18 @@
   width: 25px;
   height: 25px;
   fill: currentcolor;
+}
+
+.about-links__icon--privacy {
+  background: #4f6f8f;
+}
+
+.about-links__icon--privacy svg {
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
 }
 
 .about-links__copy {
@@ -200,6 +216,17 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.7;
+}
+
+.about-links__chevron {
+  width: 19px;
+  height: 19px;
+  color: #8e8e93;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .about-version {
