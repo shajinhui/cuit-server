@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"cuit-server/internal/feedback"
+	platformcache "cuit-server/internal/platform/cache"
 	"cuit-server/internal/platform/database"
 	"cuit-server/migrations"
 	"github.com/cloudwego/hertz/pkg/app"
@@ -85,8 +87,24 @@ func TestAdminStatsRequiresBearerToken(t *testing.T) {
 	collector.now = func() time.Time {
 		return time.Date(2026, 7, 26, 4, 30, 0, 0, time.UTC)
 	}
+	userID := insertTestUser(t, db)
+	feedbackRepository := feedback.NewRepository(db)
+	if _, err := feedbackRepository.Create(context.Background(), userID, feedback.Submission{
+		Type:      feedback.TypeSuggestion,
+		Platform:  feedback.PlatformAndroid,
+		Content:   "希望统计页面可以查看用户反馈内容",
+		UserAgent: "test-device",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	cacheLoader := platformcache.NewLoader(platformcache.DisabledStore{})
 	h := server.Default()
-	NewHandler(collector, "test-admin-token").Register(h)
+	NewHandler(
+		collector,
+		"test-admin-token",
+		cacheLoader,
+		feedbackRepository,
+	).Register(h)
 
 	unauthorized := ut.PerformRequest(
 		h.Engine,
@@ -116,6 +134,15 @@ func TestAdminStatsRequiresBearerToken(t *testing.T) {
 	}
 	if response.Data.PeriodDays != 7 || len(response.Data.Daily) != 7 {
 		t.Fatalf("unexpected stats response: %+v", response.Data)
+	}
+	if response.Data.Cache.Enabled ||
+		response.Data.Cache.StartedAt.IsZero() ||
+		len(response.Data.Feedback) != 1 ||
+		response.Data.Feedback[0].Content != "希望统计页面可以查看用户反馈内容" {
+		t.Fatalf("unexpected admin details: cache=%+v feedback=%+v",
+			response.Data.Cache,
+			response.Data.Feedback,
+		)
 	}
 }
 

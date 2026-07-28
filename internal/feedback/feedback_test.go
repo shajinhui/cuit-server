@@ -103,6 +103,35 @@ func TestFeedbackEndpointRejectsInvalidOrAnonymousSubmission(t *testing.T) {
 	}
 }
 
+func TestRepositoryListsRecentFeedback(t *testing.T) {
+	db := openTestDatabase(t)
+	userID := insertTestUser(t, db)
+	repository := NewRepository(db)
+	times := []time.Time{
+		time.Date(2026, 7, 28, 1, 0, 0, 0, time.UTC),
+		time.Date(2026, 7, 28, 2, 0, 0, 0, time.UTC),
+	}
+	for _, createdAt := range times {
+		repository.now = func() time.Time { return createdAt }
+		if _, err := repository.Create(context.Background(), userID, Submission{
+			Type:      TypeSuggestion,
+			Platform:  PlatformAndroid,
+			Content:   "用于测试排序的反馈内容",
+			UserAgent: "test-device",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	records, err := repository.ListRecent(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 1 || !records[0].CreatedAt.Equal(times[1]) {
+		t.Fatalf("unexpected recent feedback: %+v", records)
+	}
+}
+
 type rejectingRepository struct{}
 
 func (rejectingRepository) Create(context.Context, int64, Submission) (Record, error) {

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"cuit-server/internal/feedback"
+	platformcache "cuit-server/internal/platform/cache"
 	apiresponse "cuit-server/internal/platform/response"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -17,10 +19,30 @@ import (
 type Handler struct {
 	collector *Collector
 	token     string
+	cache     CacheStatsReader
+	feedback  FeedbackReader
 }
 
-func NewHandler(collector *Collector, token string) *Handler {
-	return &Handler{collector: collector, token: token}
+type CacheStatsReader interface {
+	Snapshot(ctx context.Context) platformcache.Snapshot
+}
+
+type FeedbackReader interface {
+	ListRecent(ctx context.Context, limit int) ([]feedback.Record, error)
+}
+
+func NewHandler(
+	collector *Collector,
+	token string,
+	cache CacheStatsReader,
+	feedback FeedbackReader,
+) *Handler {
+	return &Handler{
+		collector: collector,
+		token:     token,
+		cache:     cache,
+		feedback:  feedback,
+	}
 }
 
 func (h *Handler) Register(server *server.Hertz) {
@@ -50,7 +72,42 @@ func (h *Handler) stats(ctx context.Context, c *app.RequestContext) {
 		apiresponse.Error(c, http.StatusInternalServerError, 50000, "服务暂时不可用")
 		return
 	}
+	stats.Cache = mapCacheStats(h.cache.Snapshot(requestCtx))
+	records, err := h.feedback.ListRecent(requestCtx, 50)
+	if err != nil {
+		log.Printf("读取用户反馈失败: %v", err)
+		apiresponse.Error(c, http.StatusInternalServerError, 50000, "服务暂时不可用")
+		return
+	}
+	stats.Feedback = make([]FeedbackItem, 0, len(records))
+	for _, record := range records {
+		stats.Feedback = append(stats.Feedback, FeedbackItem{
+			ID:        record.ID,
+			Type:      record.Type,
+			Platform:  record.Platform,
+			Content:   record.Content,
+			CreatedAt: record.CreatedAt,
+		})
+	}
 	apiresponse.Success(c, stats)
+}
+
+func mapCacheStats(snapshot platformcache.Snapshot) CacheStats {
+	return CacheStats{
+		Enabled:           snapshot.Enabled,
+		Reachable:         snapshot.Reachable,
+		StartedAt:         snapshot.StartedAt,
+		Requests:          snapshot.Requests,
+		Hits:              snapshot.Hits,
+		SourceLoads:       snapshot.SourceLoads,
+		CoalescedRequests: snapshot.CoalescedRequests,
+		ReadErrors:        snapshot.ReadErrors,
+		WriteErrors:       snapshot.WriteErrors,
+		Keys:              snapshot.Keys,
+		MemoryBytes:       snapshot.MemoryBytes,
+		EvictedKeys:       snapshot.EvictedKeys,
+		ExpiredKeys:       snapshot.ExpiredKeys,
+	}
 }
 
 func (h *Handler) authorized(header string) bool {

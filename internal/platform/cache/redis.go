@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,6 +56,57 @@ func (s *RedisStore) Delete(ctx context.Context, key string) error {
 		return fmt.Errorf("redis: delete: %w", err)
 	}
 	return nil
+}
+
+func (s *RedisStore) Stats(ctx context.Context) (StoreStats, error) {
+	keys, err := s.client.DBSize(ctx).Result()
+	if err != nil {
+		return StoreStats{Enabled: true}, fmt.Errorf("redis: read key count: %w", err)
+	}
+	memoryInfo, err := s.client.Info(ctx, "memory").Result()
+	if err != nil {
+		return StoreStats{Enabled: true}, fmt.Errorf("redis: read memory info: %w", err)
+	}
+	statsInfo, err := s.client.Info(ctx, "stats").Result()
+	if err != nil {
+		return StoreStats{Enabled: true}, fmt.Errorf("redis: read stats info: %w", err)
+	}
+	memoryBytes, err := infoUint(memoryInfo, "used_memory")
+	if err != nil {
+		return StoreStats{Enabled: true}, err
+	}
+	evictedKeys, err := infoUint(statsInfo, "evicted_keys")
+	if err != nil {
+		return StoreStats{Enabled: true}, err
+	}
+	expiredKeys, err := infoUint(statsInfo, "expired_keys")
+	if err != nil {
+		return StoreStats{Enabled: true}, err
+	}
+	return StoreStats{
+		Enabled:     true,
+		Reachable:   true,
+		Keys:        keys,
+		MemoryBytes: memoryBytes,
+		EvictedKeys: evictedKeys,
+		ExpiredKeys: expiredKeys,
+	}, nil
+}
+
+func infoUint(info string, name string) (uint64, error) {
+	prefix := name + ":"
+	for line := range strings.SplitSeq(info, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		value, err := strconv.ParseUint(strings.TrimSpace(strings.TrimPrefix(line, prefix)), 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("redis: parse %s: %w", name, err)
+		}
+		return value, nil
+	}
+	return 0, fmt.Errorf("redis: %s not found in INFO", name)
 }
 
 func (s *RedisStore) Close() error {

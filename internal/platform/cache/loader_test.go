@@ -61,6 +61,10 @@ func TestGetOrLoadReadsCachedValue(t *testing.T) {
 	if calls.Load() != 1 || len(first) != 1 || second[0] != "cached" {
 		t.Fatalf("cache was not reused: calls=%d first=%v second=%v", calls.Load(), first, second)
 	}
+	snapshot := loader.Snapshot(context.Background())
+	if snapshot.Requests != 2 || snapshot.Hits != 1 || snapshot.SourceLoads != 1 {
+		t.Fatalf("unexpected cache snapshot: %+v", snapshot)
+	}
 }
 
 func TestGetOrLoadCoalescesConcurrentMisses(t *testing.T) {
@@ -99,5 +103,11 @@ func TestGetOrLoadCoalescesConcurrentMisses(t *testing.T) {
 	}
 	if calls.Load() != 1 {
 		t.Fatalf("source should be called once, got %d", calls.Load())
+	}
+	snapshot := loader.Snapshot(context.Background())
+	if snapshot.Requests != workers ||
+		snapshot.SourceLoads != 1 ||
+		snapshot.Hits+snapshot.CoalescedRequests != workers-1 {
+		t.Fatalf("unexpected coalesced snapshot: %+v", snapshot)
 	}
 }

@@ -28,12 +28,38 @@ export interface RouteStats {
   max_latency_ms: number
 }
 
+export interface CacheStats {
+  enabled: boolean
+  reachable: boolean
+  started_at: string
+  requests: number
+  hits: number
+  source_loads: number
+  coalesced_requests: number
+  read_errors: number
+  write_errors: number
+  keys: number
+  memory_bytes: number
+  evicted_keys: number
+  expired_keys: number
+}
+
+export interface FeedbackItem {
+  id: number
+  type: 'suggestion' | 'bug'
+  platform: 'android' | 'ios'
+  content: string
+  created_at: string
+}
+
 export interface ServiceStats {
   period_days: number
   generated_at: string
   summary: StatsSummary
+  cache: CacheStats
   daily: DailyStats[]
   top_routes: RouteStats[]
+  feedback: FeedbackItem[]
 }
 
 export interface ChartSeries {

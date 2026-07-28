@@ -15,6 +15,19 @@ type Store interface {
 	Delete(ctx context.Context, key string) error
 }
 
+type StoreStats struct {
+	Enabled     bool
+	Reachable   bool
+	Keys        int64
+	MemoryBytes uint64
+	EvictedKeys uint64
+	ExpiredKeys uint64
+}
+
+type StoreStatsReader interface {
+	Stats(ctx context.Context) (StoreStats, error)
+}
+
 // DisabledStore 在未配置或暂时无法连接 Redis 时保持 Cache-Aside 主流程可用。
 type DisabledStore struct{}
 
@@ -28,4 +41,8 @@ func (DisabledStore) Set(context.Context, string, []byte, time.Duration) error {
 
 func (DisabledStore) Delete(context.Context, string) error {
 	return nil
+}
+
+func (DisabledStore) Stats(context.Context) (StoreStats, error) {
+	return StoreStats{}, nil
 }

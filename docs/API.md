@@ -58,8 +58,8 @@ Redis 只保存上述可重建数据，不保存密码、Cookie、Ticket、应�
 ## 管理员统计
 
 仅在服务端配置 `ADMIN_STATS_TOKEN` 后注册以下接口。它用于查看接口调用量、
-错误量、耗时、新增用户、DAU/WAU/MAU 和热门接口，不保存学号、Cookie、
-请求体或教务数据。
+错误量、耗时、新增用户、DAU/WAU/MAU、热门接口、缓存运行情况和最近
+50 条用户反馈。
 
 ```http
 GET /api/v1/admin/stats?days=30
@@ -68,6 +68,21 @@ Authorization: Bearer <ADMIN_STATS_TOKEN>
 
 `days` 可选，范围为 `1` 到 `365`，默认为 `30`。该接口应仅由管理员直接调用，
 令牌不得放入 Web 或 Android 客户端。
+
+响应中的 `cache` 是自当前 API 进程启动以来的应用级缓存快照：
+
+- `requests`：进入 Cache-Aside 的查询次数。
+- `hits`：直接从 Redis 读取成功的次数。
+- `source_loads`：实际访问数据源的次数。
+- `coalesced_requests`：由同一进程合并、没有重复回源的并发请求数。
+- `keys`、`memory_bytes`、`evicted_keys`、`expired_keys`：Redis 当前状态。
+
+统计页的有效命中率按
+`(hits + coalesced_requests) / requests` 计算。Redis 不可用不会使统计接口失败，
+`cache.reachable` 会变为 `false`。
+
+`feedback` 按提交时间倒序返回最近 50 条反馈，只包含反馈 ID、类型、平台、内容
+和提交时间，不返回内部用户 ID、学号或 User-Agent。
 
 ## 2. 登录与会话
 

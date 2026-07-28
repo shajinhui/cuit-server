@@ -84,7 +84,8 @@ func main() {
 	currentWeekService := schedule.NewCachedCurrentWeekService(schedule.NewCalendarClient(), cacheLoader)
 	academicHandler := academic.NewHandler(academicService, secureCookie)
 	scheduleHandler := schedule.NewHandler(scheduleService, currentWeekService)
-	feedbackHandler := feedback.NewHandler(academicService, feedback.NewRepository(db))
+	feedbackRepository := feedback.NewRepository(db)
+	feedbackHandler := feedback.NewHandler(academicService, feedbackRepository)
 
 	h := server.Default(server.WithHostPorts(address))
 	h.Use(accesslog.New())
@@ -111,7 +112,12 @@ func main() {
 	scheduleHandler.Register(h)
 	feedbackHandler.Register(h)
 	if adminToken := strings.TrimSpace(os.Getenv("ADMIN_STATS_TOKEN")); adminToken != "" {
-		analytics.NewHandler(analyticsCollector, adminToken).Register(h)
+		analytics.NewHandler(
+			analyticsCollector,
+			adminToken,
+			cacheLoader,
+			feedbackRepository,
+		).Register(h)
 	} else {
 		log.Print("统计接口未启用：未配置 ADMIN_STATS_TOKEN")
 	}

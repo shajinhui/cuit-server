@@ -40,6 +40,13 @@ func TestRedisStoreIntegration(t *testing.T) {
 	if got, want := string(value), `{"ok":true}`; got != want {
 		t.Fatalf("value = %q, want %q", got, want)
 	}
+	stats, err := store.Stats(ctx)
+	if err != nil {
+		t.Fatalf("read Redis stats: %v", err)
+	}
+	if !stats.Enabled || !stats.Reachable || stats.Keys < 1 || stats.MemoryBytes == 0 {
+		t.Fatalf("unexpected Redis stats: %+v", stats)
+	}
 
 	time.Sleep(100 * time.Millisecond)
 	if _, err := store.Get(ctx, key); !errors.Is(err, ErrMiss) {

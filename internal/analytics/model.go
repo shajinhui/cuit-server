@@ -21,11 +21,13 @@ type UserActivity struct {
 }
 
 type Stats struct {
-	PeriodDays  int          `json:"period_days"`
-	GeneratedAt time.Time    `json:"generated_at"`
-	Summary     StatsSummary `json:"summary"`
-	Daily       []DailyStats `json:"daily"`
-	TopRoutes   []RouteStats `json:"top_routes"`
+	PeriodDays  int            `json:"period_days"`
+	GeneratedAt time.Time      `json:"generated_at"`
+	Summary     StatsSummary   `json:"summary"`
+	Cache       CacheStats     `json:"cache"`
+	Daily       []DailyStats   `json:"daily"`
+	TopRoutes   []RouteStats   `json:"top_routes"`
+	Feedback    []FeedbackItem `json:"feedback"`
 }
 
 type StatsSummary struct {
@@ -56,4 +58,28 @@ type RouteStats struct {
 	ErrorCount       int64   `json:"error_count"`
 	AverageLatencyMS float64 `json:"average_latency_ms"`
 	MaxLatencyMS     int64   `json:"max_latency_ms"`
+}
+
+type CacheStats struct {
+	Enabled           bool      `json:"enabled"`
+	Reachable         bool      `json:"reachable"`
+	StartedAt         time.Time `json:"started_at"`
+	Requests          uint64    `json:"requests"`
+	Hits              uint64    `json:"hits"`
+	SourceLoads       uint64    `json:"source_loads"`
+	CoalescedRequests uint64    `json:"coalesced_requests"`
+	ReadErrors        uint64    `json:"read_errors"`
+	WriteErrors       uint64    `json:"write_errors"`
+	Keys              int64     `json:"keys"`
+	MemoryBytes       uint64    `json:"memory_bytes"`
+	EvictedKeys       uint64    `json:"evicted_keys"`
+	ExpiredKeys       uint64    `json:"expired_keys"`
+}
+
+type FeedbackItem struct {
+	ID        int64     `json:"id"`
+	Type      string    `json:"type"`
+	Platform  string    `json:"platform"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }

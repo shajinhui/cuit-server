@@ -32,6 +32,16 @@ usePageTheme('#f4f6fa')
 const errorRate = computed(() =>
   percentage(stats.value?.summary.errors_period ?? 0, stats.value?.summary.requests_period ?? 0),
 )
+const cacheHitRate = computed(() => {
+  const cache = stats.value?.cache
+  if (!cache) return 0
+  return percentage(cache.hits + cache.coalesced_requests, cache.requests)
+})
+const cacheStatus = computed(() => {
+  const cache = stats.value?.cache
+  if (!cache?.enabled) return '未启用'
+  return cache.reachable ? '运行正常' : '连接异常'
+})
 const requestSeries = computed<ChartSeries[]>(() => [
   {
     label: '请求量',
@@ -131,6 +141,25 @@ function formatNumber(value: number): string {
 function formatLatency(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(1)} 秒`
   return `${Math.round(value)} ms`
+}
+
+function formatBytes(value: number): string {
+  if (value >= 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(1)} MB`
+  if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${value} B`
+}
+
+function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function feedbackTypeLabel(type: 'suggestion' | 'bug'): string {
+  return type === 'bug' ? 'Bug' : '建议'
 }
 </script>
 
@@ -271,6 +300,55 @@ function formatLatency(value: number): string {
         </article>
       </section>
 
+      <section class="admin-cache-card" aria-labelledby="admin-cache-title">
+        <header class="admin-card-heading">
+          <div>
+            <h2 id="admin-cache-title">缓存运行情况</h2>
+            <p>应用级指标，自本次 API 服务启动以来累计</p>
+          </div>
+          <span
+            class="admin-cache-status"
+            :class="{
+              'is-online': stats.cache.enabled && stats.cache.reachable,
+              'is-error': stats.cache.enabled && !stats.cache.reachable,
+            }"
+          >
+            {{ cacheStatus }}
+          </span>
+        </header>
+        <div class="admin-cache-grid">
+          <article>
+            <span>有效命中率</span>
+            <strong>{{ cacheHitRate.toFixed(1) }}%</strong>
+          </article>
+          <article>
+            <span>缓存请求</span>
+            <strong>{{ formatNumber(stats.cache.requests) }}</strong>
+          </article>
+          <article>
+            <span>实际回源</span>
+            <strong>{{ formatNumber(stats.cache.source_loads) }}</strong>
+          </article>
+          <article>
+            <span>合并请求</span>
+            <strong>{{ formatNumber(stats.cache.coalesced_requests) }}</strong>
+          </article>
+          <article>
+            <span>缓存条目</span>
+            <strong>{{ formatNumber(stats.cache.keys) }}</strong>
+          </article>
+          <article>
+            <span>Redis 内存</span>
+            <strong>{{ formatBytes(stats.cache.memory_bytes) }}</strong>
+          </article>
+        </div>
+        <p class="admin-cache-detail">
+          读写错误 {{ formatNumber(stats.cache.read_errors + stats.cache.write_errors) }}
+          · 已驱逐 {{ formatNumber(stats.cache.evicted_keys) }}
+          · 已过期 {{ formatNumber(stats.cache.expired_keys) }}
+        </p>
+      </section>
+
       <section class="admin-chart-grid">
         <StatsTrendChart
           title="接口调用趋势"
@@ -324,6 +402,34 @@ function formatLatency(value: number): string {
         <div v-else class="admin-empty-state">
           <p>暂无接口调用数据</p>
           <span>新部署的统计服务会从现在开始累计。</span>
+        </div>
+      </section>
+
+      <section class="admin-feedback-card" aria-labelledby="admin-feedback-title">
+        <header class="admin-card-heading">
+          <div>
+            <h2 id="admin-feedback-title">用户反馈</h2>
+            <p>最近提交的 50 条反馈，不展示用户身份信息</p>
+          </div>
+          <span>{{ stats.feedback.length }} 条</span>
+        </header>
+        <div v-if="stats.feedback.length" class="admin-feedback-list">
+          <article v-for="item in stats.feedback" :key="item.id">
+            <header>
+              <div>
+                <span :class="`admin-feedback-type is-${item.type}`">
+                  {{ feedbackTypeLabel(item.type) }}
+                </span>
+                <span class="admin-feedback-platform">{{ item.platform }}</span>
+              </div>
+              <time :datetime="item.created_at">{{ formatDateTime(item.created_at) }}</time>
+            </header>
+            <p>{{ item.content }}</p>
+          </article>
+        </div>
+        <div v-else class="admin-empty-state">
+          <p>暂无用户反馈</p>
+          <span>用户通过“问题反馈”提交后会显示在这里。</span>
         </div>
       </section>
     </section>
