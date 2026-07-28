@@ -7,14 +7,16 @@ import type { Semester } from '@/shared/models/academic'
 import { getCourseTable, getCurrentWeek, type CourseTable } from './api'
 import {
   clearScheduleCache,
+  readCourseOverrides,
   readManualCourses,
   readScheduleCache,
+  writeCourseOverrides,
   writeManualCourses,
   writeScheduleCache,
   type CachedSchedule,
 } from './cache'
 import { useScheduleStore } from './store'
-import type { ManualCourse } from './model/manualCourse'
+import type { ManualCourse, ManualCourseInput } from './model/manualCourse'
 
 vi.mock('@/shared/api/semesters', () => ({ listSemesters: vi.fn() }))
 vi.mock('./api', () => ({
@@ -23,8 +25,10 @@ vi.mock('./api', () => ({
 }))
 vi.mock('./cache', () => ({
   clearScheduleCache: vi.fn(),
+  readCourseOverrides: vi.fn(),
   readManualCourses: vi.fn(),
   readScheduleCache: vi.fn(),
+  writeCourseOverrides: vi.fn(),
   writeManualCourses: vi.fn(),
   writeScheduleCache: vi.fn(),
 }))
@@ -33,9 +37,11 @@ const listSemestersMock = vi.mocked(listSemesters)
 const getCourseTableMock = vi.mocked(getCourseTable)
 const getCurrentWeekMock = vi.mocked(getCurrentWeek)
 const clearScheduleCacheMock = vi.mocked(clearScheduleCache)
+const readCourseOverridesMock = vi.mocked(readCourseOverrides)
 const readManualCoursesMock = vi.mocked(readManualCourses)
 const readScheduleCacheMock = vi.mocked(readScheduleCache)
 const writeManualCoursesMock = vi.mocked(writeManualCourses)
+const writeCourseOverridesMock = vi.mocked(writeCourseOverrides)
 const writeScheduleCacheMock = vi.mocked(writeScheduleCache)
 
 const currentSemester: Semester = { ID: 'semester-2', SchoolYear: '2026-2027', Term: '1' }
@@ -45,9 +51,11 @@ describe('schedule store loading', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    readCourseOverridesMock.mockResolvedValue([])
     readManualCoursesMock.mockResolvedValue([])
     clearScheduleCacheMock.mockResolvedValue()
     writeManualCoursesMock.mockResolvedValue()
+    writeCourseOverridesMock.mockResolvedValue()
     writeScheduleCacheMock.mockResolvedValue()
     getCurrentWeekMock.mockResolvedValue({ CurrentWeek: 3 })
   })
@@ -128,6 +136,61 @@ describe('schedule store loading', () => {
 
     expect(store.manualCourses).toEqual([course])
   })
+
+  it('updates a manual course without changing its local identity', async () => {
+    const store = useScheduleStore()
+    const course = createManualCourse()
+    store.selectedSemesterID = currentSemester.ID
+    store.manualCourses = [course]
+
+    const updated = await store.updateCourse(
+      {
+        id: course.id,
+        source: 'manual',
+        name: course.name,
+        room: course.room,
+        weekday: course.weekday,
+        startSection: course.startSection,
+        endSection: course.endSection,
+        weeks: course.weeks,
+      },
+      createManualCourseInput({ name: '修改后的课程', room: 'H2201' }),
+    )
+
+    expect(updated).toMatchObject({
+      id: course.id,
+      name: '修改后的课程',
+      room: 'H2201',
+    })
+    expect(writeManualCoursesMock).toHaveBeenCalledWith([updated])
+  })
+
+  it('persists an original course edit as a local override', async () => {
+    const store = useScheduleStore()
+    store.selectedSemesterID = currentSemester.ID
+
+    const updated = await store.updateCourse(
+      {
+        id: 'lesson-1-1-1-2',
+        source: 'jwxt',
+        name: '原始课程',
+        room: 'H2101',
+        weekday: 1,
+        startSection: 1,
+        endSection: 2,
+        weeks: [1, 2],
+      },
+      createManualCourseInput({ name: '本机名称', weekday: 3 }),
+    )
+
+    expect(updated).toMatchObject({
+      targetID: 'lesson-1-1-1-2',
+      semesterID: currentSemester.ID,
+      name: '本机名称',
+      weekday: 3,
+    })
+    expect(writeCourseOverridesMock).toHaveBeenCalledWith([updated])
+  })
 })
 
 function createTable(semesterID: string, courseName = '示例课程'): CourseTable {
@@ -171,5 +234,21 @@ function createManualCourse(): ManualCourse {
     startSection: 1,
     endSection: 2,
     weeks: [1, 2, 3],
+  }
+}
+
+function createManualCourseInput(
+  overrides: Partial<ManualCourseInput> = {},
+): ManualCourseInput {
+  return {
+    name: '本机课程',
+    room: 'H2101',
+    weekday: 1,
+    startSection: 1,
+    endSection: 2,
+    startWeek: 1,
+    endWeek: 3,
+    repeat: 'weekly',
+    ...overrides,
   }
 }

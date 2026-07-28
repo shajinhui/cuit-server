@@ -36,6 +36,16 @@ describe('manual course model', () => {
       createManualCourse(createInput({ startSection: 4, endSection: 3 }), 'semester-1', 'manual-1'),
     ).toThrow('请选择正确的上课节次')
   })
+
+  it('preserves an irregular week pattern while editing a course', () => {
+    const course = createManualCourse(
+      createInput({ startWeek: 2, endWeek: 15, weeks: [2, 4, 8, 15] }),
+      'semester-1',
+      'manual-1',
+    )
+
+    expect(course.weeks).toEqual([2, 4, 8, 15])
+  })
 })
 
 function createInput(overrides: Partial<ManualCourseInput>): ManualCourseInput {

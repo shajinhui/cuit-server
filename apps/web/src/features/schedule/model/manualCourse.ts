@@ -9,11 +9,23 @@ export interface ManualCourseInput {
   startWeek: number
   endWeek: number
   repeat: ManualCourseRepeat
+  weeks?: number[]
 }
 
 export interface ManualCourse {
   id: string
   semesterID: string
+  name: string
+  room: string
+  weekday: number
+  startSection: number
+  endSection: number
+  weeks: number[]
+}
+
+export interface CourseEditTarget {
+  id: string
+  source: 'jwxt' | 'manual'
   name: string
   room: string
   weekday: number
@@ -46,7 +58,10 @@ export function createManualCourse(input: ManualCourseInput, semesterID: string,
     throw new Error('请选择正确的上课周次')
   }
 
-  const weeks = buildManualCourseWeeks(input.startWeek, input.endWeek, input.repeat)
+  const weeks =
+    input.weeks === undefined
+      ? buildManualCourseWeeks(input.startWeek, input.endWeek, input.repeat)
+      : normalizeExplicitWeeks(input.weeks)
   if (weeks.length === 0) throw new Error('当前周次范围没有符合条件的教学周')
 
   return {
@@ -59,6 +74,13 @@ export function createManualCourse(input: ManualCourseInput, semesterID: string,
     endSection: input.endSection,
     weeks,
   }
+}
+
+function normalizeExplicitWeeks(weeks: number[]) {
+  if (weeks.some((week) => !Number.isInteger(week) || week < 1)) {
+    throw new Error('请选择正确的上课周次')
+  }
+  return [...new Set(weeks)].sort((left, right) => left - right)
 }
 
 export function buildManualCourseWeeks(startWeek: number, endWeek: number, repeat: ManualCourseRepeat) {

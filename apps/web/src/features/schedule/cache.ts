@@ -5,10 +5,12 @@ import {
 } from '@/shared/storage/offlineDatabase'
 
 import type { CourseTable } from './api'
+import { isCourseOverride, type CourseOverride } from './model/courseOverride'
 import { isManualCourse, type ManualCourse } from './model/manualCourse'
 
 const scheduleRecordKey = 'latest-schedule'
 const manualCoursesRecordKey = 'manual-courses'
+const courseOverridesRecordKey = 'course-overrides'
 
 export interface CachedSchedule {
   version: 1
@@ -110,6 +112,54 @@ export async function writeManualCourses(courses: ManualCourse[]): Promise<void>
   })
 }
 
+export async function readCourseOverrides(): Promise<CourseOverride[]> {
+  const database = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readonly')
+    const request = transaction.objectStore(storeName).get(courseOverridesRecordKey)
+
+    request.onsuccess = () => {
+      const record = request.result as ScheduleRecord | undefined
+      const courseOverrides = record?.value
+      resolve(
+        Array.isArray(courseOverrides) && courseOverrides.every(isCourseOverride)
+          ? courseOverrides
+          : [],
+      )
+    }
+    request.onerror = () => reject(request.error ?? new Error('读取课程修改失败'))
+    transaction.oncomplete = () => database.close()
+    transaction.onabort = () => {
+      database.close()
+      reject(transaction.error ?? new Error('读取课程修改事务失败'))
+    }
+  })
+}
+
+export async function writeCourseOverrides(courseOverrides: CourseOverride[]): Promise<void> {
+  const database = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readwrite')
+    const plainCourseOverrides = JSON.parse(JSON.stringify(courseOverrides)) as CourseOverride[]
+    transaction
+      .objectStore(storeName)
+      .put({ key: courseOverridesRecordKey, value: plainCourseOverrides } satisfies ScheduleRecord)
+
+    transaction.oncomplete = () => {
+      database.close()
+      resolve()
+    }
+    transaction.onerror = () => {
+      database.close()
+      reject(transaction.error ?? new Error('保存课程修改失败'))
+    }
+    transaction.onabort = () => {
+      database.close()
+      reject(transaction.error ?? new Error('保存课程修改事务失败'))
+    }
+  })
+}
+
 export async function clearScheduleCache(): Promise<void> {
   const database = await openDatabase()
   return new Promise((resolve, reject) => {
@@ -117,6 +167,7 @@ export async function clearScheduleCache(): Promise<void> {
     const objectStore = transaction.objectStore(storeName)
     objectStore.delete(scheduleRecordKey)
     objectStore.delete(manualCoursesRecordKey)
+    objectStore.delete(courseOverridesRecordKey)
 
     transaction.oncomplete = () => {
       database.close()

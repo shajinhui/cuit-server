@@ -3,7 +3,11 @@ import { computed, ref, watch } from 'vue'
 
 import AppSelect from '@/shared/ui/AppSelect.vue'
 
-import type { ManualCourseInput, ManualCourseRepeat } from '../model/manualCourse'
+import type {
+  CourseEditTarget,
+  ManualCourseInput,
+  ManualCourseRepeat,
+} from '../model/manualCourse'
 
 defineOptions({ name: 'AddCourseSheet' })
 
@@ -15,6 +19,7 @@ const props = defineProps<{
   sectionsPerDay: number
   saving: boolean
   error: string
+  initialCourse?: CourseEditTarget | null
 }>()
 
 const emit = defineEmits<{
@@ -38,7 +43,9 @@ const endSection = ref(2)
 const startWeek = ref(1)
 const endWeek = ref(1)
 const repeat = ref<ManualCourseRepeat>('weekly')
+const explicitWeeks = ref<number[] | null>(null)
 const localError = ref('')
+const editing = computed(() => Boolean(props.initialCourse))
 
 const maximumWeek = computed(() => Math.max(props.weekCount, props.selectedWeek, 1))
 const maximumSection = computed(() => Math.max(props.sectionsPerDay, 11))
@@ -58,14 +65,16 @@ watch(
   () => props.open,
   (open) => {
     if (!open) return
-    name.value = ''
-    room.value = ''
-    weekday.value = props.selectedWeekday
-    startSection.value = 1
-    endSection.value = 2
-    startWeek.value = 1
-    endWeek.value = maximumWeek.value
-    repeat.value = 'weekly'
+    const initialCourse = props.initialCourse
+    name.value = initialCourse?.name ?? ''
+    room.value = initialCourse?.room === '地点待定' ? '' : (initialCourse?.room ?? '')
+    weekday.value = initialCourse?.weekday ?? props.selectedWeekday
+    startSection.value = initialCourse?.startSection ?? 1
+    endSection.value = initialCourse?.endSection ?? 2
+    startWeek.value = initialCourse?.weeks[0] ?? 1
+    endWeek.value = initialCourse?.weeks.at(-1) ?? maximumWeek.value
+    repeat.value = repeatForWeeks(initialCourse?.weeks ?? [])
+    explicitWeeks.value = initialCourse?.weeks.length ? [...initialCourse.weeks] : null
     localError.value = ''
   },
 )
@@ -98,7 +107,23 @@ function submit() {
     startWeek: startWeek.value,
     endWeek: endWeek.value,
     repeat: repeat.value,
+    ...(explicitWeeks.value ? { weeks: [...explicitWeeks.value] } : {}),
   })
+}
+
+function clearExplicitWeeks() {
+  explicitWeeks.value = null
+}
+
+function chooseRepeat(value: ManualCourseRepeat) {
+  clearExplicitWeeks()
+  repeat.value = value
+}
+
+function repeatForWeeks(weeks: number[]): ManualCourseRepeat {
+  if (weeks.length > 0 && weeks.every((week) => week % 2 === 1)) return 'odd'
+  if (weeks.length > 0 && weeks.every((week) => week % 2 === 0)) return 'even'
+  return 'weekly'
 }
 </script>
 
@@ -116,9 +141,9 @@ function submit() {
           <div class="add-course-sheet__grabber" aria-hidden="true" />
           <header class="add-course-sheet__header">
             <button type="button" :disabled="saving" @click="close">取消</button>
-            <h2 id="add-course-title">添加课程</h2>
+            <h2 id="add-course-title">{{ editing ? '修改课程' : '添加课程' }}</h2>
             <button type="button" class="is-primary" :disabled="saving" @click="submit">
-              {{ saving ? '保存中' : '添加' }}
+              {{ saving ? '保存中' : editing ? '保存' : '添加' }}
             </button>
           </header>
 
@@ -189,6 +214,7 @@ function submit() {
                     :options="weekSelectOptions"
                     title="选择开始周"
                     aria-label="选择开始周"
+                    @change="clearExplicitWeeks"
                   />
                 </label>
                 <label>
@@ -198,6 +224,7 @@ function submit() {
                     :options="weekSelectOptions"
                     title="选择结束周"
                     aria-label="选择结束周"
+                    @change="clearExplicitWeeks"
                   />
                 </label>
               </div>
@@ -208,7 +235,7 @@ function submit() {
                   type="button"
                   :class="{ 'is-active': repeat === item.value }"
                   :aria-pressed="repeat === item.value"
-                  @click="repeat = item.value"
+                  @click="chooseRepeat(item.value)"
                 >
                   {{ item.label }}
                 </button>
@@ -216,7 +243,13 @@ function submit() {
             </div>
 
             <p v-if="errorMessage" class="add-course-form__error" role="alert">{{ errorMessage }}</p>
-            <p class="add-course-form__note">手动课程仅保存在本机，不会修改教务系统课表。</p>
+            <p class="add-course-form__note">
+              {{
+                editing
+                  ? '课程修改仅保存在本机，不会改动教务系统课表。'
+                  : '手动课程仅保存在本机，不会修改教务系统课表。'
+              }}
+            </p>
           </form>
         </section>
       </div>
