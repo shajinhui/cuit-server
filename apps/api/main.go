@@ -11,6 +11,8 @@ import (
 
 	"cuit-server/internal/academic"
 	"cuit-server/internal/analytics"
+	"cuit-server/internal/feedback"
+	platformcache "cuit-server/internal/platform/cache"
 	"cuit-server/internal/platform/cors"
 	"cuit-server/internal/platform/database"
 	"cuit-server/internal/schedule"
@@ -45,6 +47,20 @@ func main() {
 		_ = db.Close()
 		log.Fatal(err)
 	}
+	var cacheStore platformcache.Store = platformcache.DisabledStore{}
+	if redisURL := strings.TrimSpace(os.Getenv("REDIS_URL")); redisURL != "" {
+		redisStore, err := platformcache.OpenRedis(startupCtx, redisURL)
+		if err != nil {
+			// Redis 只承载可重新获取的缓存，连接失败不能阻止登录和教务查询主流程。
+			log.Printf("Redis 缓存未启用: %v", err)
+		} else {
+			cacheStore = redisStore
+			defer redisStore.Close()
+			log.Print("Redis 缓存已启用")
+		}
+	} else {
+		log.Print("Redis 缓存未启用：未配置 REDIS_URL")
+	}
 	cancel()
 	defer db.Close()
 
@@ -62,15 +78,20 @@ func main() {
 		// 每次教务登录都创建独立 Client，确保不同学生不会共享 CookieJar。
 		return jwxt.NewClient()
 	}, repository, credentials, 3*time.Minute)
-	academicHandler := academic.NewHandler(jwxtService, secureCookie)
-	scheduleHandler := schedule.NewHandler(jwxtService, schedule.NewCalendarClient())
+	cacheLoader := platformcache.NewLoader(cacheStore)
+	academicService := academic.NewCachedService(jwxtService, cacheLoader)
+	scheduleService := schedule.NewCachedCourseTableService(jwxtService, cacheLoader)
+	currentWeekService := schedule.NewCachedCurrentWeekService(schedule.NewCalendarClient(), cacheLoader)
+	academicHandler := academic.NewHandler(academicService, secureCookie)
+	scheduleHandler := schedule.NewHandler(scheduleService, currentWeekService)
+	feedbackHandler := feedback.NewHandler(academicService, feedback.NewRepository(db))
 
 	h := server.Default(server.WithHostPorts(address))
 	h.Use(accesslog.New())
 	analyticsRepository := analytics.NewRepository(db)
 	analyticsCollector := analytics.NewCollector(
 		analyticsRepository,
-		jwxtService,
+		academicService,
 		"campus_session",
 		time.Minute,
 	)
@@ -88,6 +109,7 @@ func main() {
 	}
 	academicHandler.Register(h)
 	scheduleHandler.Register(h)
+	feedbackHandler.Register(h)
 	if adminToken := strings.TrimSpace(os.Getenv("ADMIN_STATS_TOKEN")); adminToken != "" {
 		analytics.NewHandler(analyticsCollector, adminToken).Register(h)
 	} else {

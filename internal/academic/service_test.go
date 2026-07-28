@@ -22,6 +22,7 @@ type fakeJWXTClient struct {
 	planErr              error
 	grades               []jwxt.Grade
 	gradeErr             error
+	gradeCalls           int
 	exams                []jwxt.Exam
 	examErr              error
 	courseTable          jwxt.CourseTable
@@ -73,6 +74,7 @@ func (f *fakeJWXTClient) ListSemesters(context.Context) ([]jwxt.Semester, error)
 }
 
 func (f *fakeJWXTClient) GetGrades(context.Context, string) ([]jwxt.Grade, error) {
+	f.gradeCalls++
 	return f.grades, f.gradeErr
 }
 

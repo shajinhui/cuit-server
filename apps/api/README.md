@@ -1,6 +1,6 @@
 # Campus Assistant API
 
-当前 API 服务已实现登录、学籍信息、计划完成情况、学期、成绩、考试、个人课表和空教室查询，并使用 SQLite 保存用户、加密后的教务凭据和应用会话。
+当前 API 服务已实现登录、学籍信息、计划完成情况、学期、成绩、考试、个人课表和空教室查询。SQLite 保存用户、加密后的教务凭据和应用会话；Redis 缓存可以重新获取的教务查询结果。
 
 完整的请求参数、响应字段和错误码见 [`docs/API.md`](../../docs/API.md)。
 
@@ -17,6 +17,10 @@ go run ./apps/api
 配置唯一允许携带 Cookie 访问 API 的前端地址。
 
 SQLite 文件默认位于 `data/cuit-server.db`，可通过 `SQLITE_PATH` 修改。启动时会自动创建目录、数据库并执行 `migrations` 中的建表语句。
+
+通过 `REDIS_URL` 配置 Redis，例如 `redis://127.0.0.1:6379/0`。Redis
+不可用时服务会跳过缓存并继续访问学校系统，不影响 SQLite 会话和登录主流程。
+缓存只保存有有效期的查询结果，不保存密码、Cookie、Ticket 或 JWXT Client。
 
 ## 接口
 

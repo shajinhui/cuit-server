@@ -32,6 +32,12 @@ const router = createRouter({
       component: () => import('@/pages/AboutPage.vue'),
     },
     {
+      path: '/feedback',
+      name: 'feedback',
+      component: () => import('@/pages/FeedbackPage.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/admin/stats',
       name: 'admin-stats',
       component: () => import('@/pages/AdminStatsPage.vue'),

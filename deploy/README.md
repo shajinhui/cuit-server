@@ -1,5 +1,8 @@
 # 正式部署
 
+已完成首次安装后，日常连接服务器和更新后端请直接参考
+[SSH 后端更新流程](SSH_BACKEND_UPDATE.md)。
+
 当前正式环境使用：
 
 - 前端：Cloudflare Pages，`https://fanxiaogao05.dpdns.org`
@@ -7,6 +10,7 @@
 - 校内服务器：Debian GNU/Linux 13（trixie），amd64
 - API 本机监听：`127.0.0.1:8888`
 - 数据库：服务器本地 SQLite
+- 缓存：服务器本地 Redis
 
 浏览器直接访问 API 子域名。`cloudflared` 只把 API 请求转发到本机 Go 服务，EAMS 和 CAS 仍由校内服务器访问。
 
@@ -67,6 +71,47 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now cuit-server
 sudo systemctl status cuit-server
 curl --fail http://127.0.0.1:8888/api/v1/health
+```
+
+### 配置 Redis
+
+Redis 只保存可以重新查询的缓存，不承载应用 Session、密码或学校 Cookie。先安装：
+
+```bash
+sudo apt-get update
+sudo apt-get install redis-server
+```
+
+编辑 `/etc/redis/redis.conf`，确认以下配置：
+
+```text
+bind 127.0.0.1 ::1
+protected-mode yes
+save ""
+appendonly no
+maxmemory 128mb
+maxmemory-policy allkeys-lru
+```
+
+本项目的 Redis 不需要磁盘持久化；关闭 RDB 和 AOF 可以避免把个人教务查询缓存
+写入磁盘。Redis 只监听本机，不要通过防火墙或 Cloudflare Tunnel 暴露 `6379`。
+
+```bash
+sudo systemctl enable --now redis-server
+redis-cli ping
+```
+
+在 `/etc/cuit-server/cuit-server.env` 中配置：
+
+```text
+REDIS_URL=redis://127.0.0.1:6379/0
+```
+
+修改环境变量后重启 API，并确认日志包含“Redis 缓存已启用”：
+
+```bash
+sudo systemctl restart cuit-server
+sudo journalctl -u cuit-server -n 30 --no-pager -o cat
 ```
 
 ## 3. 安装 Cloudflare Tunnel
