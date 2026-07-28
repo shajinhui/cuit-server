@@ -33,16 +33,9 @@
 
 ## 系统结构
 
-```mermaid
-flowchart LR
-    User["PWA / Android"] --> API["Hertz API"]
-    API --> Session["应用会话与业务服务"]
-    Session --> SQLite["SQLite"]
-    Session --> Redis["Redis 查询缓存"]
-    Session --> Client["每位用户独立的 JWXT Client"]
-    Client --> CAS["CAS / 一网通办"]
-    Client --> EAMS["EAMS 教务系统"]
-```
+<p align="center">
+  <img src="docs/architecture/cuit-server-architecture.png" width="100%" alt="成信友友当前项目架构图">
+</p>
 
 浏览器不直接访问学校认证系统。后端为每位用户创建独立的 `jwxt.Client` 和 `CookieJar`，避免不同学生的学校会话相互混用。
 
