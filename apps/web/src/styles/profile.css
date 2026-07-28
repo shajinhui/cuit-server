@@ -142,7 +142,7 @@
 .student-card h2 {
   margin: 0 0 2px;
   font-size: 17px;
-  font-weight: 560;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -246,7 +246,7 @@
 
 .profile-menu span {
   font-size: 17px;
-  font-weight: 560;
+  font-weight: 600;
 }
 
 .profile-menu__chevron {
@@ -272,7 +272,7 @@
   place-items: center;
   color: var(--profile-danger);
   font-size: 17px;
-  font-weight: 560;
+  font-weight: 600;
   background: transparent;
   border: 0;
   transition:
@@ -316,6 +316,117 @@
 
   .student-card__row:not(:last-child)::after {
     left: 69px;
+  }
+}
+
+/*
+ * Height, rather than operating system, determines the compact presentation.
+ * This keeps short Android phones and iPhone SE-class screens information
+ * dense without changing the large-screen iPhone layout.
+ */
+@media (max-width: 400px) and (max-height: 800px) {
+  .profile-page {
+    padding-top: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  }
+
+  .profile-hero {
+    min-height: 152px;
+  }
+
+  .profile-avatar {
+    width: 76px;
+    height: 76px;
+  }
+
+  .profile-avatar img {
+    width: 54px;
+    height: 54px;
+  }
+
+  .profile-hero__identity {
+    margin-top: 10px;
+  }
+
+  .profile-hero__identity h1 {
+    margin-bottom: 3px;
+    font-size: 24px;
+  }
+
+  .profile-hero__identity p {
+    font-size: 13px;
+  }
+
+  .student-card,
+  .profile-menu,
+  .profile-logout {
+    margin-top: 14px;
+  }
+
+  .student-card__row {
+    min-height: 58px;
+    padding: 7px 14px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 11px;
+  }
+
+  .student-card__row:not(:last-child)::after {
+    left: 61px;
+  }
+
+  .student-card__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+  }
+
+  .student-card__icon img {
+    width: 21px;
+    height: 21px;
+  }
+
+  .student-card__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .student-card h2 {
+    font-size: 16px;
+  }
+
+  .student-card p {
+    font-size: 13px;
+  }
+
+  .profile-menu button {
+    min-height: 54px;
+    padding: 0 14px;
+    grid-template-columns: 36px minmax(0, 1fr) 16px;
+    gap: 11px;
+  }
+
+  .profile-menu img,
+  .profile-menu__leading-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .profile-menu__leading-icon {
+    padding: 6px;
+    border-radius: 9px;
+  }
+
+  .profile-menu span,
+  .profile-logout button {
+    font-size: 16px;
+  }
+
+  .profile-menu__chevron {
+    width: 16px;
+    height: 16px;
+  }
+
+  .profile-logout button {
+    min-height: 50px;
   }
 }
 

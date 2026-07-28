@@ -44,7 +44,8 @@
 }
 
 .tool-search input {
-  width: 100%;
+  min-width: 0;
+  flex: 1;
   color: #1f1f23;
   font-size: 16px;
   background: transparent;
@@ -72,6 +73,8 @@
 
 .tools-grid button {
   display: flex;
+  width: 100%;
+  min-width: 0;
   min-height: clamp(112px, 31vw, 128px);
   padding: clamp(12px, 3.7vw, 16px) 10px clamp(11px, 3.2vw, 14px);
   flex-direction: column;
@@ -110,20 +113,28 @@
 
 .tools-grid .tool-copy {
   display: grid;
+  width: 100%;
+  min-width: 0;
   justify-items: center;
   gap: 2px;
 }
 
 .tools-grid .tool-label {
+  max-width: 100%;
   font-size: clamp(15px, 4vw, 17px);
-  font-weight: 590;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .tools-grid small {
+  max-width: 100%;
   color: #8e8e93;
   font-size: clamp(10px, 2.6vw, 11px);
   font-weight: 500;
+  line-height: 1.25;
   letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 380px) {

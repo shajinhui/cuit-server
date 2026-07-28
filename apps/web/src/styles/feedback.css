@@ -26,7 +26,7 @@
 .feedback-topbar h1 {
   margin: 0;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -82,7 +82,7 @@
 .feedback-section__heading h2 {
   margin: 0;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .feedback-section__heading span {
@@ -105,7 +105,7 @@
   padding: 0 12px;
   color: #636366;
   font-size: 15px;
-  font-weight: 590;
+  font-weight: 600;
   background: transparent;
   border: 0;
   border-radius: 9px;
@@ -180,7 +180,7 @@
   gap: 8px;
   color: #fff;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   background: #007aff;
   border: 0;
   border-radius: 16px;

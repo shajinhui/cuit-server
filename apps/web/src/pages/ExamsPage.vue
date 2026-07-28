@@ -219,7 +219,9 @@ function creditLabel(credits: string) {
           </div>
 
           <div v-else class="exam-today-empty">
-            <span aria-hidden="true">✓</span>
+            <span aria-hidden="true">
+              <svg viewBox="0 0 16 16"><path d="m3.5 8.4 3 3 6-7" /></svg>
+            </span>
             <div>
               <strong>今天没有考试</strong>
               <p>当前批次今天没有考试安排。</p>

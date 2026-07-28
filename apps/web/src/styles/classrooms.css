@@ -31,7 +31,7 @@ body:has(.classroom-page) {
 .classroom-topbar h1 {
   margin: 0;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.2;
   text-align: center;
 }
@@ -83,7 +83,7 @@ body:has(.classroom-page) {
   margin: 13px 0 0;
   color: #1c1c1e;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .classroom-state p {
@@ -120,7 +120,7 @@ body:has(.classroom-page) {
   place-items: center;
   color: #ff383c;
   font-size: 22px;
-  font-weight: 650;
+  font-weight: 600;
   background: rgba(255, 56, 60, 0.09);
   border-radius: 50%;
 }
@@ -184,7 +184,7 @@ body:has(.classroom-page) {
   overflow: hidden;
   color: #1c1c1e;
   font-size: 15px;
-  font-weight: 560;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
   background: #f2f2f7;
@@ -373,7 +373,7 @@ body:has(.classroom-page) {
   gap: 9px;
   color: #fff;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   background: #0088ff;
   border: 0;
   border-radius: 14px;
@@ -406,7 +406,7 @@ body:has(.classroom-page) {
 .classroom-results-heading h2 {
   margin: 0;
   font-size: 20px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
@@ -547,7 +547,7 @@ body:has(.classroom-page) {
   margin: 0;
   overflow: hidden;
   font-size: 17px;
-  font-weight: 620;
+  font-weight: 600;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -571,7 +571,7 @@ body:has(.classroom-page) {
 .classroom-capacity strong {
   color: #1c1c1e;
   font-size: 20px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .classroom-capacity span {
@@ -598,7 +598,7 @@ body:has(.classroom-page) {
   place-items: center;
   color: #ff383c;
   font-size: 20px;
-  font-weight: 650;
+  font-weight: 600;
   background: rgba(255, 56, 60, 0.09);
   border-radius: 50%;
 }
@@ -607,7 +607,7 @@ body:has(.classroom-page) {
   margin: 13px 0 0;
   color: #1c1c1e;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .classroom-result-state p {
@@ -672,22 +672,31 @@ body:has(.classroom-page) {
 .classroom-sheet > header {
   display: grid;
   min-height: 52px;
-  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
 }
 
 .classroom-sheet > header h2 {
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .classroom-sheet > header button {
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
-  padding: 0;
+  padding: 0 8px;
+  overflow: hidden;
   color: #636366;
   font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: transparent;
   border: 0;
 }
@@ -702,7 +711,7 @@ body:has(.classroom-page) {
 
 .classroom-sheet > header button.is-primary {
   color: #0088ff;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .classroom-sheet__fields {
@@ -794,7 +803,7 @@ body:has(.classroom-page) {
   padding: 0;
   color: #1c1c1e;
   font-size: 15px;
-  font-weight: 560;
+  font-weight: 600;
   background: transparent;
   border: 0;
   outline: 0;

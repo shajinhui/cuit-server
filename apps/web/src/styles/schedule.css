@@ -26,20 +26,31 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.schedule-header > div:first-child {
+  min-width: 0;
+  flex: 1;
 }
 
 .schedule-header h1 {
   margin: 0;
+  overflow: hidden;
   font-size: clamp(23px, 5.5vw, 26px);
   font-weight: 500;
   line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   letter-spacing: -0.5px;
 }
 
 .schedule-header p {
   display: flex;
   gap: 12px;
+  min-width: 0;
   margin: 7px 0 0;
+  flex-wrap: wrap;
   font-size: 17px;
   line-height: 1.1;
 }
@@ -50,12 +61,15 @@
 
 .schedule-week-select {
   display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
   align-items: center;
   min-height: 44px;
   margin: -13px 0;
 }
 
 .schedule-week-select .app-select__trigger {
+  max-width: 100%;
   min-height: 44px;
   padding: 0 18px 0 0;
   color: inherit;
@@ -81,6 +95,7 @@
 
 .schedule-header__actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 4px;
 }
@@ -143,6 +158,14 @@
   height: 20px;
 }
 
+.schedule-header__actions .more-button svg {
+  width: 18px;
+  height: 6px;
+  overflow: visible;
+  fill: currentColor;
+  stroke: none;
+}
+
 .schedule-more {
   position: relative;
   display: flex;
@@ -199,7 +222,7 @@
 .schedule-semester-option strong {
   color: #101722;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -251,7 +274,7 @@
   padding: 9px 10px;
   color: rgba(16, 23, 34, 0.72);
   font-size: 13px;
-  font-weight: 520;
+  font-weight: 500;
   line-height: 1.25;
   text-align: left;
   background: transparent;
@@ -261,6 +284,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+.schedule-header__actions .schedule-semester-list__item > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .schedule-header__actions .schedule-semester-list__item:active {
   background: rgba(255, 255, 255, 0.52);
   transform: none;
@@ -268,7 +296,7 @@
 
 .schedule-header__actions .schedule-semester-list__item.is-selected {
   color: #0088ff;
-  font-weight: 650;
+  font-weight: 600;
   background: rgba(0, 136, 255, 0.09);
 }
 
@@ -320,7 +348,7 @@
 .week-strip__month {
   color: #0b1119;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .week-strip__month strong,
@@ -345,11 +373,11 @@
 
 .week-strip button.is-active {
   color: #111925;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .week-strip button.is-active strong {
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .schedule-board {
@@ -479,7 +507,7 @@
 .course-block__room {
   max-width: 100%;
   font-size: clamp(11px, 3vw, 14px);
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -548,7 +576,7 @@
   overflow: hidden;
   color: #26343d;
   font-size: 8px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -708,7 +736,7 @@
   display: grid;
   min-height: 48px;
   padding: 11px 14px;
-  grid-template-columns: 80px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   gap: 10px;
 }
@@ -727,6 +755,7 @@
   color: rgba(38, 52, 61, 0.58);
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .course-detail-card__details dd {
@@ -775,7 +804,7 @@
   padding: 0 14px;
   color: #26343d;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   background: rgba(116, 116, 128, 0.12);
   border: 0;
   border-radius: 13px;
@@ -811,7 +840,7 @@
   margin-bottom: 2px;
   color: #b33431;
   font-size: 12px;
-  font-weight: 550;
+  font-weight: 600;
 }
 
 .course-detail-sheet-enter-active,
@@ -878,22 +907,30 @@
   display: grid;
   min-height: 52px;
   padding: 0 6px;
-  grid-template-columns: 80px 1fr 80px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
 }
 
 .add-course-sheet__header h2 {
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .add-course-sheet__header button {
+  max-width: 100%;
   min-width: 44px;
   min-height: 44px;
   padding: 0 10px;
+  overflow: hidden;
   color: rgba(16, 23, 34, 0.7);
+  text-overflow: ellipsis;
+  white-space: nowrap;
   background: transparent;
   border: 0;
   border-radius: 12px;
@@ -909,7 +946,7 @@
 
 .add-course-sheet__header button.is-primary {
   color: #0878e8;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .add-course-sheet__header button:active,
@@ -942,7 +979,7 @@
   display: grid;
   min-height: 52px;
   padding: 4px 12px;
-  grid-template-columns: 94px minmax(0, 1fr);
+  grid-template-columns: minmax(min-content, 0.34fr) minmax(0, 1fr);
   align-items: center;
 }
 
@@ -957,8 +994,11 @@
 }
 
 .add-course-form label > span {
+  min-width: 0;
   font-size: 15px;
   font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .add-course-form input,
@@ -1039,11 +1079,14 @@
 }
 
 .add-course-form__repeat button {
+  min-width: 0;
   min-height: 34px;
   padding: 0 10px;
   color: rgba(16, 23, 34, 0.62);
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
   background: rgba(118, 118, 128, 0.12);
   border: 0;
   border-radius: 9px;

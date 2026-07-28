@@ -224,7 +224,9 @@ async function refreshSchedule() {
             :disabled="!store.selectedSemesterID"
             @click="openAddCourse"
           >
-            ＋
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
           </button>
           <button
             type="button"
@@ -244,7 +246,11 @@ async function refreshSchedule() {
               :aria-expanded="moreMenuOpen"
               @click="toggleMoreMenu"
             >
-              •••
+              <svg aria-hidden="true" viewBox="0 0 18 6">
+                <circle cx="3" cy="3" r="1.5" />
+                <circle cx="9" cy="3" r="1.5" />
+                <circle cx="15" cy="3" r="1.5" />
+              </svg>
             </button>
             <Transition name="schedule-more-menu">
               <div

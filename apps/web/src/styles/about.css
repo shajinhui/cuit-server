@@ -27,7 +27,7 @@
   margin: 0;
   overflow: hidden;
   font-size: 18px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.2;
   text-align: center;
   text-overflow: ellipsis;
@@ -115,7 +115,7 @@
 .about-card h2 {
   margin: 0;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.25;
 }
 

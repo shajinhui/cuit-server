@@ -39,7 +39,7 @@
 
 .pwa-install-promotion__copy strong {
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -58,7 +58,7 @@
   padding: 0 15px;
   color: #fff;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   background: #0088ff;
   border: 0;
   border-radius: 22px;
@@ -214,7 +214,7 @@
   place-items: center;
   color: #fff;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   background: #0088ff;
   border-radius: 50%;
 }
@@ -231,7 +231,7 @@
   margin-top: 18px;
   color: #fff;
   font-size: 17px;
-  font-weight: 650;
+  font-weight: 600;
   background: #0088ff;
   border: 0;
   border-radius: 25px;
@@ -299,10 +299,6 @@
   .pwa-install-promotion > img {
     width: 44px;
     height: 44px;
-  }
-
-  .pwa-install-promotion__copy span {
-    max-width: 132px;
   }
 
   .pwa-install-guide {
