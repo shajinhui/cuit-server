@@ -6,6 +6,7 @@ import type { Classroom, ClassroomOccupancy, ClassroomSchedule } from './api'
 const classroomScheduleKeyPrefix = 'classroom-schedule:'
 const classroomInitializationKey = 'classroom-initialization'
 const classroomScheduleCacheVersion = 2
+const classroomLocalCacheTTL = 24 * 60 * 60 * 1000
 
 export interface CachedClassroomSchedule {
   version: 2
@@ -43,7 +44,10 @@ export async function readClassroomScheduleCache(
     request.onsuccess = () => {
       const record = request.result as ClassroomScheduleRecord | undefined
       resolve(
-        isCachedClassroomSchedule(record?.value, semesterID, campusID) ? record.value : null,
+        isCachedClassroomSchedule(record?.value, semesterID, campusID) &&
+          isClassroomLocalCacheFresh(record.value.cachedAt)
+          ? record.value
+          : null,
       )
     }
     request.onerror = () => reject(request.error ?? new Error('读取本地教室课表失败'))
@@ -98,7 +102,12 @@ export async function readClassroomInitializationCache(): Promise<CachedClassroo
 
     request.onsuccess = () => {
       const record = request.result as ClassroomScheduleRecord | undefined
-      resolve(isCachedClassroomInitialization(record?.value) ? record.value : null)
+      resolve(
+        isCachedClassroomInitialization(record?.value) &&
+          isClassroomLocalCacheFresh(record.value.cachedAt)
+          ? record.value
+          : null,
+      )
     }
     request.onerror = () => reject(request.error ?? new Error('读取本地空教室查询条件失败'))
     transaction.oncomplete = () => database.close()
@@ -177,15 +186,17 @@ export async function hasClassroomScheduleCache(): Promise<boolean> {
   const database = await openOfflineDatabase()
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(offlineStoreName, 'readonly')
-    const request = transaction.objectStore(offlineStoreName).openKeyCursor()
+    const request = transaction.objectStore(offlineStoreName).openCursor()
     let found = false
 
     request.onsuccess = () => {
       const cursor = request.result
       if (!cursor) return
+      const record = cursor.value as ClassroomScheduleRecord
       if (
         typeof cursor.key === 'string' &&
-        cursor.key.startsWith(classroomScheduleKeyPrefix)
+        cursor.key.startsWith(classroomScheduleKeyPrefix) &&
+        hasFreshCachedAt(record.value)
       ) {
         found = true
         return
@@ -202,6 +213,20 @@ export async function hasClassroomScheduleCache(): Promise<boolean> {
       reject(transaction.error ?? new Error('检查本地教室课表事务失败'))
     }
   })
+}
+
+export function isClassroomLocalCacheFresh(cachedAt: number, now = Date.now()): boolean {
+  const age = now - cachedAt
+  return Number.isFinite(cachedAt) && age >= 0 && age < classroomLocalCacheTTL
+}
+
+function hasFreshCachedAt(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false
+
+  const cached = value as { cachedAt?: unknown }
+  return (
+    typeof cached.cachedAt === 'number' && isClassroomLocalCacheFresh(cached.cachedAt)
+  )
 }
 
 function isCachedClassroomInitialization(
