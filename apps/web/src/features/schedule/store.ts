@@ -12,13 +12,20 @@ import {
 import { getCourseTable, getCurrentWeek, type CourseTable } from './api'
 import {
   clearScheduleCache,
+  readCourseOverrides,
   readManualCourses,
   readScheduleCache,
+  writeCourseOverrides,
   writeManualCourses,
   writeScheduleCache,
 } from './cache'
 import {
+  createCourseOverride,
+  type CourseOverride,
+} from './model/courseOverride'
+import {
   createManualCourse,
+  type CourseEditTarget,
   type ManualCourse,
   type ManualCourseInput,
 } from './model/manualCourse'
@@ -35,6 +42,8 @@ export const useScheduleStore = defineStore('schedule', {
     table: null as CourseTable | null,
     manualCourses: [] as ManualCourse[],
     manualCoursesLoaded: false,
+    courseOverrides: [] as CourseOverride[],
+    courseOverridesLoaded: false,
     currentWeek: 0,
     loading: false,
     error: '',
@@ -55,6 +64,7 @@ export const useScheduleStore = defineStore('schedule', {
       try {
         await this.restoreCachedSchedule()
         await this.restoreManualCourses()
+        await this.restoreCourseOverrides()
         const cachedSemesterMatches =
           !requestedSemesterID || requestedSemesterID === this.selectedSemesterID
         if (!options.refresh && this.table && cachedSemesterMatches) {
@@ -70,6 +80,8 @@ export const useScheduleStore = defineStore('schedule', {
           this.table = null
           this.manualCourses = []
           this.manualCoursesLoaded = true
+          this.courseOverrides = []
+          this.courseOverridesLoaded = true
           this.currentWeek = 0
           this.usingCachedData = false
           this.cachedAt = 0
@@ -148,6 +160,12 @@ export const useScheduleStore = defineStore('schedule', {
       this.manualCourses = await readManualCourses()
       this.manualCoursesLoaded = true
     },
+    async restoreCourseOverrides() {
+      if (this.courseOverridesLoaded) return
+
+      this.courseOverrides = await readCourseOverrides()
+      this.courseOverridesLoaded = true
+    },
     async addManualCourse(input: ManualCourseInput) {
       const course = createManualCourse(input, this.selectedSemesterID, createManualCourseID())
       const nextCourses = [...this.manualCourses, course]
@@ -155,6 +173,29 @@ export const useScheduleStore = defineStore('schedule', {
       await writeManualCourses(nextCourses)
       this.manualCourses = nextCourses
       return course
+    },
+    async updateCourse(target: CourseEditTarget, input: ManualCourseInput) {
+      if (target.source === 'manual') {
+        const courseIndex = this.manualCourses.findIndex((course) => course.id === target.id)
+        if (courseIndex < 0) throw new Error('没有找到这门本机课程')
+
+        const course = createManualCourse(input, this.selectedSemesterID, target.id)
+        const nextCourses = [...this.manualCourses]
+        nextCourses[courseIndex] = course
+        await writeManualCourses(nextCourses)
+        this.manualCourses = nextCourses
+        return course
+      }
+
+      const courseOverride = createCourseOverride(input, this.selectedSemesterID, target.id)
+      const nextCourseOverrides = this.courseOverrides.filter(
+        (item) =>
+          item.targetID !== target.id || item.semesterID !== this.selectedSemesterID,
+      )
+      nextCourseOverrides.push(courseOverride)
+      await writeCourseOverrides(nextCourseOverrides)
+      this.courseOverrides = nextCourseOverrides
+      return courseOverride
     },
     async removeManualCourse(courseID: string) {
       const course = this.manualCourses.find((item) => item.id === courseID)
@@ -171,6 +212,8 @@ export const useScheduleStore = defineStore('schedule', {
       this.table = null
       this.manualCourses = []
       this.manualCoursesLoaded = false
+      this.courseOverrides = []
+      this.courseOverridesLoaded = false
       this.currentWeek = 0
       this.error = ''
       this.weekError = ''

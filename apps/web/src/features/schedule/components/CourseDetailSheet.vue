@@ -13,6 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: []
+  edit: [course: CourseSlotCourse]
   remove: [courseID: string]
 }>()
 
@@ -70,6 +71,8 @@ const removableCourses = computed(() => {
   return props.course.courses.filter((course) => course.source === 'manual')
 })
 
+const editableCourses = computed(() => props.course?.courses ?? [])
+
 watch(
   () => props.course,
   (course) => {
@@ -86,6 +89,11 @@ function close() {
 
 function requestRemoval(course: CourseSlotCourse) {
   pendingRemoval.value = course
+}
+
+function editCourse(course: CourseSlotCourse) {
+  if (props.removing) return
+  emit('edit', course)
 }
 
 function cancelRemoval() {
@@ -180,7 +188,7 @@ function formatWeeks(weeks: number[]) {
             </div>
           </dl>
 
-          <div v-if="removableCourses.length > 0" class="course-detail-card__actions">
+          <div v-if="editableCourses.length > 0" class="course-detail-card__actions">
             <template v-if="pendingRemoval">
               <p>
                 确定删除“{{ pendingRemoval.name }}”吗？
@@ -200,8 +208,21 @@ function formatWeeks(weeks: number[]) {
             </template>
             <template v-else>
               <button
+                v-for="editableCourse in editableCourses"
+                :key="`edit-${editableCourse.id}`"
+                type="button"
+                class="course-detail-card__edit"
+                @click="editCourse(editableCourse)"
+              >
+                {{
+                  editableCourses.length > 1
+                    ? `修改“${editableCourse.name}”`
+                    : '修改课程'
+                }}
+              </button>
+              <button
                 v-for="manualCourse in removableCourses"
-                :key="manualCourse.id"
+                :key="`remove-${manualCourse.id}`"
                 type="button"
                 class="course-detail-card__delete"
                 @click="requestRemoval(manualCourse)"

@@ -8,6 +8,7 @@ import {
 } from './calendar'
 
 import type { Course, CourseActivity } from '../api'
+import type { CourseOverride } from './courseOverride'
 import type { ManualCourse } from './manualCourse'
 
 describe('schedule calendar model', () => {
@@ -85,6 +86,34 @@ describe('schedule calendar model', () => {
 
     expect(inactiveBlock.muted).toBe(true)
     expect(inactiveBlock.tone).toBe(activeBlock.tone)
+  })
+
+  it('applies a persisted local edit to an original course', () => {
+    const course = createCourse('原始课程', [
+      createActivity({ Weekday: 1, StartSection: 1, EndSection: 2, Weeks: [1, 2, 3] }),
+    ])
+    const courseOverride: CourseOverride = {
+      targetID: '原始课程-1-1-2',
+      semesterID: 'semester-1',
+      name: '修改后的课程',
+      room: 'H2201',
+      weekday: 4,
+      startSection: 5,
+      endSection: 6,
+      weeks: [2, 4],
+    }
+
+    expect(buildCourseBlocks([course], 4, [], [courseOverride])[0]).toMatchObject({
+      id: courseOverride.targetID,
+      name: '修改后的课程',
+      room: 'H2201',
+      day: 4,
+      start: 5,
+      span: 2,
+      weeks: [2, 4],
+      muted: false,
+      source: 'jwxt',
+    })
   })
 
   it('keeps course and activity details for the detail card', () => {

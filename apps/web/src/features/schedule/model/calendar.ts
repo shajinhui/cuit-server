@@ -1,4 +1,5 @@
 import type { Course } from '../api'
+import type { CourseOverride } from './courseOverride'
 import type { ManualCourse } from './manualCourse'
 
 export type CourseTone =
@@ -99,8 +100,12 @@ export function buildCourseBlocks(
   courses: Course[] | null | undefined,
   selectedWeek: number,
   manualCourses: ManualCourse[] = [],
+  courseOverrides: CourseOverride[] = [],
 ): CourseBlock[] {
   const blocks: CourseBlock[] = []
+  const overridesByTarget = new Map(
+    courseOverrides.map((courseOverride) => [courseOverride.targetID, courseOverride]),
+  )
   for (const course of courses ?? []) {
     const identity = course.LessonID || course.Code || course.Name
     const groupedActivities = new Map<string, NonNullable<Course['Activities']>>()
@@ -156,7 +161,11 @@ export function buildCourseBlocks(
         conflict: false,
       })
     }
-    blocks.push(...mergeContinuousCourseBlocks(courseBlocks, identity))
+    blocks.push(
+      ...mergeContinuousCourseBlocks(courseBlocks, identity).map((block) =>
+        applyCourseOverride(block, overridesByTarget.get(block.id), selectedWeek),
+      ),
+    )
   }
   for (const course of manualCourses) {
     const muted = selectedWeek > 0 && !course.weeks.includes(selectedWeek)
@@ -189,6 +198,34 @@ export function buildCourseBlocks(
   return groupCourseSlots(blocks, selectedWeek).sort(
     (left, right) => Number(left.muted) - Number(right.muted),
   )
+}
+
+function applyCourseOverride(
+  block: CourseBlock,
+  courseOverride: CourseOverride | undefined,
+  selectedWeek: number,
+): CourseBlock {
+  if (!courseOverride) return block
+
+  const room = courseOverride.room || '地点待定'
+  const muted = selectedWeek > 0 && !courseOverride.weeks.includes(selectedWeek)
+  return {
+    ...block,
+    name: courseOverride.name,
+    room,
+    day: courseOverride.weekday,
+    start: courseOverride.startSection,
+    span: courseOverride.endSection - courseOverride.startSection + 1,
+    weeks: [...courseOverride.weeks],
+    arrangements: [
+      {
+        room,
+        teachers: [...block.teachers],
+        weeks: [...courseOverride.weeks],
+      },
+    ],
+    muted,
+  }
 }
 
 export function buildTimeSlots(courses: CourseBlock[]): TimeSlot[] {

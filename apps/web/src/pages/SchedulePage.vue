@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import {
@@ -9,6 +9,8 @@ import {
   useScheduleCalendar,
   useScheduleStore,
   type CourseBlock,
+  type CourseEditTarget,
+  type CourseSlotCourse,
   type ManualCourseInput,
 } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
@@ -28,6 +30,7 @@ const moreMenuRef = ref<HTMLElement | null>(null)
 const addCourseOpen = ref(false)
 const addingCourse = ref(false)
 const addCourseError = ref('')
+const editingCourse = ref<CourseEditTarget | null>(null)
 const selectedCourse = ref<CourseBlock | null>(null)
 const removingCourse = ref(false)
 const removeCourseError = ref('')
@@ -51,8 +54,11 @@ usePageTheme('#c9d5e7')
 
 onMounted(() => {
   document.addEventListener('pointerdown', closeMoreMenuFromOutside)
+  resetWeekSelection()
   void store.load()
 })
+
+onActivated(resetWeekSelection)
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', closeMoreMenuFromOutside)
@@ -64,6 +70,9 @@ const selectedSemesterLabel = computed(() => {
   return semester ? semesterName(semester.SchoolYear, semester.Term) : '选择学期'
 })
 const selectedWeekday = computed(() => selectedDate.value.getDay() || 7)
+const currentWeekLabel = computed(() =>
+  store.currentWeek > 0 ? `当前第 ${store.currentWeek} 周` : '',
+)
 const weekSelectOptions = computed(() =>
   weekOptions.value.map((week) => ({ value: week, label: `第 ${week} 周` })),
 )
@@ -99,11 +108,14 @@ function openAddCourse() {
 
   closeMoreMenu()
   addCourseError.value = ''
+  editingCourse.value = null
   addCourseOpen.value = true
 }
 
 function closeAddCourse() {
-  if (!addingCourse.value) addCourseOpen.value = false
+  if (addingCourse.value) return
+  addCourseOpen.value = false
+  editingCourse.value = null
 }
 
 function openCourseDetails(course: CourseBlock) {
@@ -117,13 +129,37 @@ function closeCourseDetails() {
   selectedCourse.value = null
 }
 
-async function addManualCourse(input: ManualCourseInput) {
+function openCourseEditor(course: CourseSlotCourse) {
+  const courseBlock = selectedCourse.value
+  if (!courseBlock) return
+
+  editingCourse.value = {
+    id: course.id,
+    source: course.source,
+    name: course.name,
+    room: course.room,
+    weekday: courseBlock.day,
+    startSection: courseBlock.start,
+    endSection: courseBlock.start + courseBlock.span - 1,
+    weeks: [...course.weeks],
+  }
+  selectedCourse.value = null
+  removeCourseError.value = ''
+  addCourseError.value = ''
+  addCourseOpen.value = true
+}
+
+async function saveCourse(input: ManualCourseInput) {
   addingCourse.value = true
   addCourseError.value = ''
   try {
-    const course = await store.addManualCourse(input)
+    const course = editingCourse.value
+      ? await store.updateCourse(editingCourse.value, input)
+      : await store.addManualCourse(input)
+    const action = editingCourse.value ? '已修改' : '已添加'
     addCourseOpen.value = false
-    showNotice(`已添加“${course.name}”`)
+    editingCourse.value = null
+    showNotice(`${action}“${course.name}”`)
   } catch (error) {
     addCourseError.value = error instanceof Error ? error.message : '课程保存失败，请稍后重试'
   } finally {
@@ -201,7 +237,16 @@ async function refreshSchedule() {
     <section class="schedule-page page-padding">
       <header class="schedule-header">
         <div>
-          <h1>{{ dateTitle }}</h1>
+          <div class="schedule-date-line">
+            <h1>{{ dateTitle }}</h1>
+            <span
+              v-if="currentWeekLabel"
+              class="schedule-current-week"
+              :class="{ 'is-browsing': selectedWeek !== store.currentWeek }"
+            >
+              {{ currentWeekLabel }}
+            </span>
+          </div>
           <p class="schedule-week-control">
             <AppSelect
               class="schedule-week-select"
@@ -362,6 +407,7 @@ async function refreshSchedule() {
         :removing="removingCourse"
         :remove-error="removeCourseError"
         @close="closeCourseDetails"
+        @edit="openCourseEditor"
         @remove="removeManualCourse"
       />
 
@@ -373,8 +419,9 @@ async function refreshSchedule() {
         :sections-per-day="store.table?.SectionsPerDay ?? 11"
         :saving="addingCourse"
         :error="addCourseError"
+        :initial-course="editingCourse"
         @close="closeAddCourse"
-        @submit="addManualCourse"
+        @submit="saveCourse"
       />
 
       <Transition name="toast">
