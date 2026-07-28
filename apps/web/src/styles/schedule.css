@@ -740,6 +740,80 @@
   text-align: right;
 }
 
+.course-detail-card__actions {
+  margin: 0 12px 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.62);
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.76);
+}
+
+.course-detail-card__actions > p {
+  margin: 3px 6px 10px;
+  color: #26343d;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.course-detail-card__actions > p small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(38, 52, 61, 0.58);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.course-detail-card__actions > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.course-detail-card__actions button {
+  min-height: 44px;
+  padding: 0 14px;
+  color: #26343d;
+  font-size: 14px;
+  font-weight: 650;
+  background: rgba(116, 116, 128, 0.12);
+  border: 0;
+  border-radius: 13px;
+  transition:
+    transform 100ms ease-out,
+    background-color 100ms ease-out;
+}
+
+.course-detail-card__actions button:active {
+  transform: scale(0.98);
+}
+
+.course-detail-card__actions button:disabled {
+  opacity: 0.5;
+}
+
+.course-detail-card__actions button.is-destructive,
+.course-detail-card__delete {
+  color: #c73a36;
+  background: rgba(199, 58, 54, 0.09);
+}
+
+.course-detail-card__delete {
+  width: 100%;
+}
+
+.course-detail-card__delete + .course-detail-card__delete {
+  margin-top: 6px;
+}
+
+.course-detail-card__actions > p.course-detail-card__remove-error {
+  margin-top: 8px;
+  margin-bottom: 2px;
+  color: #b33431;
+  font-size: 12px;
+  font-weight: 550;
+}
+
 .course-detail-sheet-enter-active,
 .course-detail-sheet-leave-active {
   transition: opacity 180ms ease;

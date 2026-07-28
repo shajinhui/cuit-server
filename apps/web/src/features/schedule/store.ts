@@ -156,6 +156,15 @@ export const useScheduleStore = defineStore('schedule', {
       this.manualCourses = nextCourses
       return course
     },
+    async removeManualCourse(courseID: string) {
+      const course = this.manualCourses.find((item) => item.id === courseID)
+      if (!course) return null
+
+      const nextCourses = this.manualCourses.filter((item) => item.id !== courseID)
+      await writeManualCourses(nextCourses)
+      this.manualCourses = nextCourses
+      return course
+    },
     clearData() {
       this.semesters = []
       this.selectedSemesterID = ''
