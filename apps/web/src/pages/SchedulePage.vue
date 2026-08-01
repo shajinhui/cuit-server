@@ -71,7 +71,7 @@ const selectedSemesterLabel = computed(() => {
 })
 const selectedWeekday = computed(() => selectedDate.value.getDay() || 7)
 const currentWeekLabel = computed(() =>
-  store.currentWeek > 0 ? `当前第 ${store.currentWeek} 周` : '',
+  store.currentWeek > 0 ? `当前为第 ${store.currentWeek} 周` : '',
 )
 const weekSelectOptions = computed(() =>
   weekOptions.value.map((week) => ({ value: week, label: `第 ${week} 周` })),
