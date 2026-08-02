@@ -88,6 +88,33 @@ describe('schedule calendar model', () => {
     expect(inactiveBlock.tone).toBe(activeBlock.tone)
   })
 
+  it('applies a saved course color to every card of the same course', () => {
+    const course = createCourse('same-course', [
+      createActivity({ Weekday: 1, Weeks: [1] }),
+      createActivity({ Weekday: 3, Weeks: [1] }),
+    ])
+    const automaticBlock = buildCourseBlocks([course], 1)[0]
+    const customizedBlocks = buildCourseBlocks([course], 1, [], [], [
+      {
+        semesterID: 'semester-1',
+        courseKey: automaticBlock.colorKey,
+        tone: 'muted-coral',
+      },
+    ])
+
+    expect(customizedBlocks).toHaveLength(2)
+    expect(customizedBlocks.every((block) => block.tone === 'muted-coral')).toBe(true)
+    expect(customizedBlocks.every((block) => block.colorKey === automaticBlock.colorKey)).toBe(true)
+  })
+
+  it('keeps the color key stable when only the course name changes', () => {
+    const course = createCourse('原课程名', [createActivity({ Weeks: [1] })])
+    const originalColorKey = buildCourseBlocks([course], 1)[0].colorKey
+    course.Name = '修改后的课程名'
+
+    expect(buildCourseBlocks([course], 1)[0].colorKey).toBe(originalColorKey)
+  })
+
   it('assigns fifteen different stable colors before reusing the palette', () => {
     const courses = Array.from({ length: 15 }, (_, index) =>
       createCourse(`课程${String(index + 1).padStart(2, '0')}`, [createActivity({ Weeks: [1] })]),

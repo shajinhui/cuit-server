@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import {
@@ -11,6 +11,7 @@ import {
   type CourseBlock,
   type CourseEditTarget,
   type CourseSlotCourse,
+  type CourseTone,
   type ManualCourseInput,
 } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
@@ -34,6 +35,8 @@ const editingCourse = ref<CourseEditTarget | null>(null)
 const selectedCourse = ref<CourseBlock | null>(null)
 const removingCourse = ref(false)
 const removeCourseError = ref('')
+const savingCourseColor = ref(false)
+const courseColorError = ref('')
 let noticeTimer: number | undefined
 
 const {
@@ -75,6 +78,11 @@ const currentWeekLabel = computed(() =>
 )
 const weekSelectOptions = computed(() =>
   weekOptions.value.map((week) => ({ value: week, label: `第 ${week} 周` })),
+)
+const customColorKeys = computed(() =>
+  store.courseColorPreferences
+    .filter((preference) => preference.semesterID === store.selectedSemesterID)
+    .map((preference) => preference.courseKey),
 )
 
 watch(
@@ -120,12 +128,14 @@ function closeAddCourse() {
 
 function openCourseDetails(course: CourseBlock) {
   removeCourseError.value = ''
+  courseColorError.value = ''
   selectedCourse.value = course
 }
 
 function closeCourseDetails() {
-  if (removingCourse.value) return
+  if (removingCourse.value || savingCourseColor.value) return
   removeCourseError.value = ''
+  courseColorError.value = ''
   selectedCourse.value = null
 }
 
@@ -182,6 +192,31 @@ async function removeManualCourse(courseID: string) {
     removeCourseError.value = error instanceof Error ? error.message : '课程删除失败，请稍后重试'
   } finally {
     removingCourse.value = false
+  }
+}
+
+async function setCourseColor(course: CourseSlotCourse, tone: CourseTone | null) {
+  const existingPreference = store.courseColorPreferences.find(
+    (preference) =>
+      preference.semesterID === store.selectedSemesterID &&
+      preference.courseKey === course.colorKey,
+  )
+  if (existingPreference?.tone === tone || (!existingPreference && tone === null)) return
+
+  const selectedCourseID = selectedCourse.value?.id
+  savingCourseColor.value = true
+  courseColorError.value = ''
+  try {
+    await store.setCourseColor(course.colorKey, tone)
+    await nextTick()
+    selectedCourse.value =
+      courses.value.find((courseBlock) => courseBlock.id === selectedCourseID) ??
+      selectedCourse.value
+  } catch (error) {
+    courseColorError.value =
+      error instanceof Error ? error.message : '课程颜色保存失败，请稍后重试'
+  } finally {
+    savingCourseColor.value = false
   }
 }
 
@@ -406,9 +441,13 @@ async function refreshSchedule() {
         :course="selectedCourse"
         :removing="removingCourse"
         :remove-error="removeCourseError"
+        :saving-color="savingCourseColor"
+        :color-error="courseColorError"
+        :custom-color-keys="customColorKeys"
         @close="closeCourseDetails"
         @edit="openCourseEditor"
         @remove="removeManualCourse"
+        @color="setCourseColor"
       />
 
       <AddCourseSheet

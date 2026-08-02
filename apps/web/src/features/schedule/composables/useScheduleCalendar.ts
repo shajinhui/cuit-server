@@ -29,6 +29,9 @@ export function useScheduleCalendar(store: ScheduleStore) {
       store.courseOverrides.filter(
         (courseOverride) => courseOverride.semesterID === store.selectedSemesterID,
       ),
+      store.courseColorPreferences.filter(
+        (preference) => preference.semesterID === store.selectedSemesterID,
+      ),
     ),
   )
   const timeSlots = computed(() => buildTimeSlots(courses.value))

@@ -4,5 +4,7 @@ export { default as CourseDetailSheet } from './components/CourseDetailSheet.vue
 export { default as ScheduleGrid } from './components/ScheduleGrid.vue'
 export { useScheduleCalendar } from './composables/useScheduleCalendar'
 export type { CourseBlock, CourseSlotCourse } from './model/calendar'
+export { courseToneOptions } from './model/courseColor'
+export type { CourseTone } from './model/courseColor'
 export type { CourseEditTarget, ManualCourseInput } from './model/manualCourse'
 export { useScheduleStore } from './store'
