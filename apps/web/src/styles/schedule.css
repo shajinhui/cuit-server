@@ -557,35 +557,63 @@
 }
 
 .course-block--haze-blue {
-  background: #829bb9;
+  background: #7896bc;
 }
 
 .course-block--sage {
-  background: #829a82;
+  background: #819c72;
 }
 
 .course-block--terracotta {
-  background: #be8067;
+  background: #c17a5e;
 }
 
 .course-block--mustard {
-  background: #b99a4f;
+  background: #c0a04a;
 }
 
 .course-block--dusty-purple {
-  background: #9585ad;
+  background: #9a82b4;
 }
 
 .course-block--blue-gray {
-  background: #709a94;
+  background: #60999a;
 }
 
 .course-block--rose-brown {
-  background: #b37782;
+  background: #b97688;
 }
 
 .course-block--caramel {
-  background: #b68a62;
+  background: #ab7e5d;
+}
+
+.course-block--seafoam {
+  background: #6f9d86;
+}
+
+.course-block--slate-blue {
+  background: #6d79a8;
+}
+
+.course-block--muted-coral {
+  background: #bd6862;
+}
+
+.course-block--olive {
+  background: #8d984f;
+}
+
+.course-block--lavender-gray {
+  background: #8a718f;
+}
+
+.course-block--sand {
+  background: #a28d70;
+}
+
+.course-block--pine {
+  background: #6e8870;
 }
 
 .course-block.is-muted {
