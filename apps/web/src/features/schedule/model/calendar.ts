@@ -1,23 +1,12 @@
 import type { Course } from '../api'
+import {
+  courseTones,
+  type CourseColorPreference,
+  type CourseTone,
+} from './courseColor'
 import type { CourseOverride } from './courseOverride'
 import type { ManualCourse } from './manualCourse'
 
-export type CourseTone =
-  | 'haze-blue'
-  | 'sage'
-  | 'terracotta'
-  | 'mustard'
-  | 'dusty-purple'
-  | 'blue-gray'
-  | 'rose-brown'
-  | 'caramel'
-  | 'seafoam'
-  | 'slate-blue'
-  | 'muted-coral'
-  | 'olive'
-  | 'lavender-gray'
-  | 'sand'
-  | 'pine'
 export type TimeSlot = readonly [string, string]
 
 export interface WeekDate {
@@ -37,6 +26,7 @@ export interface CourseSlotCourse {
   weeks: number[]
   arrangements: CourseArrangement[]
   source: 'jwxt' | 'manual'
+  colorKey: string
   tone: CourseTone
   muted: boolean
 }
@@ -56,23 +46,6 @@ export interface CourseArrangement {
 }
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
-const courseTones = [
-  'haze-blue',
-  'terracotta',
-  'sage',
-  'dusty-purple',
-  'mustard',
-  'rose-brown',
-  'blue-gray',
-  'caramel',
-  'slate-blue',
-  'olive',
-  'muted-coral',
-  'seafoam',
-  'lavender-gray',
-  'sand',
-  'pine',
-] as const
 const baseTimeSlots: TimeSlot[] = [
   ['08:20', '09:05'],
   ['09:00', '09:45'],
@@ -115,6 +88,7 @@ export function buildCourseBlocks(
   selectedWeek: number,
   manualCourses: ManualCourse[] = [],
   courseOverrides: CourseOverride[] = [],
+  colorPreferences: CourseColorPreference[] = [],
 ): CourseBlock[] {
   const blocks: CourseBlock[] = []
   const courseList = courses ?? []
@@ -122,6 +96,9 @@ export function buildCourseBlocks(
     ...courseList.map(courseToneIdentity),
     ...manualCourses.map((course) => course.id),
   ])
+  const preferredToneByIdentity = new Map(
+    colorPreferences.map((preference) => [preference.courseKey, preference.tone]),
+  )
   const overridesByTarget = new Map(
     courseOverrides.map((courseOverride) => [courseOverride.targetID, courseOverride]),
   )
@@ -172,10 +149,14 @@ export function buildCourseBlocks(
         weeks: [...activityWeeks],
         arrangements,
         source: 'jwxt',
+        colorKey: toneIdentity,
         day: firstActivity.Weekday,
         start: firstActivity.StartSection,
         span: firstActivity.EndSection - firstActivity.StartSection + 1,
-        tone: toneByIdentity.get(toneIdentity) ?? courseTones[0],
+        tone:
+          preferredToneByIdentity.get(toneIdentity) ??
+          toneByIdentity.get(toneIdentity) ??
+          courseTones[0],
         muted,
         courses: [],
         conflict: false,
@@ -206,10 +187,12 @@ export function buildCourseBlocks(
         },
       ],
       source: 'manual',
+      colorKey: course.id,
       day: course.weekday,
       start: course.startSection,
       span: course.endSection - course.startSection + 1,
-      tone: toneByIdentity.get(course.id) ?? courseTones[0],
+      tone:
+        preferredToneByIdentity.get(course.id) ?? toneByIdentity.get(course.id) ?? courseTones[0],
       muted,
       courses: [],
       conflict: false,
@@ -263,7 +246,8 @@ export function buildWeekOptions(weekCount: number, currentWeek: number, selecte
 }
 
 function courseToneIdentity(course: Course) {
-  return [course.Code, course.LessonID, course.Name].filter(Boolean).join('\u0000')
+  const stableIdentity = [course.Code, course.LessonID].filter(Boolean).join('\u0000')
+  return stableIdentity || course.Name
 }
 
 function buildCourseToneMap(identities: string[]) {
@@ -437,6 +421,7 @@ function toSlotCourse(block: CourseBlock): CourseSlotCourse {
       weeks: [...arrangement.weeks],
     })),
     source: block.source,
+    colorKey: block.colorKey,
     tone: block.tone,
     muted: block.muted,
   }

@@ -7,9 +7,11 @@ import type { Semester } from '@/shared/models/academic'
 import { getCourseTable, getCurrentWeek, type CourseTable } from './api'
 import {
   clearScheduleCache,
+  readCourseColorPreferences,
   readCourseOverrides,
   readManualCourses,
   readScheduleCache,
+  writeCourseColorPreferences,
   writeCourseOverrides,
   writeManualCourses,
   writeScheduleCache,
@@ -25,9 +27,11 @@ vi.mock('./api', () => ({
 }))
 vi.mock('./cache', () => ({
   clearScheduleCache: vi.fn(),
+  readCourseColorPreferences: vi.fn(),
   readCourseOverrides: vi.fn(),
   readManualCourses: vi.fn(),
   readScheduleCache: vi.fn(),
+  writeCourseColorPreferences: vi.fn(),
   writeCourseOverrides: vi.fn(),
   writeManualCourses: vi.fn(),
   writeScheduleCache: vi.fn(),
@@ -37,10 +41,12 @@ const listSemestersMock = vi.mocked(listSemesters)
 const getCourseTableMock = vi.mocked(getCourseTable)
 const getCurrentWeekMock = vi.mocked(getCurrentWeek)
 const clearScheduleCacheMock = vi.mocked(clearScheduleCache)
+const readCourseColorPreferencesMock = vi.mocked(readCourseColorPreferences)
 const readCourseOverridesMock = vi.mocked(readCourseOverrides)
 const readManualCoursesMock = vi.mocked(readManualCourses)
 const readScheduleCacheMock = vi.mocked(readScheduleCache)
 const writeManualCoursesMock = vi.mocked(writeManualCourses)
+const writeCourseColorPreferencesMock = vi.mocked(writeCourseColorPreferences)
 const writeCourseOverridesMock = vi.mocked(writeCourseOverrides)
 const writeScheduleCacheMock = vi.mocked(writeScheduleCache)
 
@@ -52,9 +58,11 @@ describe('schedule store loading', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     readCourseOverridesMock.mockResolvedValue([])
+    readCourseColorPreferencesMock.mockResolvedValue([])
     readManualCoursesMock.mockResolvedValue([])
     clearScheduleCacheMock.mockResolvedValue()
     writeManualCoursesMock.mockResolvedValue()
+    writeCourseColorPreferencesMock.mockResolvedValue()
     writeCourseOverridesMock.mockResolvedValue()
     writeScheduleCacheMock.mockResolvedValue()
     getCurrentWeekMock.mockResolvedValue({ CurrentWeek: 3 })
@@ -190,6 +198,50 @@ describe('schedule store loading', () => {
       weekday: 3,
     })
     expect(writeCourseOverridesMock).toHaveBeenCalledWith([updated])
+  })
+
+  it('persists and restores a custom course color for the selected semester', async () => {
+    const store = useScheduleStore()
+    store.selectedSemesterID = currentSemester.ID
+
+    await store.setCourseColor('course-1', 'muted-coral')
+
+    expect(writeCourseColorPreferencesMock).toHaveBeenLastCalledWith([
+      {
+        semesterID: currentSemester.ID,
+        courseKey: 'course-1',
+        tone: 'muted-coral',
+      },
+    ])
+    expect(store.courseColorPreferences).toEqual([
+      {
+        semesterID: currentSemester.ID,
+        courseKey: 'course-1',
+        tone: 'muted-coral',
+      },
+    ])
+
+    await store.setCourseColor('course-1', null)
+
+    expect(writeCourseColorPreferencesMock).toHaveBeenLastCalledWith([])
+    expect(store.courseColorPreferences).toEqual([])
+  })
+
+  it('keeps the previous course color when local persistence fails', async () => {
+    writeCourseColorPreferencesMock.mockRejectedValueOnce(new Error('write failed'))
+    const store = useScheduleStore()
+    store.selectedSemesterID = currentSemester.ID
+    store.courseColorPreferences = [
+      {
+        semesterID: currentSemester.ID,
+        courseKey: 'course-1',
+        tone: 'haze-blue',
+      },
+    ]
+
+    await expect(store.setCourseColor('course-1', 'muted-coral')).rejects.toThrow('write failed')
+
+    expect(store.courseColorPreferences[0]?.tone).toBe('haze-blue')
   })
 })
 

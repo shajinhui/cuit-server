@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 
 import type { CourseBlock, CourseSlotCourse } from '../model/calendar'
+import { courseToneOptions, type CourseTone } from '../model/courseColor'
 
 defineOptions({ name: 'CourseDetailSheet' })
 
@@ -9,16 +10,21 @@ const props = defineProps<{
   course: CourseBlock | null
   removing?: boolean
   removeError?: string
+  savingColor?: boolean
+  colorError?: string
+  customColorKeys?: string[]
 }>()
 
 const emit = defineEmits<{
   close: []
   edit: [course: CourseSlotCourse]
   remove: [courseID: string]
+  color: [course: CourseSlotCourse, tone: CourseTone | null]
 }>()
 
 const detailCard = ref<HTMLElement | null>(null)
 const pendingRemoval = ref<CourseSlotCourse | null>(null)
+const expandedColorCourseID = ref('')
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 const timeLabel = computed(() => {
@@ -74,10 +80,11 @@ const removableCourses = computed(() => {
 const editableCourses = computed(() => props.course?.courses ?? [])
 
 watch(
-  () => props.course,
-  (course) => {
+  () => props.course?.id,
+  (courseID) => {
     pendingRemoval.value = null
-    if (course) void nextTick(() => detailCard.value?.focus({ preventScroll: true }))
+    expandedColorCourseID.value = ''
+    if (courseID) void nextTick(() => detailCard.value?.focus({ preventScroll: true }))
   },
 )
 
@@ -94,6 +101,20 @@ function requestRemoval(course: CourseSlotCourse) {
 function editCourse(course: CourseSlotCourse) {
   if (props.removing) return
   emit('edit', course)
+}
+
+function toggleColorPicker(course: CourseSlotCourse) {
+  if (props.savingColor) return
+  expandedColorCourseID.value = expandedColorCourseID.value === course.id ? '' : course.id
+}
+
+function chooseColor(course: CourseSlotCourse, tone: CourseTone | null) {
+  if (props.savingColor) return
+  emit('color', course, tone)
+}
+
+function hasCustomColor(course: CourseSlotCourse) {
+  return props.customColorKeys?.includes(course.colorKey) ?? false
 }
 
 function cancelRemoval() {
@@ -187,6 +208,82 @@ function formatWeeks(weeks: number[]) {
               <dd>{{ row.value }}</dd>
             </div>
           </dl>
+
+          <div v-if="editableCourses.length > 0" class="course-color-settings">
+            <div
+              v-for="editableCourse in editableCourses"
+              :key="`color-${editableCourse.id}`"
+              class="course-color-setting"
+            >
+              <button
+                type="button"
+                class="course-color-setting__trigger"
+                :aria-expanded="expandedColorCourseID === editableCourse.id"
+                :disabled="savingColor"
+                @click="toggleColorPicker(editableCourse)"
+              >
+                <span>
+                  <strong>课程颜色</strong>
+                  <small v-if="editableCourses.length > 1">{{ editableCourse.name }}</small>
+                  <small v-else>{{ hasCustomColor(editableCourse) ? '自定义' : '自动分配' }}</small>
+                </span>
+                <i
+                  class="course-color-setting__preview"
+                  :class="`course-color-setting__preview--${editableCourse.tone}`"
+                  aria-hidden="true"
+                />
+                <svg aria-hidden="true" viewBox="0 0 12 12">
+                  <path d="m3 4.5 3 3 3-3" />
+                </svg>
+              </button>
+
+              <div
+                v-if="expandedColorCourseID === editableCourse.id"
+                class="course-color-picker"
+                role="radiogroup"
+                :aria-label="`选择“${editableCourse.name}”的颜色`"
+              >
+                <button
+                  v-for="option in courseToneOptions"
+                  :key="option.tone"
+                  type="button"
+                  class="course-color-picker__option"
+                  :class="{
+                    'is-selected':
+                      hasCustomColor(editableCourse) && editableCourse.tone === option.tone,
+                  }"
+                  role="radio"
+                  :aria-label="option.label"
+                  :aria-checked="
+                    hasCustomColor(editableCourse) && editableCourse.tone === option.tone
+                  "
+                  :disabled="savingColor"
+                  @click="chooseColor(editableCourse, option.tone)"
+                >
+                  <span
+                    :class="`course-color-picker__swatch--${option.tone}`"
+                    aria-hidden="true"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="course-color-picker__automatic"
+                  :class="{ 'is-selected': !hasCustomColor(editableCourse) }"
+                  :aria-pressed="!hasCustomColor(editableCourse)"
+                  :disabled="savingColor"
+                  @click="chooseColor(editableCourse, null)"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 16 16">
+                    <path d="m3.5 8.5 3 3 6-7" />
+                  </svg>
+                  自动分配
+                </button>
+              </div>
+            </div>
+            <p v-if="colorError" class="course-color-settings__error" role="alert">
+              {{ colorError }}
+            </p>
+          </div>
 
           <div v-if="editableCourses.length > 0" class="course-detail-card__actions">
             <template v-if="pendingRemoval">

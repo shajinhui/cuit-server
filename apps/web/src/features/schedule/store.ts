@@ -12,13 +12,16 @@ import {
 import { getCourseTable, getCurrentWeek, type CourseTable } from './api'
 import {
   clearScheduleCache,
+  readCourseColorPreferences,
   readCourseOverrides,
   readManualCourses,
   readScheduleCache,
+  writeCourseColorPreferences,
   writeCourseOverrides,
   writeManualCourses,
   writeScheduleCache,
 } from './cache'
+import type { CourseColorPreference, CourseTone } from './model/courseColor'
 import {
   createCourseOverride,
   type CourseOverride,
@@ -44,6 +47,8 @@ export const useScheduleStore = defineStore('schedule', {
     manualCoursesLoaded: false,
     courseOverrides: [] as CourseOverride[],
     courseOverridesLoaded: false,
+    courseColorPreferences: [] as CourseColorPreference[],
+    courseColorPreferencesLoaded: false,
     currentWeek: 0,
     loading: false,
     error: '',
@@ -65,6 +70,7 @@ export const useScheduleStore = defineStore('schedule', {
         await this.restoreCachedSchedule()
         await this.restoreManualCourses()
         await this.restoreCourseOverrides()
+        await this.restoreCourseColorPreferences()
         const cachedSemesterMatches =
           !requestedSemesterID || requestedSemesterID === this.selectedSemesterID
         if (!options.refresh && this.table && cachedSemesterMatches) {
@@ -82,6 +88,8 @@ export const useScheduleStore = defineStore('schedule', {
           this.manualCoursesLoaded = true
           this.courseOverrides = []
           this.courseOverridesLoaded = true
+          this.courseColorPreferences = []
+          this.courseColorPreferencesLoaded = true
           this.currentWeek = 0
           this.usingCachedData = false
           this.cachedAt = 0
@@ -166,6 +174,12 @@ export const useScheduleStore = defineStore('schedule', {
       this.courseOverrides = await readCourseOverrides()
       this.courseOverridesLoaded = true
     },
+    async restoreCourseColorPreferences() {
+      if (this.courseColorPreferencesLoaded) return
+
+      this.courseColorPreferences = await readCourseColorPreferences()
+      this.courseColorPreferencesLoaded = true
+    },
     async addManualCourse(input: ManualCourseInput) {
       const course = createManualCourse(input, this.selectedSemesterID, createManualCourseID())
       const nextCourses = [...this.manualCourses, course]
@@ -197,6 +211,25 @@ export const useScheduleStore = defineStore('schedule', {
       this.courseOverrides = nextCourseOverrides
       return courseOverride
     },
+    async setCourseColor(courseKey: string, tone: CourseTone | null) {
+      if (!this.selectedSemesterID) throw new Error('请先选择学期')
+      if (!courseKey) throw new Error('没有找到这门课程')
+
+      const nextPreferences = this.courseColorPreferences.filter(
+        (preference) =>
+          preference.semesterID !== this.selectedSemesterID ||
+          preference.courseKey !== courseKey,
+      )
+      if (tone) {
+        nextPreferences.push({
+          semesterID: this.selectedSemesterID,
+          courseKey,
+          tone,
+        })
+      }
+      await writeCourseColorPreferences(nextPreferences)
+      this.courseColorPreferences = nextPreferences
+    },
     async removeManualCourse(courseID: string) {
       const course = this.manualCourses.find((item) => item.id === courseID)
       if (!course) return null
@@ -204,6 +237,15 @@ export const useScheduleStore = defineStore('schedule', {
       const nextCourses = this.manualCourses.filter((item) => item.id !== courseID)
       await writeManualCourses(nextCourses)
       this.manualCourses = nextCourses
+      const nextPreferences = this.courseColorPreferences.filter(
+        (preference) =>
+          preference.semesterID !== course.semesterID || preference.courseKey !== courseID,
+      )
+      if (nextPreferences.length !== this.courseColorPreferences.length) {
+        // 课程已经成功删除时，颜色清理失败不应让删除操作表现为失败；残留键不会被新课程复用。
+        await writeCourseColorPreferences(nextPreferences).catch(() => undefined)
+        this.courseColorPreferences = nextPreferences
+      }
       return course
     },
     clearData() {
@@ -214,6 +256,8 @@ export const useScheduleStore = defineStore('schedule', {
       this.manualCoursesLoaded = false
       this.courseOverrides = []
       this.courseOverridesLoaded = false
+      this.courseColorPreferences = []
+      this.courseColorPreferencesLoaded = false
       this.currentWeek = 0
       this.error = ''
       this.weekError = ''

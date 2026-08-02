@@ -5,12 +5,17 @@ import {
 } from '@/shared/storage/offlineDatabase'
 
 import type { CourseTable } from './api'
+import {
+  isCourseColorPreference,
+  type CourseColorPreference,
+} from './model/courseColor'
 import { isCourseOverride, type CourseOverride } from './model/courseOverride'
 import { isManualCourse, type ManualCourse } from './model/manualCourse'
 
 const scheduleRecordKey = 'latest-schedule'
 const manualCoursesRecordKey = 'manual-courses'
 const courseOverridesRecordKey = 'course-overrides'
+const courseColorPreferencesRecordKey = 'course-color-preferences'
 
 export interface CachedSchedule {
   version: 1
@@ -160,6 +165,57 @@ export async function writeCourseOverrides(courseOverrides: CourseOverride[]): P
   })
 }
 
+export async function readCourseColorPreferences(): Promise<CourseColorPreference[]> {
+  const database = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readonly')
+    const request = transaction.objectStore(storeName).get(courseColorPreferencesRecordKey)
+
+    request.onsuccess = () => {
+      const record = request.result as ScheduleRecord | undefined
+      const preferences = record?.value
+      resolve(
+        Array.isArray(preferences) && preferences.every(isCourseColorPreference)
+          ? preferences
+          : [],
+      )
+    }
+    request.onerror = () => reject(request.error ?? new Error('读取课程颜色失败'))
+    transaction.oncomplete = () => database.close()
+    transaction.onabort = () => {
+      database.close()
+      reject(transaction.error ?? new Error('读取课程颜色事务失败'))
+    }
+  })
+}
+
+export async function writeCourseColorPreferences(
+  preferences: CourseColorPreference[],
+): Promise<void> {
+  const database = await openDatabase()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(storeName, 'readwrite')
+    const plainPreferences = JSON.parse(JSON.stringify(preferences)) as CourseColorPreference[]
+    transaction.objectStore(storeName).put({
+      key: courseColorPreferencesRecordKey,
+      value: plainPreferences,
+    } satisfies ScheduleRecord)
+
+    transaction.oncomplete = () => {
+      database.close()
+      resolve()
+    }
+    transaction.onerror = () => {
+      database.close()
+      reject(transaction.error ?? new Error('保存课程颜色失败'))
+    }
+    transaction.onabort = () => {
+      database.close()
+      reject(transaction.error ?? new Error('保存课程颜色事务失败'))
+    }
+  })
+}
+
 export async function clearScheduleCache(): Promise<void> {
   const database = await openDatabase()
   return new Promise((resolve, reject) => {
@@ -168,6 +224,7 @@ export async function clearScheduleCache(): Promise<void> {
     objectStore.delete(scheduleRecordKey)
     objectStore.delete(manualCoursesRecordKey)
     objectStore.delete(courseOverridesRecordKey)
+    objectStore.delete(courseColorPreferencesRecordKey)
 
     transaction.oncomplete = () => {
       database.close()
