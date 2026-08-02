@@ -11,6 +11,13 @@ export type CourseTone =
   | 'blue-gray'
   | 'rose-brown'
   | 'caramel'
+  | 'seafoam'
+  | 'slate-blue'
+  | 'muted-coral'
+  | 'olive'
+  | 'lavender-gray'
+  | 'sand'
+  | 'pine'
 export type TimeSlot = readonly [string, string]
 
 export interface WeekDate {
@@ -51,13 +58,20 @@ export interface CourseArrangement {
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const courseTones = [
   'haze-blue',
-  'sage',
   'terracotta',
-  'mustard',
+  'sage',
   'dusty-purple',
-  'blue-gray',
+  'mustard',
   'rose-brown',
+  'blue-gray',
   'caramel',
+  'slate-blue',
+  'olive',
+  'muted-coral',
+  'seafoam',
+  'lavender-gray',
+  'sand',
+  'pine',
 ] as const
 const baseTimeSlots: TimeSlot[] = [
   ['08:20', '09:05'],
@@ -103,11 +117,17 @@ export function buildCourseBlocks(
   courseOverrides: CourseOverride[] = [],
 ): CourseBlock[] {
   const blocks: CourseBlock[] = []
+  const courseList = courses ?? []
+  const toneByIdentity = buildCourseToneMap([
+    ...courseList.map(courseToneIdentity),
+    ...manualCourses.map((course) => course.id),
+  ])
   const overridesByTarget = new Map(
     courseOverrides.map((courseOverride) => [courseOverride.targetID, courseOverride]),
   )
-  for (const course of courses ?? []) {
+  for (const course of courseList) {
     const identity = course.LessonID || course.Code || course.Name
+    const toneIdentity = courseToneIdentity(course)
     const groupedActivities = new Map<string, NonNullable<Course['Activities']>>()
     for (const activity of course.Activities ?? []) {
       if (
@@ -155,7 +175,7 @@ export function buildCourseBlocks(
         day: firstActivity.Weekday,
         start: firstActivity.StartSection,
         span: firstActivity.EndSection - firstActivity.StartSection + 1,
-        tone: toneForCourse(course.Code || identity),
+        tone: toneByIdentity.get(toneIdentity) ?? courseTones[0],
         muted,
         courses: [],
         conflict: false,
@@ -189,7 +209,7 @@ export function buildCourseBlocks(
       day: course.weekday,
       start: course.startSection,
       span: course.endSection - course.startSection + 1,
-      tone: toneForCourse(course.id),
+      tone: toneByIdentity.get(course.id) ?? courseTones[0],
       muted,
       courses: [],
       conflict: false,
@@ -242,10 +262,20 @@ export function buildWeekOptions(weekCount: number, currentWeek: number, selecte
   return Array.from({ length: count }, (_, index) => index + 1)
 }
 
-function toneForCourse(identity: string): CourseTone {
-  let hash = 0
-  for (const character of identity) hash = (hash * 31 + character.charCodeAt(0)) >>> 0
-  return courseTones[hash % courseTones.length]
+function courseToneIdentity(course: Course) {
+  return [course.Code, course.LessonID, course.Name].filter(Boolean).join('\u0000')
+}
+
+function buildCourseToneMap(identities: string[]) {
+  const sortedIdentities = uniqueStrings(identities).sort((left, right) =>
+    left.localeCompare(right, 'zh-CN'),
+  )
+  return new Map(
+    sortedIdentities.map((identity, index) => [
+      identity,
+      courseTones[index % courseTones.length],
+    ]),
+  )
 }
 
 function uniqueStrings(values: string[]) {

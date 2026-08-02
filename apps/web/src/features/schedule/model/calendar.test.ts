@@ -88,6 +88,24 @@ describe('schedule calendar model', () => {
     expect(inactiveBlock.tone).toBe(activeBlock.tone)
   })
 
+  it('assigns fifteen different stable colors before reusing the palette', () => {
+    const courses = Array.from({ length: 15 }, (_, index) =>
+      createCourse(`课程${String(index + 1).padStart(2, '0')}`, [createActivity({ Weeks: [1] })]),
+    )
+    const colorsByName = new Map(
+      buildCourseBlocks(courses, 1)[0].courses.map((course) => [course.name, course.tone]),
+    )
+    const reversedColorsByName = new Map(
+      buildCourseBlocks([...courses].reverse(), 1)[0].courses.map((course) => [
+        course.name,
+        course.tone,
+      ]),
+    )
+
+    expect(new Set(colorsByName.values()).size).toBe(15)
+    expect(reversedColorsByName).toEqual(colorsByName)
+  })
+
   it('applies a persisted local edit to an original course', () => {
     const course = createCourse('原始课程', [
       createActivity({ Weekday: 1, StartSection: 1, EndSection: 2, Weeks: [1, 2, 3] }),
