@@ -127,6 +127,10 @@ pnpm run check
 
 `pnpm run check` 会依次执行 ESLint、Vitest、TypeScript 类型检查和生产构建。网络集成测试默认不访问学校系统，显式测试方式见 [JWXT SDK 文档](pkg/jwxt/README.md)。
 
+## 压测
+
+企业级 k6 压测套件位于 [loadtest/](loadtest/README.md)，支持冒烟、负载、压力、浸泡和登录专项场景，使用真实会话与 Redis 缓存命中路径。
+
 ## 安全与隐私
 
 - 不在前端保存教务密码、CAS Ticket 或学校 Cookie。
