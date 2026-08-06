@@ -5,6 +5,8 @@ on:
     paths:
       - 'apps/web/**'
       - '.github/workflows/android.yml'
+    tags:
+      - 'v*'
   pull_request:
     paths:
       - 'apps/web/**'
@@ -19,9 +21,13 @@ on:
         options:
           - debug
           - release
+      release_tag:
+        description: 构建后发布到此 Git tag（可选，如 v0.2.0）
+        required: false
+        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: android-${{ github.workflow }}-${{ github.ref }}
@@ -152,3 +158,36 @@ jobs:
           path: apps/web/android/app/build/outputs/apk/release/app-release-signed.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Build Android OTA bundle
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+        run: pnpm run build:update
+
+      - name: Publish to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.release_tag }}
+        run: |
+          tag="$RELEASE_TAG"
+          assets=()
+          for apk in \
+            android/app/build/outputs/apk/debug/app-debug.apk \
+            android/app/build/outputs/apk/release/app-release-signed.apk
+          do
+            if [[ -f "$apk" ]]; then
+              assets+=("$apk")
+            fi
+          done
+          if compgen -G "dist/app-updates/android/bundles/*.zip" >/dev/null; then
+            assets+=(dist/app-updates/android/bundles/*.zip)
+          fi
+          if (( ${#assets[@]} == 0 )); then
+            echo "::warning::没有可发布的构建产物"
+            exit 0
+          fi
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --clobber
+          else
+            gh release create "$tag" "${assets[@]}" --title "$tag" --generate-notes
+          fi
