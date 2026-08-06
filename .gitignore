@@ -18,4 +18,8 @@ coverage.out
 
 # Local generated files
 tmp/
-data/
+/data/
+
+# Load test data and reports
+loadtest/data/accounts.json
+loadtest/reports/
