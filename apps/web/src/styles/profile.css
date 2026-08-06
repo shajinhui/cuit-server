@@ -38,8 +38,11 @@
   width: 96px;
   height: 96px;
   flex: 0 0 auto;
+  position: relative;
+  padding: 0;
   place-items: center;
   overflow: hidden;
+  cursor: pointer;
   background: var(--profile-control);
   border: 1px solid rgba(255, 255, 255, 0.92);
   border-radius: 50%;
@@ -47,11 +50,38 @@
 }
 
 .profile-avatar img {
-  width: 68px;
-  height: 68px;
-  object-fit: contain;
-  filter: grayscale(1);
-  opacity: 0.72;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar:active {
+  opacity: 0.82;
+}
+
+.profile-avatar__edit {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: #1c1c1e;
+  background: rgba(242, 242, 247, 0.96);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(28, 28, 30, 0.18);
+}
+
+.profile-avatar__edit svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .profile-hero__identity {
@@ -299,11 +329,6 @@
     height: 88px;
   }
 
-  .profile-avatar img {
-    width: 62px;
-    height: 62px;
-  }
-
   .profile-hero {
     min-height: 190px;
   }
@@ -336,11 +361,6 @@
   .profile-avatar {
     width: 76px;
     height: 76px;
-  }
-
-  .profile-avatar img {
-    width: 54px;
-    height: 54px;
   }
 
   .profile-hero__identity {

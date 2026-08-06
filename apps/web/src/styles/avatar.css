@@ -1,0 +1,209 @@
+.avatar-sheet-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(28, 28, 30, 0.3);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.avatar-sheet {
+  display: flex;
+  width: min(100%, 480px);
+  max-height: calc(100dvh - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - 12px);
+  flex-direction: column;
+  overflow: hidden;
+  color: #1c1c1e;
+  background: rgba(242, 242, 247, 0.98);
+  border-radius: 24px 24px 0 0;
+  box-shadow:
+    0 -20px 60px rgba(28, 28, 30, 0.22),
+    0 -2px 12px rgba(28, 28, 30, 0.08);
+}
+
+.avatar-sheet__grabber {
+  width: 36px;
+  height: 5px;
+  flex: 0 0 auto;
+  align-self: center;
+  margin-top: 7px;
+  background: rgba(60, 60, 67, 0.28);
+  border-radius: 3px;
+}
+
+.avatar-sheet__header {
+  display: grid;
+  min-height: 52px;
+  padding: 0 6px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.avatar-sheet__header h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-sheet__header button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  color: #007aff;
+  font-size: 16px;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  justify-self: start;
+}
+
+.avatar-sheet__header button:active {
+  opacity: 0.58;
+}
+
+.avatar-sheet__header button:disabled {
+  opacity: 0.42;
+}
+
+.avatar-grid {
+  display: grid;
+  padding: 8px 20px 4px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.avatar-grid__item {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: visible;
+  background: #e5e5ea;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  outline: 0;
+}
+
+.avatar-grid__item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-grid__item.is-active {
+  border-color: #007aff;
+}
+
+.avatar-grid__item.is-active::after {
+  position: absolute;
+  inset: -2px;
+  content: '';
+  pointer-events: none;
+  border: 2px solid #f2f2f7;
+  border-radius: 50%;
+}
+
+.avatar-grid__item:active {
+  opacity: 0.72;
+}
+
+.avatar-grid__item:disabled {
+  opacity: 0.55;
+}
+
+.avatar-grid__check {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #fff;
+  background: #007aff;
+  border: 2px solid #f2f2f7;
+  border-radius: 50%;
+}
+
+.avatar-grid__check svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.avatar-upload-button {
+  display: flex;
+  min-height: 46px;
+  margin: 16px 20px 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #1c1c1e;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.82);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.06);
+}
+
+.avatar-upload-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.avatar-upload-button:active {
+  opacity: 0.62;
+}
+
+.avatar-upload-button:disabled {
+  opacity: 0.55;
+}
+
+.avatar-sheet__note {
+  margin: 10px 20px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  color: #8e8e93;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.avatar-sheet-enter-active,
+.avatar-sheet-leave-active {
+  transition: opacity 0.22s var(--ease-out);
+}
+
+.avatar-sheet-enter-active .avatar-sheet,
+.avatar-sheet-leave-active .avatar-sheet {
+  transition: transform 0.32s var(--ease-out);
+}
+
+.avatar-sheet-enter-from,
+.avatar-sheet-leave-to {
+  opacity: 0;
+}
+
+.avatar-sheet-enter-from .avatar-sheet,
+.avatar-sheet-leave-to .avatar-sheet {
+  transform: translateY(100%);
+}

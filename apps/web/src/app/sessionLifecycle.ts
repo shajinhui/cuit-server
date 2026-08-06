@@ -7,7 +7,12 @@ import {
 } from '@/features/classrooms'
 import { useExamsStore } from '@/features/exams'
 import { usePlanCompletionStore } from '@/features/plan-completion'
-import { clearProfileCache, hasProfileCache, useProfileStore } from '@/features/profile'
+import {
+  clearAvatarCache,
+  clearProfileCache,
+  hasProfileCache,
+  useProfileStore,
+} from '@/features/profile'
 import { clearScheduleCache, hasScheduleCache, useScheduleStore } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
 
@@ -60,6 +65,7 @@ async function clearUserData() {
   useScheduleStore().clearData()
   if (!userDataReset) {
     userDataReset = Promise.all([
+      clearAvatarCache(),
       clearScheduleCache(),
       clearProfileCache(),
       clearClassroomScheduleCache(),
