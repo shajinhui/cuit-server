@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
   <title id="title">成信友友当前项目架构</title>
-  <desc id="desc">展示 Vue PWA 与 Capacitor Android 客户端、Cloudflare Pages 和 Tunnel、Hertz 模块化单体、SQLite、Redis、独立 JWXT SDK、学校认证与教务系统，以及交付链路。</desc>
+  <desc id="desc">展示 Vue PWA 与 Capacitor Android 客户端、Cloudflare Pages 和 Tunnel、Hertz 模块化单体、MySQL、Redis、独立 JWXT SDK、学校认证与教务系统，以及交付链路。</desc>
 
   <defs>
     <filter id="softShadow" x="-15%" y="-15%" width="130%" height="140%">
@@ -88,13 +88,13 @@
   <ellipse cx="148" cy="491" rx="48" ry="14" fill="none" stroke="#2d3138" stroke-width="4"/>
   <path d="M100 491v46c0 8 21 14 48 14s48-6 48-14v-46" fill="none" stroke="#2d3138" stroke-width="4"/>
   <path d="M100 514c0 8 21 14 48 14s48-6 48-14" fill="none" stroke="#2d3138" stroke-width="3"/>
-  <text x="148" y="579" text-anchor="middle" class="node-title">SQLite</text>
+  <text x="148" y="579" text-anchor="middle" class="node-title">MySQL</text>
   <text x="148" y="601" text-anchor="middle" class="small">用户 · 凭据 · 统计 · 反馈</text>
 
   <rect x="60" y="638" width="176" height="119" rx="22" fill="#fff6d0" class="external"/>
   <rect x="100" y="668" width="96" height="19" rx="9" fill="#2d3138"/>
   <rect x="100" y="694" width="96" height="19" rx="9" fill="#2d3138"/>
-  <text x="148" y="738" text-anchor="middle" class="node-title">Redis（可选）</text>
+  <text x="148" y="738" text-anchor="middle" class="node-title">Redis</text>
 
   <!-- Backend -->
   <rect x="282" y="394" width="910" height="405" rx="28" fill="#eaf5fd" stroke="#6d91aa" stroke-width="1.8"/>
