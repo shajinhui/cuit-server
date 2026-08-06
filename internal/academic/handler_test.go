@@ -3,8 +3,10 @@ package academic
 import (
 	"bytes"
 	"context"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"cuit-server/pkg/jwxt"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -83,9 +85,48 @@ func (fakeGradeService) Authenticated(_ context.Context, sessionID string) (bool
 
 func (fakeGradeService) Logout(context.Context, string) error { return nil }
 
+type noopLoginLimiter struct{}
+
+func (noopLoginLimiter) Check(context.Context, string, string) (time.Duration, bool) {
+	return 0, false
+}
+
+func (noopLoginLimiter) Fail(context.Context, string, string) {}
+
+func (noopLoginLimiter) Reset(context.Context, string) {}
+
+type stubLoginLimiter struct {
+	locked  bool
+	checked []string
+	failed  []string
+	reset   []string
+}
+
+func (s *stubLoginLimiter) Check(_ context.Context, studentNo, ip string) (time.Duration, bool) {
+	s.checked = append(s.checked, studentNo+"|"+ip)
+	if s.locked {
+		return 15 * time.Minute, true
+	}
+	return 0, false
+}
+
+func (s *stubLoginLimiter) Fail(_ context.Context, studentNo, ip string) {
+	s.failed = append(s.failed, studentNo+"|"+ip)
+}
+
+func (s *stubLoginLimiter) Reset(_ context.Context, studentNo string) {
+	s.reset = append(s.reset, studentNo)
+}
+
+type failingGradeService struct{ fakeGradeService }
+
+func (failingGradeService) Login(context.Context, string, string) (string, error) {
+	return "", jwxt.ErrInvalidCredentials
+}
+
 func TestLoginSetsHttpOnlySessionCookie(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 	body := []byte(`{"username":"20240001","password":"secret"}`)
 
 	recorder := ut.PerformRequest(
@@ -109,7 +150,7 @@ func TestLoginSetsHttpOnlySessionCookie(t *testing.T) {
 
 func TestSemestersRequiresAuthenticatedSession(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 
 	recorder := ut.PerformRequest(h.Engine, "GET", "/api/v1/jwxt/semesters", nil)
 	response := recorder.Result()
@@ -123,7 +164,7 @@ func TestSemestersRequiresAuthenticatedSession(t *testing.T) {
 
 func TestSessionStatusDoesNotCallRemoteSystem(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 
 	recorder := ut.PerformRequest(
 		h.Engine,
@@ -143,7 +184,7 @@ func TestSessionStatusDoesNotCallRemoteSystem(t *testing.T) {
 
 func TestProfileReturnsAuthenticatedStudent(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 
 	recorder := ut.PerformRequest(
 		h.Engine,
@@ -166,7 +207,7 @@ func TestProfileReturnsAuthenticatedStudent(t *testing.T) {
 
 func TestPlanCompletionReturnsSummaryAndItems(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 
 	recorder := ut.PerformRequest(
 		h.Engine,
@@ -187,7 +228,7 @@ func TestPlanCompletionReturnsSummaryAndItems(t *testing.T) {
 
 func TestExamsReturnsExamRoomData(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 
 	response := ut.PerformRequest(
 		h.Engine,
@@ -207,10 +248,85 @@ func TestExamsReturnsExamRoomData(t *testing.T) {
 
 func TestExamEndpointRequiresQueryParameter(t *testing.T) {
 	h := server.Default()
-	NewHandler(fakeGradeService{}, false).Register(h)
+	NewHandler(fakeGradeService{}, false, noopLoginLimiter{}).Register(h)
 
 	response := ut.PerformRequest(h.Engine, "GET", "/api/v1/jwxt/exams", nil).Result()
 	if response.StatusCode() != 400 || !strings.Contains(string(response.Body()), `"code":40000`) {
 		t.Fatalf("unexpected response: status=%d body=%s", response.StatusCode(), response.Body())
+	}
+}
+
+func TestLoginRejectedWhenRateLimited(t *testing.T) {
+	h := server.Default()
+	NewHandler(fakeGradeService{}, false, &stubLoginLimiter{locked: true}).Register(h)
+	body := []byte(`{"username":"20240001","password":"secret"}`)
+
+	response := ut.PerformRequest(
+		h.Engine,
+		"POST",
+		"/api/v1/jwxt/session",
+		&ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+	).Result()
+	if response.StatusCode() != http.StatusTooManyRequests {
+		t.Fatalf("unexpected status: %d", response.StatusCode())
+	}
+	if got := string(response.Header.Peek("Retry-After")); got != "900" {
+		t.Fatalf("unexpected Retry-After: %q", got)
+	}
+	if !strings.Contains(string(response.Body()), `"code":42901`) {
+		t.Fatalf("unexpected response: %s", response.Body())
+	}
+}
+
+func TestLoginFailureIsCountedByLimiter(t *testing.T) {
+	limiter := &stubLoginLimiter{}
+	h := server.Default()
+	NewHandler(failingGradeService{}, false, limiter).Register(h)
+	body := []byte(`{"username":"20240001","password":"wrong"}`)
+
+	response := ut.PerformRequest(
+		h.Engine,
+		"POST",
+		"/api/v1/jwxt/session",
+		&ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+		ut.Header{Key: "CF-Connecting-IP", Value: "203.0.113.7"},
+	).Result()
+	if response.StatusCode() != http.StatusUnauthorized {
+		t.Fatalf("unexpected status: %d", response.StatusCode())
+	}
+	want := "20240001|203.0.113.7"
+	if len(limiter.failed) != 1 || limiter.failed[0] != want {
+		t.Fatalf("expected failure recorded for %q, got %v", want, limiter.failed)
+	}
+	if len(limiter.reset) != 0 {
+		t.Fatalf("failed login must not reset limiter: %v", limiter.reset)
+	}
+}
+
+func TestLoginSuccessResetsLimiter(t *testing.T) {
+	limiter := &stubLoginLimiter{}
+	h := server.Default()
+	NewHandler(fakeGradeService{}, false, limiter).Register(h)
+	body := []byte(`{"username":"20240001","password":"secret"}`)
+
+	response := ut.PerformRequest(
+		h.Engine,
+		"POST",
+		"/api/v1/jwxt/session",
+		&ut.Body{Body: bytes.NewReader(body), Len: len(body)},
+		ut.Header{Key: "Content-Type", Value: "application/json"},
+		ut.Header{Key: "CF-Connecting-IP", Value: "203.0.113.7"},
+	).Result()
+	if response.StatusCode() != http.StatusOK {
+		t.Fatalf("unexpected status: %d", response.StatusCode())
+	}
+	want := "20240001"
+	if len(limiter.reset) != 1 || limiter.reset[0] != want {
+		t.Fatalf("expected reset for %q, got %v", want, limiter.reset)
+	}
+	if len(limiter.failed) != 0 {
+		t.Fatalf("successful login must not count failure: %v", limiter.failed)
 	}
 }

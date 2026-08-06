@@ -50,14 +50,16 @@ func main() {
 		log.Fatal(err)
 	}
 	var cacheStore platformcache.Store = platformcache.DisabledStore{}
+	var redisStore *platformcache.RedisStore
 	if redisURL := strings.TrimSpace(os.Getenv("REDIS_URL")); redisURL != "" {
-		redisStore, err := platformcache.OpenRedis(startupCtx, redisURL)
+		opened, err := platformcache.OpenRedis(startupCtx, redisURL)
 		if err != nil {
 			// Redis 只承载可重新获取的缓存，连接失败不能阻止登录和教务查询主流程。
 			log.Printf("Redis 缓存未启用: %v", err)
 		} else {
-			cacheStore = redisStore
-			defer redisStore.Close()
+			redisStore = opened
+			cacheStore = opened
+			defer opened.Close()
 			log.Print("Redis 缓存已启用")
 		}
 	} else {
@@ -83,7 +85,24 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("登录并发上限: %d", loginMaxConcurrency)
+	loginFailMaxAccount, err := positiveEnvironmentInt("LOGIN_FAIL_MAX_ACCOUNT", 5)
+	if err != nil {
+		log.Fatal(err)
+	}
+	loginFailMaxIP, err := positiveEnvironmentInt("LOGIN_FAIL_MAX_IP", 20)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var loginLimiter academic.LoginLimiter = admission.DisabledLoginLimiter{}
+	if redisStore != nil {
+		loginLimiter, err = admission.NewLoginLimiter(redisStore.Client(), loginFailMaxAccount, loginFailMaxIP)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Print("登录失败限流未启用：未配置 REDIS_URL")
+	}
+	log.Printf("登录并发上限: %d，登录失败阈值: 学号 %d 次 / IP %d 次", loginMaxConcurrency, loginFailMaxAccount, loginFailMaxIP)
 
 	jwxtService := academic.NewService(func() (academic.JWXTClient, error) {
 		// 每次教务登录都创建独立 Client，确保不同学生不会共享 CookieJar。
@@ -93,7 +112,7 @@ func main() {
 	academicService := academic.NewCachedService(jwxtService, cacheLoader)
 	scheduleService := schedule.NewCachedCourseTableService(jwxtService, cacheLoader)
 	currentWeekService := schedule.NewCachedCurrentWeekService(schedule.NewCalendarClient(), cacheLoader)
-	academicHandler := academic.NewHandler(academicService, secureCookie)
+	academicHandler := academic.NewHandler(academicService, secureCookie, loginLimiter)
 	scheduleHandler := schedule.NewHandler(scheduleService, currentWeekService)
 	feedbackRepository := feedback.NewRepository(db)
 	feedbackHandler := feedback.NewHandler(academicService, feedbackRepository)

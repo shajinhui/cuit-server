@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,9 +32,17 @@ type GradeService interface {
 	Logout(ctx context.Context, sessionID string) error
 }
 
+// LoginLimiter 登录失败限流，由 admission 包提供 Redis 实现。
+type LoginLimiter interface {
+	Check(ctx context.Context, studentNo, ip string) (time.Duration, bool)
+	Fail(ctx context.Context, studentNo, ip string)
+	Reset(ctx context.Context, studentNo string)
+}
+
 type Handler struct {
 	service      GradeService
 	secureCookie bool
+	limiter      LoginLimiter
 }
 
 type loginRequest struct {
@@ -41,8 +50,8 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
-func NewHandler(service GradeService, secureCookie bool) *Handler {
-	return &Handler{service: service, secureCookie: secureCookie}
+func NewHandler(service GradeService, secureCookie bool, limiter LoginLimiter) *Handler {
+	return &Handler{service: service, secureCookie: secureCookie, limiter: limiter}
 }
 
 func (h *Handler) Register(server *server.Hertz, loginMiddleware ...app.HandlerFunc) {
@@ -65,16 +74,45 @@ func (h *Handler) login(ctx context.Context, c *app.RequestContext) {
 		writeError(c, http.StatusBadRequest, 40000, "请输入学号和密码")
 		return
 	}
+	studentNo := strings.TrimSpace(request.Username)
+	ip := clientIP(c)
+	if retryAfter, locked := h.limiter.Check(ctx, studentNo, ip); locked {
+		c.Header("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+		writeError(c, http.StatusTooManyRequests, 42901, "尝试次数过多，请稍后再试")
+		return
+	}
 	requestCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	sessionID, err := h.service.Login(requestCtx, request.Username, request.Password)
+	sessionID, err := h.service.Login(requestCtx, studentNo, request.Password)
 	if err != nil {
+		if errors.Is(err, jwxt.ErrInvalidCredentials) {
+			// 只有密码错误才计数，教务系统网络故障不误锁用户。
+			h.limiter.Fail(ctx, studentNo, ip)
+		}
 		log.Printf("教务系统登录失败: %v", err)
 		writeServiceError(c, err)
 		return
 	}
+	h.limiter.Reset(ctx, studentNo)
 	h.setSessionCookie(c, sessionID)
 	apiresponse.Success(c, map[string]bool{"authenticated": true})
+}
+
+// clientIP 优先取 Cloudflare Tunnel 透传的真实客户端 IP。
+// 若服务器 8888 端口可被公网直连，该请求头可被伪造，需保证只允许本机访问。
+func clientIP(c *app.RequestContext) string {
+	if ip := strings.TrimSpace(string(c.Request.Header.Peek("CF-Connecting-IP"))); ip != "" {
+		return ip
+	}
+	if forwarded := strings.TrimSpace(string(c.Request.Header.Peek("X-Forwarded-For"))); forwarded != "" {
+		if comma := strings.IndexByte(forwarded, ','); comma >= 0 {
+			forwarded = forwarded[:comma]
+		}
+		if ip := strings.TrimSpace(forwarded); ip != "" {
+			return ip
+		}
+	}
+	return c.ClientIP()
 }
 
 func (h *Handler) sessionStatus(ctx context.Context, c *app.RequestContext) {

@@ -112,3 +112,8 @@ func infoUint(info string, name string) (uint64, error) {
 func (s *RedisStore) Close() error {
 	return s.client.Close()
 }
+
+// Client 返回底层 Redis 客户端，供登录限流等组件共享同一连接池。
+func (s *RedisStore) Client() *redis.Client {
+	return s.client
+}

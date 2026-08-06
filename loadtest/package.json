@@ -1,0 +1,16 @@
+{
+  "name": "cuit-server-loadtest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "k6 压测套件，覆盖冒烟、负载、压力、浸泡和登录场景",
+  "scripts": {
+    "smoke": "mkdir -p reports && k6 run --summary-export=reports/api-smoke.json api.js",
+    "1c1g": "mkdir -p reports && k6 run --env MODE=1c1g --summary-export=reports/api-1c1g.json api.js",
+    "load": "mkdir -p reports && k6 run --env MODE=load --summary-export=reports/api-load.json api.js",
+    "stress": "mkdir -p reports && k6 run --env MODE=stress --summary-export=reports/api-stress.json api.js",
+    "soak": "mkdir -p reports && k6 run --env MODE=soak --summary-export=reports/api-soak.json api.js",
+    "soak-1c1g": "mkdir -p reports && k6 run --env MODE=soak-1c1g --summary-export=reports/api-soak-1c1g.json api.js",
+    "login": "mkdir -p reports && k6 run --summary-export=reports/login.json login.js",
+    "inspect": "k6 inspect --env ACCOUNTS_FILE=data/accounts.example.json api.js && k6 inspect --env ACCOUNTS_FILE=data/accounts.example.json login.js"
+  }
+}

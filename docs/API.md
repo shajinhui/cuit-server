@@ -154,6 +154,25 @@ Retry-After: 5
 }
 ```
 
+同一学号或 IP 在 10 分钟内密码错误次数超过阈值（默认学号 `5` 次、IP `20` 次，
+可用 `LOGIN_FAIL_MAX_ACCOUNT`、`LOGIN_FAIL_MAX_IP` 调整）时，锁定 15 分钟并返回：
+
+```http
+HTTP/1.1 429 Too Many Requests
+Retry-After: 900
+```
+
+```json
+{
+  "code": 42901,
+  "message": "尝试次数过多，请稍后再试",
+  "data": null
+}
+```
+
+只有“学号或密码错误”会计入失败次数，教务系统网络故障不会误锁用户；登录成功后自动清零。
+限流依赖 Redis（`REDIS_URL`），未配置时登录流程不受限流影响。
+
 ### 2.2 查询会话状态
 
 ```http
