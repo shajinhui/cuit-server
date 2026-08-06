@@ -37,6 +37,9 @@ export async function createSquareAvatar(file: File): Promise<Blob> {
 
     context.imageSmoothingEnabled = true
     context.imageSmoothingQuality = 'high'
+    // JPEG 不支持透明通道，先铺白色底，避免透明 PNG 上传后变成黑底。
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, 512, 512)
     context.drawImage(
       bitmap,
       (bitmap.width - side) / 2,
