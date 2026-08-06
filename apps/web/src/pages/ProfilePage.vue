@@ -7,6 +7,7 @@ import graduationIcon from '@/assets/icons/profile-graduation-cap.png'
 import profileIcon from '@/assets/icons/nav-profile.png'
 import { logoutSession } from '@/app/sessionLifecycle'
 import { useProfileStore } from '@/features/profile'
+import AvatarPicker from '@/features/profile/components/AvatarPicker.vue'
 import { usePwaInstall } from '@/features/pwa-install'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -20,8 +21,13 @@ const session = useSessionStore()
 const { isInstalled, requestInstall } = usePwaInstall()
 const notice = ref('')
 const loggingOut = ref(false)
+const avatarPickerOpen = ref(false)
 let noticeTimer: number | undefined
 
+const avatarSrc = computed(() => profileStore.avatar?.src || profileIcon)
+const selectedPresetId = computed(() =>
+  profileStore.avatar?.kind === 'preset' ? profileStore.avatar.presetId : null,
+)
 const identityName = computed(() => profileStore.profile?.Name || (profileStore.loading ? '正在加载…' : '同学'))
 const academicIdentity = computed(() => {
   const profile = profileStore.profile
@@ -40,6 +46,7 @@ usePageTheme('#f2f2f7')
 
 onMounted(() => {
   void loadProfile()
+  void profileStore.loadAvatar()
 })
 
 onBeforeUnmount(() => {
@@ -78,6 +85,22 @@ async function installApp() {
   if (result === 'installed') showNotice('当前已在桌面应用中打开')
 }
 
+async function selectPresetAvatar(presetId: number) {
+  await profileStore.selectPresetAvatar(presetId)
+  avatarPickerOpen.value = false
+  showNotice('头像已更新')
+}
+
+async function uploadAvatar(file: File) {
+  try {
+    await profileStore.setCustomAvatar(file)
+    avatarPickerOpen.value = false
+    showNotice('头像已更新')
+  } catch (error) {
+    showNotice(error instanceof Error ? error.message : '头像保存失败，请重试')
+  }
+}
+
 function maskStudentNumber(studentNo: string) {
   if (!studentNo) return ''
   if (studentNo.length <= 4) return studentNo
@@ -89,7 +112,19 @@ function maskStudentNumber(studentNo: string) {
   <AppShell variant="profile">
     <section class="profile-page page-padding">
       <header class="profile-hero">
-        <div class="profile-avatar"><img :src="profileIcon" alt="" /></div>
+        <button
+          type="button"
+          class="profile-avatar"
+          aria-label="更换头像"
+          @click="avatarPickerOpen = true"
+        >
+          <img :src="avatarSrc" alt="" />
+          <span class="profile-avatar__edit" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 20h4.2L20 8.2l-4.2-4.2L4 16v4Zm8.6-12.8 4.2 4.2" />
+            </svg>
+          </span>
+        </button>
         <div class="profile-hero__identity">
           <h1>{{ identityName }}</h1>
           <p>{{ academicIdentity || '学籍信息' }}</p>
@@ -184,6 +219,15 @@ function maskStudentNumber(studentNo: string) {
           <span>{{ loggingOut ? '正在退出…' : '退出教务' }}</span>
         </button>
       </div>
+
+      <AvatarPicker
+        :open="avatarPickerOpen"
+        :selected-preset-id="selectedPresetId"
+        :saving="profileStore.avatarSaving"
+        @close="avatarPickerOpen = false"
+        @select-preset="selectPresetAvatar"
+        @upload="uploadAvatar"
+      />
 
       <Transition name="toast">
         <div v-if="notice" class="toast-message" role="status">{{ notice }}</div>

@@ -1,3 +1,5 @@
 export type { StudentProfile } from './api'
+export { presetAvatars, randomPresetAvatarId } from './avatar'
+export { clearAvatarCache } from './avatarCache'
 export { clearProfileCache, hasProfileCache } from './cache'
 export { useProfileStore } from './store'
