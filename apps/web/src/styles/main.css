@@ -1,4 +1,5 @@
 @import './app-select.css';
+@import './home.css';
 @import './schedule.css';
 @import './tools.css';
 @import './classrooms.css';
@@ -142,13 +143,14 @@ select:focus-visible {
 .bottom-navigation {
   --bottom-navigation-outer-radius: 32px;
   --bottom-navigation-inner-radius: 27px;
+  --nav-count: 3;
 
   position: fixed;
   z-index: 50;
   bottom: max(8px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 2px));
   left: 50%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--nav-count), 1fr);
   width: calc(100% - 56px);
   max-width: 396px;
   min-height: 64px;
@@ -195,7 +197,7 @@ select:focus-visible {
   top: 5px;
   bottom: 5px;
   left: 7px;
-  width: calc((100% - 10px) / 3 - 4px);
+  width: calc((100% - 10px) / var(--nav-count) - 4px);
   pointer-events: none;
   background: rgba(116, 116, 128, 0.12);
   border: 0;

@@ -43,7 +43,7 @@ async function submitLogin() {
     password.value = ''
     const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
       ? route.query.redirect
-      : '/schedule'
+      : '/home'
     await router.replace(redirect)
   } catch (error) {
     password.value = ''

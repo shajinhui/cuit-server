@@ -6,8 +6,14 @@ import { useSessionStore } from '@/features/session'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/schedule' },
+    { path: '/', redirect: '/home' },
     { path: '/login', name: 'login', component: () => import('@/pages/LoginPage.vue') },
+    {
+      path: '/home',
+      name: 'home',
+      component: () => import('@/pages/HomePage.vue'),
+      meta: { requiresAuth: true },
+    },
     {
       path: '/schedule',
       name: 'schedule',
@@ -104,7 +110,7 @@ router.beforeEach(async (to) => {
   const authenticated = session.status === 'authenticated'
   const canReadOfflineData = session.status === 'offline'
   if (to.name === 'login' && (authenticated || canReadOfflineData)) {
-    return { name: 'schedule' }
+    return { name: 'home' }
   }
   if (to.meta.requiresAuth && !authenticated && !canReadOfflineData) {
     return { name: 'login', query: { redirect: to.fullPath } }

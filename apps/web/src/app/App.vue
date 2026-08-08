@@ -10,7 +10,7 @@ import BottomNavigation from './components/BottomNavigation.vue'
 defineOptions({ name: 'AppRoot' })
 
 const route = useRoute()
-const navigationRoutes = new Set(['schedule', 'tools', 'profile'])
+const navigationRoutes = new Set(['home', 'schedule', 'tools', 'profile'])
 const resolvingInitialRoute = computed(() => !route.name)
 const showBottomNavigation = computed(() => navigationRoutes.has(String(route.name)))
 </script>
