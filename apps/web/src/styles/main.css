@@ -147,7 +147,7 @@ select:focus-visible {
 
   position: fixed;
   z-index: 50;
-  bottom: max(8px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 2px));
+  bottom: max(2px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 8px));
   left: 50%;
   display: grid;
   grid-template-columns: repeat(var(--nav-count), 1fr);
@@ -278,7 +278,7 @@ select:focus-visible {
     --bottom-navigation-outer-radius: 29px;
     --bottom-navigation-inner-radius: 24px;
 
-    bottom: max(6px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 2px));
+    bottom: max(2px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 8px));
     min-height: 58px;
   }
 
