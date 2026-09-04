@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { AppUpdatePrompt } from '@/features/app-updates'
+import { AppAnnouncement } from '@/features/announcements'
+import { AppUpdatePrompt, useAndroidLiveUpdate } from '@/features/app-updates'
 import { PwaInstallPrompt } from '@/features/pwa-install'
 
 import BottomNavigation from './components/BottomNavigation.vue'
@@ -13,6 +14,8 @@ const route = useRoute()
 const navigationRoutes = new Set(['schedule', 'tools', 'profile'])
 const resolvingInitialRoute = computed(() => !route.name)
 const showBottomNavigation = computed(() => navigationRoutes.has(String(route.name)))
+const { readyUpdate } = useAndroidLiveUpdate()
+const allowAnnouncement = computed(() => showBottomNavigation.value && !readyUpdate.value)
 </script>
 
 <template>
@@ -32,6 +35,7 @@ const showBottomNavigation = computed(() => navigationRoutes.has(String(route.na
   </div>
   <RouterView v-else />
   <BottomNavigation v-if="showBottomNavigation" />
+  <AppAnnouncement :allow-presentation="allowAnnouncement" />
   <PwaInstallPrompt
     :allow-promotion="showBottomNavigation"
     :with-bottom-navigation="showBottomNavigation"
