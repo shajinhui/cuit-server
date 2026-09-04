@@ -1,17 +1,39 @@
 import { describe, expect, it } from 'vitest'
 
-import { isAnnouncementUnread } from './model'
+import {
+  getAnnouncementViewCount,
+  recordAnnouncementPresentation,
+  shouldAutoPresentAnnouncement,
+} from './model'
 
-describe('isAnnouncementUnread', () => {
-  it('在设备没有阅读记录时展示公告', () => {
-    expect(isAnnouncementUnread(null, 'announcement-2')).toBe(true)
+describe('announcement presentation state', () => {
+  it('没有展示记录时需要自动展示', () => {
+    expect(shouldAutoPresentAnnouncement(null, 'announcement-2')).toBe(true)
   })
 
-  it('公告 ID 更新后重新展示', () => {
-    expect(isAnnouncementUnread('announcement-1', 'announcement-2')).toBe(true)
+  it('同一公告展示一次后仍会再次自动展示', () => {
+    const state = { id: 'announcement-2', viewCount: 1 }
+    expect(shouldAutoPresentAnnouncement(state, 'announcement-2')).toBe(true)
   })
 
-  it('同一公告已经阅读后不再展示', () => {
-    expect(isAnnouncementUnread('announcement-2', 'announcement-2')).toBe(false)
+  it('同一公告展示两次后停止自动展示', () => {
+    const state = { id: 'announcement-2', viewCount: 2 }
+    expect(shouldAutoPresentAnnouncement(state, 'announcement-2')).toBe(false)
+  })
+
+  it('公告 ID 更新后重新从零计数', () => {
+    const state = { id: 'announcement-1', viewCount: 2 }
+    expect(getAnnouncementViewCount(state, 'announcement-2')).toBe(0)
+    expect(shouldAutoPresentAnnouncement(state, 'announcement-2')).toBe(true)
+  })
+
+  it('记录展示次数且不超过上限', () => {
+    const once = recordAnnouncementPresentation(null, 'announcement-2')
+    const twice = recordAnnouncementPresentation(once, 'announcement-2')
+    const capped = recordAnnouncementPresentation(twice, 'announcement-2')
+
+    expect(once).toEqual({ id: 'announcement-2', viewCount: 1 })
+    expect(twice).toEqual({ id: 'announcement-2', viewCount: 2 })
+    expect(capped).toEqual({ id: 'announcement-2', viewCount: 2 })
   })
 })
