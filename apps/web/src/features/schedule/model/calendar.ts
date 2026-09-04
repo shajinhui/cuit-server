@@ -1,3 +1,5 @@
+import type { Semester } from '@/shared/models/academic'
+
 import type { Course } from '../api'
 import {
   courseTones,
@@ -48,16 +50,17 @@ export interface CourseArrangement {
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
 const baseTimeSlots: TimeSlot[] = [
   ['08:20', '09:05'],
-  ['09:00', '09:45'],
-  ['10:10', '10:55'],
-  ['11:10', '11:55'],
+  ['09:15', '10:00'],
+  ['10:20', '11:05'],
+  ['11:15', '12:00'],
   ['14:00', '14:45'],
-  ['14:30', '15:15'],
-  ['15:40', '16:25'],
-  ['16:40', '17:25'],
-  ['18:30', '19:15'],
+  ['14:55', '15:40'],
+  ['15:50', '16:35'],
+  ['16:45', '17:30'],
+  ['17:40', '18:25'],
   ['19:30', '20:15'],
-  ['20:30', '21:15'],
+  ['20:25', '21:10'],
+  ['21:20', '22:05'],
 ]
 
 export function formatDateTitle(date: Date) {
@@ -81,6 +84,41 @@ export function dateForWeekday(selected: Date, weekdayIndex: number) {
   const date = new Date(selected)
   date.setDate(date.getDate() - currentDay + weekdayIndex + 1)
   return date
+}
+
+export function dateForSemesterWeek(
+  semester: Semester | undefined,
+  week: number,
+  weekday: number,
+): Date | null {
+  if (!semester || Number.parseInt(semester.Term, 10) !== 1 || week < 1) return null
+
+  const startYear = Number.parseInt(semester.SchoolYear.split('-')[0] ?? '', 10)
+  if (!Number.isInteger(startYear) || weekday < 1 || weekday > 7) return null
+
+  // 第一学期以 9 月 1 日所在教学周为第 1 周，避免用上学期的 CurrentWeek 倒推出 3 月。
+  const septemberFirst = new Date(startYear, 8, 1)
+  const septemberWeekday = septemberFirst.getDay() || 7
+  const firstWeekMonday = new Date(startYear, 8, 1 - septemberWeekday + 1)
+  const date = new Date(firstWeekMonday)
+  date.setDate(firstWeekMonday.getDate() + (week - 1) * 7 + weekday - 1)
+  return date
+}
+
+export function currentWeekForSemesterDate(
+  semester: Semester | undefined,
+  date: Date,
+): number | null {
+  const firstWeekMonday = dateForSemesterWeek(semester, 1, 1)
+  if (!firstWeekMonday) return null
+
+  const weekday = date.getDay() || 7
+  const currentMonday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - weekday + 1)
+  const elapsedDays = Math.round(
+    (currentMonday.getTime() - firstWeekMonday.getTime()) / (24 * 60 * 60 * 1000),
+  )
+  const week = Math.floor(elapsedDays / 7) + 1
+  return week >= 1 && week <= 25 ? week : null
 }
 
 export function buildCourseBlocks(

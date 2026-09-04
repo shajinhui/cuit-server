@@ -73,12 +73,59 @@ func currentWeekFromHTML(body []byte, now time.Time) (CurrentWeek, error) {
 		return CurrentWeek{}, fmt.Errorf("%w: parse week anchor: %w", ErrCurrentWeekUnavailable, err)
 	}
 
-	// 官网把锚点日记为第 0 天，并用 ceil(相差天数/7) 显示当前周次，这里保持同一规则。
 	today := now.In(chinaLocation)
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, chinaLocation)
+	if !anchorMatchesCurrentSemester(anchor, today) {
+		if fallback, ok := autumnSemesterAnchor(today); ok {
+			anchor = fallback
+		} else {
+			return CurrentWeek{}, fmt.Errorf(
+				"%w: stale week anchor=%s for date=%s",
+				ErrCurrentWeekUnavailable,
+				anchor.Format(time.DateOnly),
+				today.Format(time.DateOnly),
+			)
+		}
+	}
+
+	// 官网把锚点日记为第 0 天，并用 ceil(相差天数/7) 显示当前周次，这里保持同一规则。
 	days := int(today.Sub(anchor).Hours() / 24)
 	if days < 0 {
-		days = -days
+		return CurrentWeek{}, fmt.Errorf(
+			"%w: week anchor=%s is after date=%s",
+			ErrCurrentWeekUnavailable,
+			anchor.Format(time.DateOnly),
+			today.Format(time.DateOnly),
+		)
 	}
 	return CurrentWeek{CurrentWeek: (days + 6) / 7}, nil
+}
+
+func anchorMatchesCurrentSemester(anchor, today time.Time) bool {
+	switch today.Month() {
+	case time.September, time.October, time.November, time.December:
+		return anchor.Year() == today.Year() &&
+			(anchor.Month() == time.August || anchor.Month() == time.September)
+	case time.January:
+		return anchor.Year() == today.Year()-1 &&
+			(anchor.Month() == time.August || anchor.Month() == time.September)
+	default:
+		return anchor.Year() == today.Year() &&
+			(anchor.Month() == time.January || anchor.Month() == time.February || anchor.Month() == time.March)
+	}
+}
+
+func autumnSemesterAnchor(today time.Time) (time.Time, bool) {
+	if today.Month() < time.September || today.Month() > time.December {
+		return time.Time{}, false
+	}
+
+	septemberFirst := time.Date(today.Year(), time.September, 1, 0, 0, 0, 0, chinaLocation)
+	weekday := int(septemberFirst.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	firstWeekMonday := septemberFirst.AddDate(0, 0, 1-weekday)
+	// 学校主页的锚点位于第一教学周周一前两天。
+	return firstWeekMonday.AddDate(0, 0, -2), true
 }

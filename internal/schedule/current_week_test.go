@@ -22,6 +22,35 @@ var d = Math.ceil(day / 7);
 	}
 }
 
+func TestCurrentWeekFromHTMLReplacesStaleSpringAnchorInAutumn(t *testing.T) {
+	html := []byte(`<script>
+var day = datedifference(s1, '2026-02-28');
+var d = Math.ceil(day / 7);
+</script>`)
+	now := time.Date(2026, time.September, 4, 16, 0, 0, 0, chinaLocation)
+
+	week, err := currentWeekFromHTML(html, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if week.CurrentWeek != 1 {
+		t.Fatalf("unexpected current week: %d", week.CurrentWeek)
+	}
+}
+
+func TestCurrentWeekFromHTMLStartsSecondAutumnWeekOnMonday(t *testing.T) {
+	html := []byte(`<script>datedifference(s1, '2026-02-28')</script>`)
+	now := time.Date(2026, time.September, 7, 8, 0, 0, 0, chinaLocation)
+
+	week, err := currentWeekFromHTML(html, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if week.CurrentWeek != 2 {
+		t.Fatalf("unexpected current week: %d", week.CurrentWeek)
+	}
+}
+
 func TestCurrentWeekFromHTMLRequiresAnchor(t *testing.T) {
 	_, err := currentWeekFromHTML([]byte(`<html></html>`), time.Now())
 	if !errors.Is(err, ErrCurrentWeekUnavailable) {

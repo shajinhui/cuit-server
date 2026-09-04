@@ -146,7 +146,7 @@ func (s *CachedCurrentWeekService) GetCurrentWeek(ctx context.Context) (CurrentW
 	return platformcache.GetOrLoad(
 		ctx,
 		s.cache,
-		"cuit:v1:current-week",
+		"cuit:v2:current-week",
 		untilNextDay(s.now()),
 		s.source.GetCurrentWeek,
 	)

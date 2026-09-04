@@ -7,6 +7,7 @@ import {
   buildTimeSlots,
   buildWeekDates,
   buildWeekOptions,
+  dateForSemesterWeek,
   dateForWeekday,
   formatDateTitle,
 } from '../model/calendar'
@@ -38,6 +39,9 @@ export function useScheduleCalendar(store: ScheduleStore) {
   const isCurrentSemester = computed(
     () => store.selectedSemesterID === findCurrentSemester(store.semesters)?.ID,
   )
+  const selectedSemester = computed(() =>
+    store.semesters.find((semester) => semester.ID === store.selectedSemesterID),
+  )
   const weekOptions = computed(() =>
     buildWeekOptions(store.table?.WeekCount ?? 0, store.currentWeek, selectedWeek.value),
   )
@@ -67,7 +71,11 @@ export function useScheduleCalendar(store: ScheduleStore) {
   function selectWeek(nextWeek: number) {
     if (!Number.isInteger(nextWeek) || nextWeek < 1 || nextWeek === selectedWeek.value) return
 
-    if (store.currentWeek > 0) {
+    const weekday = selectedDate.value.getDay() || 7
+    const semesterDate = dateForSemesterWeek(selectedSemester.value, nextWeek, weekday)
+    if (semesterDate) {
+      selectedDate.value = semesterDate
+    } else if (store.currentWeek > 0) {
       const date = new Date(selectedDate.value)
       date.setDate(date.getDate() + (nextWeek - selectedWeek.value) * 7)
       selectedDate.value = date

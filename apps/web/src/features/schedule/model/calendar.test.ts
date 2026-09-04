@@ -5,6 +5,8 @@ import {
   buildTimeSlots,
   buildWeekDates,
   buildWeekOptions,
+  currentWeekForSemesterDate,
+  dateForSemesterWeek,
 } from './calendar'
 
 import type { Course, CourseActivity } from '../api'
@@ -25,6 +27,26 @@ describe('schedule calendar model', () => {
       { label: '日', date: 26 },
     ])
     expect(dates.map((date) => date.active)).toEqual([false, false, false, false, false, false, true])
+  })
+
+  it('anchors the first week of an autumn semester to the September teaching week', () => {
+    const semester = { ID: 'semester-1', SchoolYear: '2026-2027', Term: '1' }
+
+    expect(dateForSemesterWeek(semester, 1, 1)).toEqual(new Date(2026, 7, 31))
+    expect(dateForSemesterWeek(semester, 1, 5)).toEqual(new Date(2026, 8, 4))
+    expect(dateForSemesterWeek(semester, 2, 1)).toEqual(new Date(2026, 8, 7))
+    expect(currentWeekForSemesterDate(semester, new Date(2026, 8, 4))).toBe(1)
+    expect(currentWeekForSemesterDate(semester, new Date(2026, 8, 7))).toBe(2)
+  })
+
+  it('uses the updated twelve-section timetable', () => {
+    const slots = buildTimeSlots([])
+
+    expect(slots).toHaveLength(12)
+    expect(slots[0]).toEqual(['08:20', '09:05'])
+    expect(slots[1]).toEqual(['09:15', '10:00'])
+    expect(slots[8]).toEqual(['17:40', '18:25'])
+    expect(slots[11]).toEqual(['21:20', '22:05'])
   })
 
   it('filters invalid activities and places inactive courses after active courses', () => {

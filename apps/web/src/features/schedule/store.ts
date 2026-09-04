@@ -22,6 +22,7 @@ import {
   writeScheduleCache,
 } from './cache'
 import type { CourseColorPreference, CourseTone } from './model/courseColor'
+import { currentWeekForSemesterDate } from './model/calendar'
 import {
   createCourseOverride,
   type CourseOverride,
@@ -158,7 +159,10 @@ export const useScheduleStore = defineStore('schedule', {
       this.semesters = cache.semesters
       this.selectedSemesterID = cache.selectedSemesterID
       this.table = cache.table
-      this.currentWeek = cache.currentWeek
+      const selectedSemester = cache.semesters.find(
+        (semester) => semester.ID === cache.selectedSemesterID,
+      )
+      this.currentWeek = currentWeekForSemesterDate(selectedSemester, new Date()) ?? cache.currentWeek
       this.cachedAt = cache.cachedAt
       this.usingCachedData = true
     },
