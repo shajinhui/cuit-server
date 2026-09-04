@@ -10,6 +10,7 @@ import libraryIcon from '@/assets/icons/tool-library.png'
 import mapIcon from '@/assets/icons/tool-campus-map.png'
 import newStudentIcon from '@/assets/icons/tool-new-student.png'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
+import { ACTIVE_ANNOUNCEMENT, openActiveAnnouncement } from '@/features/announcements'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppShell from '@/shared/ui/AppShell.vue'
 
@@ -64,6 +65,26 @@ function openTool(tool: ToolItem) {
 <template>
   <AppShell variant="tools">
     <section class="tools-page page-padding">
+      <button
+        type="button"
+        class="tools-announcement-card"
+        aria-label="查看最新公告"
+        @click="openActiveAnnouncement"
+      >
+        <span class="tools-announcement-card__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 5.5h11.5v8H9l-3.8 3v-3H4v-8Z" />
+            <path d="M10 15.5h5l3.8 3v-3H20v-8h-2" />
+          </svg>
+        </span>
+        <span class="tools-announcement-card__copy">
+          <small>最新公告</small>
+          <strong>{{ ACTIVE_ANNOUNCEMENT.title }}</strong>
+          <span>{{ ACTIVE_ANNOUNCEMENT.description }}</span>
+        </span>
+        <span class="tools-announcement-card__chevron" aria-hidden="true">›</span>
+      </button>
+
       <label class="tool-search">
         <span aria-hidden="true" />
         <input v-model="query" type="search" placeholder="搜索校园服务" aria-label="搜索校园服务" />

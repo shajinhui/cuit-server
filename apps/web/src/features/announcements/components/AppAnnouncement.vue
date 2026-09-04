@@ -3,7 +3,13 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
 
-import { ACTIVE_ANNOUNCEMENT, isAnnouncementUnread } from '../model'
+import {
+  ACTIVE_ANNOUNCEMENT,
+  type AnnouncementViewState,
+  recordAnnouncementPresentation,
+  shouldAutoPresentAnnouncement,
+} from '../model'
+import { APP_ANNOUNCEMENT_OPEN_EVENT } from '../presentation'
 
 defineOptions({ name: 'AppAnnouncement' })
 
@@ -11,9 +17,11 @@ const props = defineProps<{
   allowPresentation: boolean
 }>()
 
-const storageKey = 'app-announcement-seen-id'
+const storageKey = 'app-announcement-view-state'
+const legacyStorageKey = 'app-announcement-seen-id'
 const visible = ref(false)
 const dialog = ref<HTMLElement | null>(null)
+const presentationMode = ref<'auto' | 'manual' | null>(null)
 let closedForSession = false
 let previouslyFocused: HTMLElement | null = null
 
@@ -24,9 +32,13 @@ watch(
       visible.value = false
       return
     }
-    if (closedForSession || !isAnnouncementUnread(readSeenAnnouncementID(), ACTIVE_ANNOUNCEMENT.id)) {
+    if (
+      closedForSession ||
+      !shouldAutoPresentAnnouncement(readViewState(), ACTIVE_ANNOUNCEMENT.id)
+    ) {
       return
     }
+    presentationMode.value = 'auto'
     visible.value = true
   },
   { immediate: true },
@@ -44,36 +56,63 @@ watch(visible, async (shown) => {
   previouslyFocused = null
 })
 
-onMounted(() => document.addEventListener('keydown', handleKeydown))
-onBeforeUnmount(() => document.removeEventListener('keydown', handleKeydown))
+onMounted(() => {
+  document.addEventListener('keydown', handleKeydown)
+  window.addEventListener(APP_ANNOUNCEMENT_OPEN_EVENT, openManually)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener(APP_ANNOUNCEMENT_OPEN_EVENT, openManually)
+})
 
-function readSeenAnnouncementID(): string | null {
+function readViewState(): AnnouncementViewState | null {
   try {
-    return window.localStorage.getItem(storageKey)
+    const stored = window.localStorage.getItem(storageKey)
+    if (stored) {
+      const state = JSON.parse(stored) as Partial<AnnouncementViewState>
+      if (typeof state.id === 'string' && typeof state.viewCount === 'number') {
+        return { id: state.id, viewCount: state.viewCount }
+      }
+    }
+
+    // 旧版本只记录“已读”。将其视作已展示一次，让升级用户还能看到第二次提醒。
+    const legacySeenID = window.localStorage.getItem(legacyStorageKey)
+    return legacySeenID ? { id: legacySeenID, viewCount: 1 } : null
   } catch {
     return null
   }
 }
 
-function markAsSeen() {
+function closeAnnouncement() {
   closedForSession = true
   visible.value = false
-  try {
-    window.localStorage.setItem(storageKey, ACTIVE_ANNOUNCEMENT.id)
-  } catch {
-    // 存储受限时至少在当前应用会话中不再重复展示。
+
+  if (presentationMode.value === 'auto') {
+    try {
+      const state = recordAnnouncementPresentation(readViewState(), ACTIVE_ANNOUNCEMENT.id)
+      window.localStorage.setItem(storageKey, JSON.stringify(state))
+      window.localStorage.removeItem(legacyStorageKey)
+    } catch {
+      // 存储受限时至少在当前应用会话中不再重复展示。
+    }
   }
+  presentationMode.value = null
+}
+
+function openManually() {
+  presentationMode.value = 'manual'
+  visible.value = true
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && visible.value) markAsSeen()
+  if (event.key === 'Escape' && visible.value) closeAnnouncement()
 }
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="app-announcement" appear>
-      <div v-if="visible" class="app-announcement-backdrop" @click.self="markAsSeen">
+      <div v-if="visible" class="app-announcement-backdrop" @click.self="closeAnnouncement">
         <section
           ref="dialog"
           class="app-announcement-dialog"
@@ -97,8 +136,8 @@ function handleKeydown(event: KeyboardEvent) {
           <p class="app-announcement-dialog__group">QQ群 {{ QQ_GROUP_NUMBER }}</p>
 
           <div class="app-announcement-dialog__actions">
-            <button type="button" @click="markAsSeen">我知道了</button>
-            <a :href="QQ_GROUP_URL" target="_blank" rel="noopener noreferrer" @click="markAsSeen">
+            <button type="button" @click="closeAnnouncement">我知道了</button>
+            <a :href="QQ_GROUP_URL" target="_blank" rel="noopener noreferrer" @click="closeAnnouncement">
               立即入群
             </a>
           </div>
