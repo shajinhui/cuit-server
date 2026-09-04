@@ -177,6 +177,18 @@
   background: #4f6f8f;
 }
 
+.about-links__icon--community {
+  background: #0088ff;
+}
+
+.about-links__icon--community svg {
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
 .about-links__icon--privacy svg {
   fill: none;
   stroke: currentcolor;

@@ -1,0 +1,4 @@
+export const QQ_GROUP_NUMBER = '151247227'
+
+export const QQ_GROUP_URL =
+  'https://qun.qq.com/universal-share/share?ac=1&authKey=6mEX8oKBSC9YGOQKHzHb%2BvnOSCYI8NpxFuw4RO6PMZm6wrA0kpNnniOr%2FchH0ShC&busi_data=eyJncm91cENvZGUiOiIxNTEyNDcyMjciLCJ0b2tlbiI6Ik1YWkVmOFhJb1RndC9BU0k0cVRzZnVTdGMxSk1ldldTYWxtNGFsWEdVbThUckVvMGJrU3h2NWM2QVUxNWtmcUciLCJ1aW4iOiIyNjA2MDIzNzU4In0%3D&data=UoVHpFfpjgyvkN0nlex1ZgHosvWTxrE8Fm0RoP6JDzjkqbx1-5KRYX3Nw_NYikzGKfUkOBb_X30OG97BEekBnw&svctype=4&tempid=h5_group_info'

@@ -1,0 +1,181 @@
+.app-announcement-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  padding:
+    calc(22px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    22px
+    calc(22px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  place-items: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.app-announcement-dialog {
+  width: 100%;
+  max-width: 340px;
+  padding: 24px 20px 18px;
+  color: #1c1c1e;
+  text-align: center;
+  background: rgba(248, 248, 250, 0.98);
+  border-radius: 24px;
+  box-shadow: 0 20px 54px rgba(28, 28, 30, 0.22);
+  outline: none;
+}
+
+.app-announcement-dialog__icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto;
+  place-items: center;
+  color: #fff;
+  background: #0088ff;
+  border-radius: 15px;
+}
+
+.app-announcement-dialog__icon svg {
+  width: 31px;
+  height: 31px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+
+.app-announcement-dialog__eyebrow {
+  margin: 14px 0 3px;
+  color: #8e8e93;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.app-announcement-dialog h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.app-announcement-dialog__description {
+  margin: 12px 2px 0;
+  color: #48484a;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.app-announcement-dialog__group {
+  display: inline-flex;
+  min-height: 32px;
+  margin: 14px 0 0;
+  padding: 6px 12px;
+  align-items: center;
+  color: #636366;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  background: #e5e5ea;
+  border-radius: 16px;
+}
+
+.app-announcement-dialog__actions {
+  display: grid;
+  margin-top: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.app-announcement-dialog__actions button,
+.app-announcement-dialog__actions a {
+  display: grid;
+  min-height: 48px;
+  padding: 0 12px;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  border: 0;
+  border-radius: 24px;
+  transition:
+    transform 140ms var(--ease-out),
+    opacity 120ms ease;
+}
+
+.app-announcement-dialog__actions button {
+  color: #3a3a3c;
+  background: #e5e5ea;
+}
+
+.app-announcement-dialog__actions a {
+  color: #fff;
+  background: #0088ff;
+}
+
+.app-announcement-dialog__actions button:active,
+.app-announcement-dialog__actions a:active {
+  transform: scale(0.97);
+}
+
+.app-announcement-enter-active {
+  transition: opacity 220ms var(--ease-out);
+}
+
+.app-announcement-leave-active {
+  transition: opacity 150ms var(--ease-out);
+}
+
+.app-announcement-enter-active .app-announcement-dialog {
+  transition:
+    transform 240ms var(--ease-out),
+    opacity 180ms ease;
+}
+
+.app-announcement-leave-active .app-announcement-dialog {
+  transition:
+    transform 150ms var(--ease-out),
+    opacity 120ms ease;
+}
+
+.app-announcement-enter-from,
+.app-announcement-leave-to {
+  opacity: 0;
+}
+
+.app-announcement-enter-from .app-announcement-dialog,
+.app-announcement-leave-to .app-announcement-dialog {
+  opacity: 0;
+  transform: scale(0.96) translateY(8px);
+}
+
+@media (max-width: 370px) {
+  .app-announcement-backdrop {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-announcement-dialog {
+    background: #f8f8fa;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-announcement-dialog__actions button,
+  .app-announcement-dialog__actions a,
+  .app-announcement-enter-active,
+  .app-announcement-leave-active,
+  .app-announcement-enter-active .app-announcement-dialog,
+  .app-announcement-leave-active .app-announcement-dialog {
+    transition: none;
+  }
+
+  .app-announcement-dialog__actions button:active,
+  .app-announcement-dialog__actions a:active {
+    transform: none;
+  }
+}

@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
 
 defineOptions({ name: 'AboutPage' })
 
@@ -38,6 +39,22 @@ usePageTheme('#f2f2f7')
       </section>
 
       <section class="about-links" aria-label="项目链接">
+        <a :href="QQ_GROUP_URL" target="_blank" rel="noopener noreferrer">
+          <span class="about-links__icon about-links__icon--community" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 5.5h11.5v8H9l-3.8 3v-3H4v-8Z" />
+              <path d="M10 15.5h5l3.8 3v-3H20v-8h-2" />
+            </svg>
+          </span>
+          <span class="about-links__copy">
+            <strong>加入交流互助群</strong>
+            <small>QQ群 {{ QQ_GROUP_NUMBER }} · 讨论使用与反馈问题</small>
+          </span>
+          <svg class="about-links__external" aria-hidden="true" viewBox="0 0 20 20">
+            <path d="M8 4h8v8M16 4l-9 9M14 11v4H5V6h4" />
+          </svg>
+        </a>
+
         <RouterLink :to="{ name: 'privacy' }">
           <span class="about-links__icon about-links__icon--privacy" aria-hidden="true">
             <svg viewBox="0 0 24 24">
