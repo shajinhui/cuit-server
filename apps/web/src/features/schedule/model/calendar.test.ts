@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { semesterWeekForDate } from './semesterCalendar'
 
 import {
   buildCourseBlocks,
   buildTimeSlots,
   buildWeekDates,
   buildWeekOptions,
-  currentWeekForSemesterDate,
   dateForSemesterWeek,
+  scheduleCampusFromName,
 } from './calendar'
 
 import type { Course, CourseActivity } from '../api'
@@ -32,11 +33,33 @@ describe('schedule calendar model', () => {
   it('anchors the first week of an autumn semester to the September teaching week', () => {
     const semester = { ID: 'semester-1', SchoolYear: '2026-2027', Term: '1' }
 
-    expect(dateForSemesterWeek(semester, 1, 1)).toEqual(new Date(2026, 7, 31))
-    expect(dateForSemesterWeek(semester, 1, 5)).toEqual(new Date(2026, 8, 4))
-    expect(dateForSemesterWeek(semester, 2, 1)).toEqual(new Date(2026, 8, 7))
-    expect(currentWeekForSemesterDate(semester, new Date(2026, 8, 4))).toBe(1)
-    expect(currentWeekForSemesterDate(semester, new Date(2026, 8, 7))).toBe(2)
+    expect(dateForSemesterWeek(semester, 1, 1)).toEqual(new Date(2026, 8, 7))
+    expect(dateForSemesterWeek(semester, 1, 5)).toEqual(new Date(2026, 8, 11))
+    expect(dateForSemesterWeek(semester, 2, 1)).toEqual(new Date(2026, 8, 14))
+    expect(semesterWeekForDate(semester, new Date(2026, 8, 4))).toBe(0)
+    expect(semesterWeekForDate(semester, new Date(2026, 8, 13))).toBe(1)
+    expect(semesterWeekForDate(semester, new Date(2026, 8, 14))).toBe(2)
+  })
+
+  it('uses the published March calendar for the 2025-2026 spring semester', () => {
+    const semester = { ID: 'semester-2', SchoolYear: '2025-2026', Term: '2' }
+
+    expect(dateForSemesterWeek(semester, 1, 1)).toEqual(new Date(2026, 2, 2))
+    expect(dateForSemesterWeek(semester, 1, 5)).toEqual(new Date(2026, 2, 6))
+    expect(dateForSemesterWeek(semester, 2, 1)).toEqual(new Date(2026, 2, 9))
+    expect(semesterWeekForDate(semester, new Date(2026, 2, 6))).toBe(1)
+    expect(semesterWeekForDate(semester, new Date(2026, 2, 9))).toBe(2)
+  })
+
+  it('uses the February start for 2026-2027 and crosses months and years correctly', () => {
+    const spring = { ID: 'spring', SchoolYear: '2026-2027', Term: '2' }
+    const autumn = { ...spring, Term: '1' }
+    expect(dateForSemesterWeek(spring, 1, 1)).toEqual(new Date(2027, 1, 22))
+    expect(dateForSemesterWeek(spring, 2, 1)).toEqual(new Date(2027, 2, 1))
+    expect(dateForSemesterWeek(autumn, 17, 5)).toEqual(new Date(2027, 0, 1))
+    expect(dateForSemesterWeek({ ...spring, SchoolYear: '2030-2031' }, 1, 1)).toBeNull()
+    expect(dateForSemesterWeek(spring, 1.5, 1)).toBeNull()
+    expect(dateForSemesterWeek(spring, 1, 8)).toBeNull()
   })
 
   it('uses the updated twelve-section timetable', () => {
@@ -47,6 +70,31 @@ describe('schedule calendar model', () => {
     expect(slots[1]).toEqual(['09:15', '10:00'])
     expect(slots[8]).toEqual(['17:40', '18:25'])
     expect(slots[11]).toEqual(['21:20', '22:05'])
+  })
+
+  it('selects the timetable from the student campus', () => {
+    expect(scheduleCampusFromName('龙泉校区')).toBe('longquan')
+    expect(scheduleCampusFromName('龙泉驿区')).toBe('longquan')
+    expect(scheduleCampusFromName('航空港校区')).toBe('airport')
+    expect(scheduleCampusFromName(undefined)).toBe('airport')
+
+    const history = { ID: 'history', SchoolYear: '2025-2026', Term: '2' }
+    const airportSlots = buildTimeSlots([], 'airport', history)
+    const longquanSlots = buildTimeSlots([], 'longquan', history)
+    expect(airportSlots.slice(0, 2)).toEqual([
+      ['08:20', '09:05'],
+      ['09:15', '10:00'],
+    ])
+    expect(longquanSlots.slice(0, 2)).toEqual([
+      ['08:30', '09:15'],
+      ['09:25', '10:10'],
+    ])
+    expect(longquanSlots.slice(2)).toEqual(airportSlots.slice(2))
+    expect(buildTimeSlots([], 'longquan', { ...history, SchoolYear: '2026-2027', Term: '1' }))
+      .toEqual(airportSlots)
+    expect(buildTimeSlots([], 'longquan', { ...history, SchoolYear: '2026-2027', Term: '2' }))
+      .toEqual(airportSlots)
+    expect(buildTimeSlots([], 'longquan')).toEqual(airportSlots)
   })
 
   it('filters invalid activities and places inactive courses after active courses', () => {

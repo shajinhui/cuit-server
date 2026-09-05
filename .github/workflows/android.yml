@@ -4,12 +4,14 @@ on:
   push:
     paths:
       - 'apps/web/**'
+      - 'shared/academiccalendar/**'
       - '.github/workflows/android.yml'
     tags:
       - 'v*'
   pull_request:
     paths:
       - 'apps/web/**'
+      - 'shared/academiccalendar/**'
       - '.github/workflows/android.yml'
   workflow_dispatch:
     inputs:

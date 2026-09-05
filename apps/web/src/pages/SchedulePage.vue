@@ -14,6 +14,7 @@ import {
   type CourseTone,
   type ManualCourseInput,
 } from '@/features/schedule'
+import { useProfileStore } from '@/features/profile'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
@@ -23,6 +24,7 @@ defineOptions({ name: 'SchedulePage' })
 
 const router = useRouter()
 const store = useScheduleStore()
+const profileStore = useProfileStore()
 const session = useSessionStore()
 const notice = ref('')
 const moreMenuOpen = ref(false)
@@ -42,6 +44,7 @@ let noticeTimer: number | undefined
 const {
   courses,
   dateTitle,
+  hasSemesterCalendar,
   resetWeekSelection,
   selectDay,
   selectedDate,
@@ -51,20 +54,27 @@ const {
   timeSlots,
   weekDates,
   weekOptions,
-} = useScheduleCalendar(store)
+} = useScheduleCalendar(store, computed(() => profileStore.profile?.Campus))
 
 usePageTheme('#c9d5e7')
 
 onMounted(() => {
   document.addEventListener('pointerdown', closeMoreMenuFromOutside)
+  document.addEventListener('visibilitychange', resetWeekWhenVisible)
   resetWeekSelection()
   void store.load()
+  void profileStore.load(false, { preferCache: true })
 })
 
 onActivated(resetWeekSelection)
 
+function resetWeekWhenVisible() {
+  if (document.visibilityState === 'visible') resetWeekSelection()
+}
+
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', closeMoreMenuFromOutside)
+  document.removeEventListener('visibilitychange', resetWeekWhenVisible)
   window.clearTimeout(noticeTimer)
 })
 
@@ -396,7 +406,7 @@ async function refreshSchedule() {
 
       <div class="week-strip" :aria-label="`第 ${selectedWeek || 1} 周日期`">
         <div class="week-strip__month">
-          <strong>{{ selectedDate.getMonth() + 1 }}</strong>
+          <strong>{{ hasSemesterCalendar ? selectedDate.getMonth() + 1 : '—' }}</strong>
           <span>月</span>
         </div>
         <button
@@ -407,7 +417,7 @@ async function refreshSchedule() {
           @click="selectDay(index)"
         >
           <span>{{ item.label }}</span>
-          <strong>{{ item.date }}</strong>
+          <strong>{{ hasSemesterCalendar ? item.date : '—' }}</strong>
         </button>
       </div>
 

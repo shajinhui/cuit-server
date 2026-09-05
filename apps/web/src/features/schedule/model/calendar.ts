@@ -8,8 +8,10 @@ import {
 } from './courseColor'
 import type { CourseOverride } from './courseOverride'
 import type { ManualCourse } from './manualCourse'
+import { firstWeekMondayForSemester } from './semesterCalendar'
 
 export type TimeSlot = readonly [string, string]
+export type ScheduleCampus = 'airport' | 'longquan'
 
 export interface WeekDate {
   label: string
@@ -48,7 +50,7 @@ export interface CourseArrangement {
 }
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
-const baseTimeSlots: TimeSlot[] = [
+const airportTimeSlots: TimeSlot[] = [
   ['08:20', '09:05'],
   ['09:15', '10:00'],
   ['10:20', '11:05'],
@@ -61,6 +63,12 @@ const baseTimeSlots: TimeSlot[] = [
   ['19:30', '20:15'],
   ['20:25', '21:10'],
   ['21:20', '22:05'],
+]
+
+const longquanTimeSlots: TimeSlot[] = [
+  ['08:30', '09:15'],
+  ['09:25', '10:10'],
+  ...airportTimeSlots.slice(2),
 ]
 
 export function formatDateTitle(date: Date) {
@@ -91,34 +99,14 @@ export function dateForSemesterWeek(
   week: number,
   weekday: number,
 ): Date | null {
-  if (!semester || Number.parseInt(semester.Term, 10) !== 1 || week < 1) return null
+  if (!Number.isInteger(week) || week < 1 || !Number.isInteger(weekday) || weekday < 1 || weekday > 7) return null
 
-  const startYear = Number.parseInt(semester.SchoolYear.split('-')[0] ?? '', 10)
-  if (!Number.isInteger(startYear) || weekday < 1 || weekday > 7) return null
+  const firstWeekMonday = firstWeekMondayForSemester(semester)
+  if (!firstWeekMonday) return null
 
-  // 第一学期以 9 月 1 日所在教学周为第 1 周，避免用上学期的 CurrentWeek 倒推出 3 月。
-  const septemberFirst = new Date(startYear, 8, 1)
-  const septemberWeekday = septemberFirst.getDay() || 7
-  const firstWeekMonday = new Date(startYear, 8, 1 - septemberWeekday + 1)
   const date = new Date(firstWeekMonday)
   date.setDate(firstWeekMonday.getDate() + (week - 1) * 7 + weekday - 1)
   return date
-}
-
-export function currentWeekForSemesterDate(
-  semester: Semester | undefined,
-  date: Date,
-): number | null {
-  const firstWeekMonday = dateForSemesterWeek(semester, 1, 1)
-  if (!firstWeekMonday) return null
-
-  const weekday = date.getDay() || 7
-  const currentMonday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - weekday + 1)
-  const elapsedDays = Math.round(
-    (currentMonday.getTime() - firstWeekMonday.getTime()) / (24 * 60 * 60 * 1000),
-  )
-  const week = Math.floor(elapsedDays / 7) + 1
-  return week >= 1 && week <= 25 ? week : null
 }
 
 export function buildCourseBlocks(
@@ -269,13 +257,25 @@ function applyCourseOverride(
   }
 }
 
-export function buildTimeSlots(courses: CourseBlock[]): TimeSlot[] {
+export function scheduleCampusFromName(campusName: string | null | undefined): ScheduleCampus {
+  return campusName?.includes('龙泉') ? 'longquan' : 'airport'
+}
+
+export function buildTimeSlots(
+  courses: CourseBlock[],
+  campus: ScheduleCampus = 'airport',
+  semester?: Semester,
+): TimeSlot[] {
+  // 2026–2027 学年起两校区统一作息；只有历史学期保留龙泉旧时段。
+  const startYear = Number(semester?.SchoolYear.split('-')[0])
+  const useLegacyLongquan = campus === 'longquan' && startYear > 0 && startYear < 2026
+  const campusTimeSlots = useLegacyLongquan ? longquanTimeSlots : airportTimeSlots
   const lastScheduledSection = courses.reduce(
     (maximum, course) => Math.max(maximum, course.start + course.span - 1),
     0,
   )
-  const rowCount = Math.max(baseTimeSlots.length, lastScheduledSection)
-  return Array.from({ length: rowCount }, (_, index) => baseTimeSlots[index] ?? ['', ''])
+  const rowCount = Math.max(campusTimeSlots.length, lastScheduledSection)
+  return Array.from({ length: rowCount }, (_, index) => campusTimeSlots[index] ?? ['', ''])
 }
 
 export function buildWeekOptions(weekCount: number, currentWeek: number, selectedWeek: number) {
