@@ -143,11 +143,11 @@ select:focus-visible {
 
 .bottom-navigation {
   --bottom-navigation-outer-radius: 32px;
-  --bottom-navigation-inner-radius: 27px;
+  --bottom-navigation-inner-radius: 24px;
 
   position: fixed;
   z-index: 50;
-  bottom: max(2px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 8px));
+  bottom: max(0px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 12px));
   left: 50%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -174,7 +174,7 @@ select:focus-visible {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 4px;
   min-width: 0;
   color: #1c1c1e;
   font-size: 12px;
@@ -196,27 +196,50 @@ select:focus-visible {
   position: absolute;
   top: 5px;
   bottom: 5px;
-  left: 7px;
-  width: calc((100% - 10px) / 3 - 4px);
+  left: 5px;
+  display: grid;
+  place-items: center;
+  width: calc((100% - 10px) / 3);
   pointer-events: none;
-  background: rgba(116, 116, 128, 0.12);
-  border: 0;
-  border-radius: var(--bottom-navigation-inner-radius);
-  box-shadow: 0 2px 8px rgba(28, 28, 30, 0.05);
-  transform: translateX(calc(var(--active-index) * (100% + 4px)));
+  transform: translateX(calc(var(--active-index) * 100%));
   transition: transform 180ms var(--ease-out);
   will-change: transform;
 }
 
+.bottom-navigation__selection::before {
+  width: calc(100% - 20px);
+  max-width: 88px;
+  height: 48px;
+  max-height: 100%;
+  content: '';
+  background: rgba(116, 116, 128, 0.12);
+  border: 0;
+  border-radius: var(--bottom-navigation-inner-radius);
+  box-shadow: 0 2px 8px rgba(28, 28, 30, 0.05);
+}
+
 .bottom-navigation__icon {
+  /* PNG 透明留白不同，按可见轮廓校准 mask；图标框和点击区域保持稳定。 */
+  --nav-icon-size: 125%;
+  --nav-icon-offset-y: 0.5px;
+
   display: block;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   flex: 0 0 auto;
   color: inherit;
   background: currentcolor;
-  -webkit-mask: var(--nav-icon) center / contain no-repeat;
-  mask: var(--nav-icon) center / contain no-repeat;
+  -webkit-mask: var(--nav-icon) center calc(50% + var(--nav-icon-offset-y)) / var(--nav-icon-size) no-repeat;
+  mask: var(--nav-icon) center calc(50% + var(--nav-icon-offset-y)) / var(--nav-icon-size) no-repeat;
+}
+
+.bottom-navigation__icon--tools {
+  --nav-icon-size: 150%;
+}
+
+.bottom-navigation__icon--profile {
+  --nav-icon-size: 117%;
+  --nav-icon-offset-y: 0px;
 }
 
 .bottom-navigation__item.is-active {
@@ -254,7 +277,7 @@ select:focus-visible {
     border: 1px solid rgba(28, 28, 30, 0.28);
   }
 
-  .bottom-navigation__selection {
+  .bottom-navigation__selection::before {
     background: #e5e5ea;
     border: 1px solid rgba(28, 28, 30, 0.18);
   }
@@ -276,9 +299,7 @@ select:focus-visible {
 
   .bottom-navigation {
     --bottom-navigation-outer-radius: 29px;
-    --bottom-navigation-inner-radius: 24px;
 
-    bottom: max(2px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 8px));
     min-height: 58px;
   }
 
@@ -287,8 +308,8 @@ select:focus-visible {
   }
 
   .bottom-navigation__icon {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
   }
 }
 
