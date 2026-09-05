@@ -143,7 +143,7 @@ select:focus-visible {
 
 .bottom-navigation {
   --bottom-navigation-outer-radius: 32px;
-  --bottom-navigation-inner-radius: 24px;
+  --bottom-navigation-inner-radius: 27px;
 
   position: fixed;
   z-index: 50;
@@ -196,26 +196,16 @@ select:focus-visible {
   position: absolute;
   top: 5px;
   bottom: 5px;
-  left: 5px;
-  display: grid;
-  place-items: center;
-  width: calc((100% - 10px) / 3);
+  left: 7px;
+  width: calc((100% - 10px) / 3 - 4px);
   pointer-events: none;
-  transform: translateX(calc(var(--active-index) * 100%));
-  transition: transform 180ms var(--ease-out);
-  will-change: transform;
-}
-
-.bottom-navigation__selection::before {
-  width: calc(100% - 20px);
-  max-width: 88px;
-  height: 48px;
-  max-height: 100%;
-  content: '';
   background: rgba(116, 116, 128, 0.12);
   border: 0;
   border-radius: var(--bottom-navigation-inner-radius);
   box-shadow: 0 2px 8px rgba(28, 28, 30, 0.05);
+  transform: translateX(calc(var(--active-index) * (100% + 4px)));
+  transition: transform 180ms var(--ease-out);
+  will-change: transform;
 }
 
 .bottom-navigation__icon {
@@ -277,7 +267,7 @@ select:focus-visible {
     border: 1px solid rgba(28, 28, 30, 0.28);
   }
 
-  .bottom-navigation__selection::before {
+  .bottom-navigation__selection {
     background: #e5e5ea;
     border: 1px solid rgba(28, 28, 30, 0.18);
   }
@@ -299,6 +289,7 @@ select:focus-visible {
 
   .bottom-navigation {
     --bottom-navigation-outer-radius: 29px;
+    --bottom-navigation-inner-radius: 24px;
 
     min-height: 58px;
   }
