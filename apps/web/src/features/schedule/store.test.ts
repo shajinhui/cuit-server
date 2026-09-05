@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { listSemesters } from '@/shared/api/semesters'
 import type { Semester } from '@/shared/models/academic'
@@ -57,6 +57,8 @@ describe('schedule store loading', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 8, 13, 12))
     readCourseOverridesMock.mockResolvedValue([])
     readCourseColorPreferencesMock.mockResolvedValue([])
     readManualCoursesMock.mockResolvedValue([])
@@ -68,6 +70,8 @@ describe('schedule store loading', () => {
     getCurrentWeekMock.mockResolvedValue({ CurrentWeek: 3 })
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('uses the local table without querying the remote system on page entry', async () => {
     readScheduleCacheMock.mockResolvedValue(createCache(previousSemester, createTable(previousSemester.ID)))
     const store = useScheduleStore()
@@ -78,6 +82,30 @@ describe('schedule store loading', () => {
     expect(listSemestersMock).not.toHaveBeenCalled()
     expect(getCourseTableMock).not.toHaveBeenCalled()
     expect(getCurrentWeekMock).not.toHaveBeenCalled()
+    expect(store.currentWeek).toBe(1)
+  })
+
+  it('recomputes the week from an in-memory table after crossing Monday without fetching courses', async () => {
+    readScheduleCacheMock.mockResolvedValue(createCache(currentSemester, createTable(currentSemester.ID)))
+    const store = useScheduleStore()
+    await store.load()
+    expect(store.currentWeek).toBe(1)
+    vi.setSystemTime(new Date(2026, 8, 14, 8))
+    await store.load()
+    expect(store.currentWeek).toBe(2)
+    expect(getCourseTableMock).not.toHaveBeenCalled()
+  })
+
+  it('does not reuse a cached teaching week before the term begins', async () => {
+    vi.setSystemTime(new Date(2027, 1, 21, 12))
+    readScheduleCacheMock.mockResolvedValue(createCache(currentSemester, createTable(currentSemester.ID)))
+    const store = useScheduleStore()
+    await store.load()
+    expect(store.currentWeek).toBe(0)
+    vi.setSystemTime(new Date(2027, 1, 22, 8))
+    store.updateLocalCurrentWeek()
+    expect(store.currentWeek).toBe(1)
+    expect(getCourseTableMock).not.toHaveBeenCalled()
   })
 
   it('queries the remote system when no local table exists', async () => {
@@ -92,6 +120,8 @@ describe('schedule store loading', () => {
     expect(listSemestersMock).toHaveBeenCalledOnce()
     expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID)
     expect(store.table).toEqual(table)
+    // 即使旧后端仍返回 3，已核实校历也不会被覆盖。
+    expect(store.currentWeek).toBe(1)
   })
 
   it('queries the remote system when the user explicitly refreshes', async () => {

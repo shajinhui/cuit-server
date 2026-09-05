@@ -22,7 +22,7 @@ import {
   writeScheduleCache,
 } from './cache'
 import type { CourseColorPreference, CourseTone } from './model/courseColor'
-import { currentWeekForSemesterDate } from './model/calendar'
+import { currentSchoolWeek } from './model/semesterCalendar'
 import {
   createCourseOverride,
   type CourseOverride,
@@ -69,6 +69,7 @@ export const useScheduleStore = defineStore('schedule', {
       this.syncError = ''
       try {
         await this.restoreCachedSchedule()
+        this.updateLocalCurrentWeek()
         await this.restoreManualCourses()
         await this.restoreCourseOverrides()
         await this.restoreCourseColorPreferences()
@@ -108,14 +109,14 @@ export const useScheduleStore = defineStore('schedule', {
         ])
         if (tableResult.status === 'rejected') throw tableResult.reason
 
-        const currentWeek = weekResult.status === 'fulfilled' ? weekResult.value.CurrentWeek : this.currentWeek
+        const localWeek = currentSchoolWeek(new Date())
+        const currentWeek = localWeek ?? (weekResult.status === 'fulfilled' ? weekResult.value.CurrentWeek : 0)
         const cachedAt = Date.now()
         this.semesters = semesters
         this.selectedSemesterID = selectedSemesterID
         this.table = tableResult.value
-        if (weekResult.status === 'fulfilled') {
-          this.currentWeek = currentWeek
-        } else {
+        this.currentWeek = currentWeek
+        if (weekResult.status === 'rejected' && localWeek === null) {
           this.weekError = errorMessage(weekResult.reason)
         }
         this.cachedAt = cachedAt
@@ -159,12 +160,17 @@ export const useScheduleStore = defineStore('schedule', {
       this.semesters = cache.semesters
       this.selectedSemesterID = cache.selectedSemesterID
       this.table = cache.table
-      const selectedSemester = cache.semesters.find(
-        (semester) => semester.ID === cache.selectedSemesterID,
-      )
-      this.currentWeek = currentWeekForSemesterDate(selectedSemester, new Date()) ?? cache.currentWeek
+      // 当前周属于今天所在学期，不属于正在浏览的历史课表；不能沿用缓存的旧周次。
+      this.currentWeek = currentSchoolWeek(new Date()) ?? 0
       this.cachedAt = cache.cachedAt
       this.usingCachedData = true
+    },
+    updateLocalCurrentWeek() {
+      const week = currentSchoolWeek(new Date())
+      if (week !== null) {
+        this.currentWeek = week
+        this.weekError = ''
+      }
     },
     async restoreManualCourses() {
       if (this.manualCoursesLoaded) return

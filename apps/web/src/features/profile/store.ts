@@ -23,8 +23,10 @@ export const useProfileStore = defineStore('profile', {
     error: '',
   }),
   actions: {
-    async load(force = false) {
-      if ((this.profile && !force) || this.loading) return
+    async load(force = false, options: { preferCache?: boolean } = {}) {
+      const cachedProfileSatisfiesRequest =
+        this.profile && (!options.preferCache || !!this.profile.Campus)
+      if ((cachedProfileSatisfiesRequest && !force) || this.loading) return
 
       this.loading = true
       this.error = ''
@@ -32,6 +34,11 @@ export const useProfileStore = defineStore('profile', {
       if (cached) this.profile = cached.profile
 
       try {
+        // 课表只需要校区；已有本机信息或离线时不再为此查询教务处。
+        if (
+          (!force && options.preferCache && cached?.profile.Campus) ||
+          useSessionStore().status === 'offline'
+        ) return
         const profile = await getStudentProfile()
         this.profile = profile
         await writeProfileCache(profile).catch(() => undefined)

@@ -60,6 +60,12 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '127.0.0.1',
       port: 5173,
+      fs: {
+        allow: [
+          fileURLToPath(new URL('.', import.meta.url)),
+          fileURLToPath(new URL('../../shared/academiccalendar', import.meta.url)),
+        ],
+      },
       proxy: {
         '/api': {
           target: env.VITE_DEV_API_TARGET || 'http://127.0.0.1:8888',

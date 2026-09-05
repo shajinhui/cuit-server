@@ -1,6 +1,6 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 
-import { findCurrentSemester } from '@/shared/models/academic'
+import { calendarForSemester, schoolSemesterForDate } from '../model/semesterCalendar'
 
 import {
   buildCourseBlocks,
@@ -10,17 +10,25 @@ import {
   dateForSemesterWeek,
   dateForWeekday,
   formatDateTitle,
+  scheduleCampusFromName,
 } from '../model/calendar'
 import type { useScheduleStore } from '../store'
 
 type ScheduleStore = ReturnType<typeof useScheduleStore>
 
-export function useScheduleCalendar(store: ScheduleStore) {
+export function useScheduleCalendar(
+  store: ScheduleStore,
+  campusName?: Readonly<Ref<string | undefined>>,
+) {
   const selectedDate = ref(new Date())
+  const today = ref(new Date())
   const selectedWeek = ref(0)
   const weekSelectionIsManual = ref(false)
 
-  const dateTitle = computed(() => formatDateTitle(selectedDate.value))
+  const hasSemesterCalendar = computed(() => !!calendarForSemester(selectedSemester.value))
+  const dateTitle = computed(() =>
+    hasSemesterCalendar.value ? formatDateTitle(selectedDate.value) : '校历日期待更新',
+  )
   const weekDates = computed(() => buildWeekDates(selectedDate.value))
   const courses = computed(() =>
     buildCourseBlocks(
@@ -35,20 +43,32 @@ export function useScheduleCalendar(store: ScheduleStore) {
       ),
     ),
   )
-  const timeSlots = computed(() => buildTimeSlots(courses.value))
-  const isCurrentSemester = computed(
-    () => store.selectedSemesterID === findCurrentSemester(store.semesters)?.ID,
+  const timeSlots = computed(() =>
+    buildTimeSlots(courses.value, scheduleCampusFromName(campusName?.value), selectedSemester.value),
   )
+  const isCurrentSemester = computed(() => {
+    const current = schoolSemesterForDate(today.value)
+    return selectedSemester.value?.SchoolYear === current.SchoolYear &&
+      selectedSemester.value?.Term === current.Term
+  })
   const selectedSemester = computed(() =>
     store.semesters.find((semester) => semester.ID === store.selectedSemesterID),
   )
   const weekOptions = computed(() =>
-    buildWeekOptions(store.table?.WeekCount ?? 0, store.currentWeek, selectedWeek.value),
+    buildWeekOptions(
+      store.table?.WeekCount || calendarForSemester(selectedSemester.value)?.weekCount || 0,
+      isCurrentSemester.value ? store.currentWeek : 0,
+      selectedWeek.value,
+    ),
   )
   const selectedWeekStatus = computed(() => {
     if (store.loading && !store.table) return '同步中'
-    if (!isCurrentSemester.value) return '历史学期'
-    if (store.currentWeek <= 0) return store.weekError ? '当前周不可用' : ''
+    if (!hasSemesterCalendar.value) return '校历待更新'
+    if (!isCurrentSemester.value) {
+      const firstDay = dateForSemesterWeek(selectedSemester.value, 1, 1)
+      return firstDay && firstDay > today.value ? '未来学期' : '历史学期'
+    }
+    if (store.currentWeek <= 0) return store.weekError ? '当前周不可用' : '非教学周'
     return selectedWeek.value === store.currentWeek ? '本周' : '非本周'
   })
   watch(
@@ -56,10 +76,8 @@ export function useScheduleCalendar(store: ScheduleStore) {
     ([table, currentWeek]) => {
       if (!table || weekSelectionIsManual.value) return
       const nextWeek = isCurrentSemester.value && currentWeek > 0 ? currentWeek : 1
-      if (selectedWeek.value !== nextWeek) {
-        selectedWeek.value = nextWeek
-        selectedDate.value = new Date()
-      }
+      selectedWeek.value = nextWeek
+      selectedDate.value = dateInSelectedSemester(nextWeek)
     },
     { immediate: true },
   )
@@ -75,24 +93,30 @@ export function useScheduleCalendar(store: ScheduleStore) {
     const semesterDate = dateForSemesterWeek(selectedSemester.value, nextWeek, weekday)
     if (semesterDate) {
       selectedDate.value = semesterDate
-    } else if (store.currentWeek > 0) {
-      const date = new Date(selectedDate.value)
-      date.setDate(date.getDate() + (nextWeek - selectedWeek.value) * 7)
-      selectedDate.value = date
     }
     selectedWeek.value = nextWeek
     weekSelectionIsManual.value = true
   }
 
   function resetWeekSelection() {
+    today.value = new Date()
+    store.updateLocalCurrentWeek()
     weekSelectionIsManual.value = false
-    selectedWeek.value = isCurrentSemester.value && store.currentWeek > 0 ? store.currentWeek : 1
-    selectedDate.value = new Date()
+    const nextWeek = isCurrentSemester.value && store.currentWeek > 0 ? store.currentWeek : 1
+    selectedWeek.value = nextWeek
+    selectedDate.value = dateInSelectedSemester(nextWeek)
+  }
+
+  function dateInSelectedSemester(week: number) {
+    const today = new Date()
+    const weekday = today.getDay() || 7
+    return dateForSemesterWeek(selectedSemester.value, week, weekday) ?? today
   }
 
   return {
     courses,
     dateTitle,
+    hasSemesterCalendar,
     resetWeekSelection,
     selectDay,
     selectedDate,

@@ -674,7 +674,9 @@ GET /api/v1/jwxt/classroom-schedule?semester_id=905&campus_id=1
 GET /api/v1/schedule/current-week
 ```
 
-无需登录。后端读取教务处公开主页中的校历日期锚点，并按官网相同规则计算当前教学周。该接口表示学校当前校历周次，不与指定的历史或未来 `semester_id` 绑定。
+无需登录。后端优先按照学校已发布校历的第一教学周周一计算当前周（周一换周，寒暑假及开学前返回 `0`）。前后端共用 `shared/academiccalendar/calendars.json`，目前覆盖 2024–2025 至 2026–2027 学年的两个学期，来源与维护方法见该目录 README。日期按北京时间计算。
+
+尚未配置的学年才读取教务处公开主页，校验锚点所属学期后按官网规则计算；如果锚点缺失或过期，返回“当前周不可用”，不再猜测开学日期。该接口不与正在浏览的历史或未来 `semester_id` 绑定。
 
 成功响应：
 
@@ -683,7 +685,7 @@ GET /api/v1/schedule/current-week
   "code": 0,
   "message": "success",
   "data": {
-    "CurrentWeek": 21
+    "CurrentWeek": 1
   }
 }
 ```
