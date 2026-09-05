@@ -10,7 +10,9 @@ systemd 管理的 `cuit-server` 后端。
 | 项目目录 | 本地仓库根目录 |
 | 跳板机 | `ssh.personal.asynclab.club:55552` |
 | 统一认证账号 | `YOUR_UNIFIED_ACCOUNT`，执行前替换 |
-| 内网服务器 | `root@172.16.0.20` |
+| 目标主机名 | `pvcl-2024125083` |
+| 内网服务器 | `root@172.16.0.6` |
+| ED25519 主机指纹 | `SHA256:+Vpm2kJbQtLjQ9iskICA4eJrE8UuXEqgHCjUlZbLRSs` |
 | 服务名称 | `cuit-server` |
 | 正式二进制 | `/usr/local/bin/cuit-server-api` |
 | 本机健康接口 | `http://127.0.0.1:8888/api/v1/health` |
@@ -18,6 +20,16 @@ systemd 管理的 `cuit-server` 后端。
 
 统一认证密码只在本机 SSH 提示中输入，不要写进命令、脚本、GitHub Secret 或聊天记录。
 目标服务器使用本机 `~/.ssh/id_ed25519` 私钥认证，私钥不需要复制到跳板机。
+
+个人虚拟机重建或网络调整后，内网地址和主机密钥可能变化。每次部署前先在 AsyncLab
+网页控制台执行以下命令，确认当前实例与上表一致；若不一致，先核实实例身份并更新本文，
+不要继续连接旧地址，也不要使用 `StrictHostKeyChecking=no` 绕过检查。
+
+```bash
+hostname
+ip -brief address
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
 
 ## 1. 测试并构建
 
@@ -48,7 +60,7 @@ scp -o IdentitiesOnly=yes \
   -i ~/.ssh/id_ed25519 \
   -J YOUR_UNIFIED_ACCOUNT@ssh.personal.asynclab.club:55552 \
   build/cuit-server-api \
-  root@172.16.0.20:/tmp/cuit-server-api
+  root@172.16.0.6:/tmp/cuit-server-api
 ```
 
 SSH 会提示输入跳板机的统一认证密码。上传目标固定为
@@ -61,7 +73,7 @@ ssh -t \
   -o IdentitiesOnly=yes \
   -i ~/.ssh/id_ed25519 \
   -J YOUR_UNIFIED_ACCOUNT@ssh.personal.asynclab.club:55552 \
-  root@172.16.0.20
+  root@172.16.0.6
 ```
 
 登录后先确认主机和当前服务状态：
@@ -170,6 +182,20 @@ curl --fail http://127.0.0.1:8888/api/v1/health
 
 ## 8. 常见 SSH 问题
 
+### `REMOTE HOST IDENTIFICATION HAS CHANGED`
+
+先在 AsyncLab 网页控制台用本文开头的命令核对目标主机名、内网地址和 ED25519
+指纹。确认是服务器正常重建或密钥更新后，备份并删除对应地址的旧记录：
+
+```bash
+cp ~/.ssh/known_hosts ~/.ssh/known_hosts.backup-$(date +%Y%m%d-%H%M%S)
+ssh-keygen -R CURRENT_SERVER_IP
+```
+
+重新连接时，只在提示的指纹与网页控制台输出完全一致后输入 `yes`。如果控制台地址与
+SSH 命令中的地址不同，应修改命令连接当前地址；同一内网地址在不同实例上可能代表完全
+不同的服务器。
+
 ### `Too many authentication failures`
 
 说明 SSH 在询问密码前尝试了过多身份。先确认命令包含：
@@ -184,7 +210,7 @@ curl --fail http://127.0.0.1:8888/api/v1/health
 ssh -o IdentitiesOnly=yes \
   -i ~/.ssh/id_ed25519 \
   -o 'ProxyCommand=ssh -p 55552 -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -W %h:%p YOUR_UNIFIED_ACCOUNT@ssh.personal.asynclab.club' \
-  root@172.16.0.20
+  root@172.16.0.6
 ```
 
 上传时发生相同错误，可以把 `scp` 的 `-J` 替换为显式代理：
@@ -194,7 +220,7 @@ scp -o IdentitiesOnly=yes \
   -i ~/.ssh/id_ed25519 \
   -o 'ProxyCommand=ssh -p 55552 -o PubkeyAuthentication=no -o PreferredAuthentications=keyboard-interactive,password -W %h:%p YOUR_UNIFIED_ACCOUNT@ssh.personal.asynclab.club' \
   build/cuit-server-api \
-  root@172.16.0.20:/tmp/cuit-server-api
+  root@172.16.0.6:/tmp/cuit-server-api
 ```
 
 ### `Permission denied (publickey)`
@@ -207,6 +233,21 @@ ls -l ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
 
 不要把私钥上传到跳板机。若公钥尚未安装到目标服务器，需要通过已有服务器会话把
 本机公钥加入目标服务器的 `/root/.ssh/authorized_keys`。
+
+如果跳板机密码通过后出现 `root@... password`，说明目标服务器没有接受公钥。先再次
+核对命令中的内网地址是否等于网页控制台 `ip -brief address` 显示的地址，再分别检查
+本机已加载私钥和服务器授权公钥的指纹：
+
+```bash
+# Mac 本地终端
+ssh-add -l
+
+# 目标服务器网页控制台
+ssh-keygen -lf /root/.ssh/authorized_keys
+```
+
+两端目标公钥的 SHA-256 指纹必须完全一致。不要把跳板机统一认证密码当作目标服务器的
+root 密码反复尝试。
 
 ### 公网健康检查失败但本机成功
 

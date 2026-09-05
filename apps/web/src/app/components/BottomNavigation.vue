@@ -38,6 +38,7 @@ const activeIndex = computed(() => {
     >
       <span
         class="bottom-navigation__icon"
+        :class="`bottom-navigation__icon--${item.name}`"
         :style="{ '--nav-icon': `url(${item.icon})` }"
         aria-hidden="true"
       />
