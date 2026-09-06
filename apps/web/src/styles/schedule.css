@@ -183,6 +183,10 @@
   height: 20px;
 }
 
+.schedule-header__actions .round-action.is-syncing svg {
+  animation: schedule-sync-spin 800ms linear infinite;
+}
+
 .schedule-header__actions .more-button svg {
   width: 18px;
   height: 6px;
@@ -1401,8 +1405,18 @@
   }
 }
 
+@keyframes schedule-sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .schedule-state__spinner {
+    animation-duration: 1.5s;
+  }
+
+  .schedule-header__actions .round-action.is-syncing svg {
     animation-duration: 1.5s;
   }
 

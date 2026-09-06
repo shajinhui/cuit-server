@@ -35,6 +35,27 @@
   transform: scale(0.985);
 }
 
+.tools-announcement-card.is-viewed {
+  min-height: 58px;
+  padding: 9px 14px;
+  grid-template-columns: 34px minmax(0, 1fr) 16px;
+  gap: 10px;
+  border-radius: 18px;
+  box-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.07);
+}
+
+.tools-announcement-card.is-viewed .tools-announcement-card__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.tools-announcement-card.is-viewed .tools-announcement-card__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
 .tools-announcement-card__icon {
   display: grid;
   width: 42px;

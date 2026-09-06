@@ -186,6 +186,18 @@
   white-space: nowrap;
 }
 
+.student-card .student-card__stacked-detail {
+  display: grid;
+  gap: 1px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.student-card__stacked-detail span {
+  overflow-wrap: anywhere;
+}
+
 .profile-status {
   min-width: 0;
   min-height: 116px;

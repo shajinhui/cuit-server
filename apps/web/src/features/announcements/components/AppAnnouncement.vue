@@ -5,11 +5,13 @@ import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
 
 import {
   ACTIVE_ANNOUNCEMENT,
-  type AnnouncementViewState,
-  recordAnnouncementPresentation,
   shouldAutoPresentAnnouncement,
 } from '../model'
-import { APP_ANNOUNCEMENT_OPEN_EVENT } from '../presentation'
+import {
+  APP_ANNOUNCEMENT_OPEN_EVENT,
+  readActiveAnnouncementViewState,
+  recordActiveAnnouncementView,
+} from '../presentation'
 
 defineOptions({ name: 'AppAnnouncement' })
 
@@ -17,11 +19,8 @@ const props = defineProps<{
   allowPresentation: boolean
 }>()
 
-const storageKey = 'app-announcement-view-state'
-const legacyStorageKey = 'app-announcement-seen-id'
 const visible = ref(false)
 const dialog = ref<HTMLElement | null>(null)
-const presentationMode = ref<'auto' | 'manual' | null>(null)
 let closedForSession = false
 let previouslyFocused: HTMLElement | null = null
 
@@ -34,11 +33,10 @@ watch(
     }
     if (
       closedForSession ||
-      !shouldAutoPresentAnnouncement(readViewState(), ACTIVE_ANNOUNCEMENT.id)
+      !shouldAutoPresentAnnouncement(readActiveAnnouncementViewState(), ACTIVE_ANNOUNCEMENT.id)
     ) {
       return
     }
-    presentationMode.value = 'auto'
     visible.value = true
   },
   { immediate: true },
@@ -65,42 +63,13 @@ onBeforeUnmount(() => {
   window.removeEventListener(APP_ANNOUNCEMENT_OPEN_EVENT, openManually)
 })
 
-function readViewState(): AnnouncementViewState | null {
-  try {
-    const stored = window.localStorage.getItem(storageKey)
-    if (stored) {
-      const state = JSON.parse(stored) as Partial<AnnouncementViewState>
-      if (typeof state.id === 'string' && typeof state.viewCount === 'number') {
-        return { id: state.id, viewCount: state.viewCount }
-      }
-    }
-
-    // 旧版本只记录“已读”。将其视作已展示一次，让升级用户还能看到第二次提醒。
-    const legacySeenID = window.localStorage.getItem(legacyStorageKey)
-    return legacySeenID ? { id: legacySeenID, viewCount: 1 } : null
-  } catch {
-    return null
-  }
-}
-
 function closeAnnouncement() {
   closedForSession = true
   visible.value = false
-
-  if (presentationMode.value === 'auto') {
-    try {
-      const state = recordAnnouncementPresentation(readViewState(), ACTIVE_ANNOUNCEMENT.id)
-      window.localStorage.setItem(storageKey, JSON.stringify(state))
-      window.localStorage.removeItem(legacyStorageKey)
-    } catch {
-      // 存储受限时至少在当前应用会话中不再重复展示。
-    }
-  }
-  presentationMode.value = null
+  recordActiveAnnouncementView()
 }
 
 function openManually() {
-  presentationMode.value = 'manual'
   visible.value = true
 }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import calendarIcon from '@/assets/icons/tool-calendar.png'
@@ -10,7 +10,12 @@ import libraryIcon from '@/assets/icons/tool-library.png'
 import mapIcon from '@/assets/icons/tool-campus-map.png'
 import newStudentIcon from '@/assets/icons/tool-new-student.png'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
-import { ACTIVE_ANNOUNCEMENT, openActiveAnnouncement } from '@/features/announcements'
+import {
+  ACTIVE_ANNOUNCEMENT,
+  activeAnnouncementHasBeenViewed,
+  APP_ANNOUNCEMENT_VIEW_STATE_EVENT,
+  openActiveAnnouncement,
+} from '@/features/announcements'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppShell from '@/shared/ui/AppShell.vue'
 
@@ -19,6 +24,7 @@ defineOptions({ name: 'ToolsPage' })
 const router = useRouter()
 const query = ref('')
 const notice = ref('')
+const announcementViewed = ref(false)
 let noticeTimer: number | undefined
 
 interface ToolItem {
@@ -46,9 +52,21 @@ const filteredTools = computed(() => {
 
 usePageTheme('#f2f2f7')
 
+onMounted(() => {
+  syncAnnouncementViewState()
+  window.addEventListener(APP_ANNOUNCEMENT_VIEW_STATE_EVENT, syncAnnouncementViewState)
+})
+
 onBeforeUnmount(() => {
   window.clearTimeout(noticeTimer)
+  window.removeEventListener(APP_ANNOUNCEMENT_VIEW_STATE_EVENT, syncAnnouncementViewState)
 })
+
+function syncAnnouncementViewState(event?: Event) {
+  announcementViewed.value =
+    (event instanceof CustomEvent && event.detail?.viewed === true) ||
+    activeAnnouncementHasBeenViewed()
+}
 
 function openTool(tool: ToolItem) {
   if (tool.comingSoon) return
@@ -68,6 +86,7 @@ function openTool(tool: ToolItem) {
       <button
         type="button"
         class="tools-announcement-card"
+        :class="{ 'is-viewed': announcementViewed }"
         aria-label="查看最新公告"
         @click="openActiveAnnouncement"
       >
@@ -78,9 +97,9 @@ function openTool(tool: ToolItem) {
           </svg>
         </span>
         <span class="tools-announcement-card__copy">
-          <small>最新公告</small>
+          <small v-if="!announcementViewed">最新公告</small>
           <strong>{{ ACTIVE_ANNOUNCEMENT.title }}</strong>
-          <span>{{ ACTIVE_ANNOUNCEMENT.description }}</span>
+          <span v-if="!announcementViewed">{{ ACTIVE_ANNOUNCEMENT.description }}</span>
         </span>
         <span class="tools-announcement-card__chevron" aria-hidden="true">›</span>
       </button>

@@ -36,8 +36,8 @@ const academicIdentity = computed(() => {
 })
 const majorAndClass = computed(() => {
   const profile = profileStore.profile
-  if (!profile) return ''
-  return [profile.Major, profile.ClassName].filter(Boolean).join(' · ')
+  if (!profile) return []
+  return [profile.Major, profile.ClassName].filter(Boolean)
 })
 const studentNumber = computed(() => maskStudentNumber(profileStore.profile?.StudentNo || ''))
 const installLabel = computed(() => (isInstalled.value ? '已安装到桌面' : '安装到桌面'))
@@ -150,7 +150,10 @@ function maskStudentNumber(studentNo: string) {
             </div>
             <div class="student-card__copy">
               <h2>专业与班级</h2>
-              <p>{{ majorAndClass || '专业信息未提供' }}</p>
+              <p v-if="majorAndClass.length" class="student-card__stacked-detail">
+                <span v-for="item in majorAndClass" :key="item">{{ item }}</span>
+              </p>
+              <p v-else>专业信息未提供</p>
             </div>
           </div>
           <div class="student-card__row">

@@ -9,7 +9,7 @@ export interface AnnouncementViewState {
   viewCount: number
 }
 
-export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 2
+export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 1
 
 export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
   id: 'qq-community-2026-09-04',
