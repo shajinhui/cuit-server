@@ -16,7 +16,10 @@ const emit = defineEmits<{
   <div
     class="schedule-grid"
     :aria-label="`第 ${selectedWeek || 1} 周课表`"
-    :style="{ gridTemplateRows: `repeat(${timeSlots.length}, minmax(0, 1fr))` }"
+    :style="{
+      '--schedule-section-count': timeSlots.length,
+      gridTemplateRows: `repeat(${timeSlots.length}, minmax(0, 1fr))`,
+    }"
   >
     <template v-for="(slot, index) in timeSlots" :key="index">
       <div class="schedule-grid__time" :style="{ gridRow: index + 1 }">
@@ -41,6 +44,7 @@ const emit = defineEmits<{
         `course-block--${course.tone}`,
         {
           'is-muted': course.muted,
+          'is-single-section': course.span === 1,
           'has-status': course.muted || course.conflict,
         },
       ]"

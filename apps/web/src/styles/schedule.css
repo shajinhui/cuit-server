@@ -411,7 +411,16 @@
   min-height: 0;
   margin-right: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-right, 0px));
   margin-left: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-left, 0px));
-  overflow: hidden;
+  /* 滚动视口止于导航上沿，后续节次不会从胶囊两侧或半透明背景中露出。 */
+  margin-bottom: calc(var(--bottom-navigation-height) + var(--bottom-navigation-offset));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.schedule-board::-webkit-scrollbar {
+  display: none;
 }
 
 .schedule-state {
@@ -468,7 +477,9 @@
   display: grid;
   grid-template-columns: 40px repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(11, minmax(0, 1fr));
-  height: 100%;
+  /* 按实际节数保持首屏最多 11 节；矮屏保留可读行高，通过滚动查看。 */
+  height: calc(100% * var(--schedule-section-count, 12) / 11);
+  min-height: calc(52px * var(--schedule-section-count, 12));
   min-width: 0;
 }
 
@@ -539,6 +550,7 @@
 .course-block__name {
   display: -webkit-box;
   min-height: 0;
+  max-height: 100%;
   align-self: center;
   overflow: hidden;
   overflow-wrap: anywhere;
@@ -550,6 +562,19 @@
   display: block;
   align-self: end;
   overflow-wrap: anywhere;
+}
+
+.course-block.is-single-section .course-block__name {
+  font-size: clamp(10px, 2.7vw, 12px);
+  line-height: 1.1;
+  -webkit-line-clamp: 2;
+}
+
+.course-block.is-single-section .course-block__room {
+  overflow: hidden;
+  font-size: clamp(9px, 2.4vw, 11px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .course-block.has-status {
