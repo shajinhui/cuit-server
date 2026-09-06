@@ -321,11 +321,17 @@ async function refreshSchedule() {
           <button
             type="button"
             class="round-action"
-            aria-label="重新同步课表"
+            :class="{ 'is-syncing': store.loading }"
+            :aria-label="store.loading ? '正在同步课表' : '重新同步课表'"
             :disabled="store.loading"
             @click="refreshSchedule"
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v11m-4-4 4 4 4-4M5 19h14" /></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M19 8a8 8 0 0 0-13.5-2L3 8.5" />
+              <path d="M3 4v4.5h4.5" />
+              <path d="M5 16a8 8 0 0 0 13.5 2l2.5-2.5" />
+              <path d="M21 20v-4.5h-4.5" />
+            </svg>
           </button>
           <div ref="moreMenuRef" class="schedule-more">
             <button

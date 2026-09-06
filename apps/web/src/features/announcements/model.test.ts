@@ -11,13 +11,8 @@ describe('announcement presentation state', () => {
     expect(shouldAutoPresentAnnouncement(null, 'announcement-2')).toBe(true)
   })
 
-  it('同一公告展示一次后仍会再次自动展示', () => {
+  it('同一公告展示一次后停止自动展示', () => {
     const state = { id: 'announcement-2', viewCount: 1 }
-    expect(shouldAutoPresentAnnouncement(state, 'announcement-2')).toBe(true)
-  })
-
-  it('同一公告展示两次后停止自动展示', () => {
-    const state = { id: 'announcement-2', viewCount: 2 }
     expect(shouldAutoPresentAnnouncement(state, 'announcement-2')).toBe(false)
   })
 
@@ -29,11 +24,9 @@ describe('announcement presentation state', () => {
 
   it('记录展示次数且不超过上限', () => {
     const once = recordAnnouncementPresentation(null, 'announcement-2')
-    const twice = recordAnnouncementPresentation(once, 'announcement-2')
-    const capped = recordAnnouncementPresentation(twice, 'announcement-2')
+    const capped = recordAnnouncementPresentation(once, 'announcement-2')
 
     expect(once).toEqual({ id: 'announcement-2', viewCount: 1 })
-    expect(twice).toEqual({ id: 'announcement-2', viewCount: 2 })
-    expect(capped).toEqual({ id: 'announcement-2', viewCount: 2 })
+    expect(capped).toEqual({ id: 'announcement-2', viewCount: 1 })
   })
 })
