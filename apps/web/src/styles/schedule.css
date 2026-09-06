@@ -352,7 +352,7 @@
   grid-template-columns: 40px repeat(7, minmax(0, 1fr));
   margin-top: 12px;
   margin-right: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-right, 0px));
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   margin-left: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-left, 0px));
 }
 
@@ -1487,7 +1487,7 @@
 
   .week-strip {
     margin-top: 7px;
-    margin-bottom: 9px;
+    margin-bottom: 5px;
   }
 
   .course-block strong,
