@@ -411,7 +411,21 @@
   min-height: 0;
   margin-right: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-right, 0px));
   margin-left: calc(-1 * var(--schedule-gutter) - env(safe-area-inset-left, 0px));
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.schedule-board::-webkit-scrollbar {
+  display: none;
+}
+
+.schedule-board::after {
+  /* 仅在滚动末尾提供空间，让最后一节可以移到悬浮导航上方。 */
+  display: block;
+  height: max(64px, calc(52px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))));
+  content: '';
 }
 
 .schedule-state {
@@ -468,7 +482,8 @@
   display: grid;
   grid-template-columns: 40px repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(11, minmax(0, 1fr));
-  height: 100%;
+  /* 前 11 节铺满整个课表视口，后续节次滚动查看，卡片间距保持不变。 */
+  height: calc(100% * var(--schedule-section-count, 12) / 11);
   min-width: 0;
 }
 
