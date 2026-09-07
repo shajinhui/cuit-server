@@ -17,6 +17,7 @@
 @import './pwa-install.css';
 @import './app-announcement.css';
 @import './app-update.css';
+@import './autorun.css';
 
 :root {
   font-family:
@@ -184,13 +185,18 @@ html[data-platform='android'] .bottom-navigation {
   justify-content: center;
   gap: 4px;
   min-width: 0;
+  padding: 0;
   color: #1c1c1e;
+  font: inherit;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.15;
   text-decoration: none;
+  cursor: pointer;
+  appearance: none;
   background: transparent;
   border-radius: var(--bottom-navigation-inner-radius);
+  border: 0;
 }
 
 .bottom-navigation__item > span:last-child {
@@ -244,6 +250,31 @@ html[data-platform='android'] .bottom-navigation {
   color: #007aff;
   background: transparent;
   box-shadow: none;
+}
+
+.bottom-navigation--inline {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  transform: none;
+}
+
+.bottom-navigation--compact {
+  --bottom-navigation-outer-radius: 28px;
+  --bottom-navigation-inner-radius: 23px;
+
+  min-height: 56px;
+}
+
+.bottom-navigation--compact .bottom-navigation__item {
+  gap: 2px;
+  font-size: 11px;
+}
+
+.bottom-navigation--compact .bottom-navigation__icon {
+  width: 21px;
+  height: 21px;
 }
 
 .bottom-navigation__item:focus-visible {
