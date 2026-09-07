@@ -437,7 +437,7 @@ html[data-platform='android'] .autorun-bottom-bar {
 
 .autorun-action-card b {
   display: grid;
-  min-width: 38px;
+  min-width: 54px;
   height: 38px;
   padding: 0 8px;
   flex: 0 0 auto;
@@ -449,14 +449,133 @@ html[data-platform='android'] .autorun-bottom-bar {
   box-shadow: none;
 }
 
-.autorun-action-card b svg {
-  width: 20px;
-  height: 20px;
+.autorun-action-card.is-success b {
+  color: #177a3f;
+  background: rgba(48, 209, 88, 0.12);
+}
+
+.autorun-action-card.is-error b {
+  color: #b42318;
+  background: rgba(255, 69, 58, 0.1);
+}
+
+.autorun-run-command {
+  position: relative;
+  display: grid;
+  width: min(226px, 68vw);
+  aspect-ratio: 1;
+  margin: 12px auto 4px;
+  padding: 30px 26px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  color: #172033;
+  text-align: center;
+  background:
+    radial-gradient(circle at 34% 25%, rgba(255, 255, 255, 0.98), transparent 34%),
+    linear-gradient(145deg, #fff 5%, #edf2f8 72%, #dce5ef 100%);
+  border: 2px solid rgba(23, 32, 51, 0.9) !important;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 7px rgba(255, 255, 255, 0.76),
+    0 0 0 8px rgba(23, 32, 51, 0.1),
+    0 22px 45px rgba(45, 67, 94, 0.2),
+    inset 0 2px 1px rgba(255, 255, 255, 0.9);
+  transform: translateZ(0);
+  transition:
+    transform 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out),
+    border-color 160ms ease;
+}
+
+.autorun-run-command::before {
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+  content: '';
+  border: 1px solid rgba(23, 32, 51, 0.18);
+  border-radius: inherit;
+}
+
+.autorun-run-command__kicker {
+  padding: 4px 9px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  background: #172033;
+  border-radius: 999px;
+}
+
+.autorun-run-command__flag {
+  width: 52px;
+  height: 52px;
+  margin: 1px 0 -1px;
   fill: none;
-  stroke: currentcolor;
+  stroke: #087dea;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 4.5;
+}
+
+.autorun-run-command strong {
+  font-size: 25px;
+  font-weight: 850;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.autorun-run-command small {
+  max-width: 158px;
+  color: #647083;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.autorun-run-command.is-success {
+  border-color: rgba(23, 122, 63, 0.9) !important;
+}
+
+.autorun-run-command.is-success .autorun-run-command__kicker {
+  background: #177a3f;
+}
+
+.autorun-run-command.is-success .autorun-run-command__flag {
+  stroke: #177a3f;
+}
+
+.autorun-run-command.is-error {
+  border-color: rgba(180, 35, 24, 0.82) !important;
+}
+
+.autorun-run-command.is-error .autorun-run-command__kicker {
+  background: #b42318;
+}
+
+.autorun-run-command.is-error .autorun-run-command__flag {
+  stroke: #b42318;
+}
+
+.autorun-run-command:not(:disabled):active {
+  box-shadow:
+    0 0 0 7px rgba(255, 255, 255, 0.76),
+    0 0 0 8px rgba(23, 32, 51, 0.1),
+    0 12px 25px rgba(45, 67, 94, 0.18),
+    inset 0 2px 1px rgba(255, 255, 255, 0.9);
+  transform: scale(0.96);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .autorun-run-command:not(:disabled):hover {
+    box-shadow:
+      0 0 0 7px rgba(255, 255, 255, 0.82),
+      0 0 0 8px rgba(23, 32, 51, 0.12),
+      0 27px 52px rgba(45, 67, 94, 0.24),
+      inset 0 2px 1px rgba(255, 255, 255, 0.9);
+    transform: translateY(-3px);
+  }
 }
 
 .autorun-empty {

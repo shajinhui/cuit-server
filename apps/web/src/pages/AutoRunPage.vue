@@ -476,12 +476,9 @@ function formatCountdown(milliseconds: number) {
       </div>
 
       <section class="autorun-actions">
-        <button
-          type="button"
+        <article
           class="autorun-action-card"
           :class="`is-${runActionStatus}`"
-          :disabled="runActionStatus === 'loading'"
-          @click="runOnce"
         >
           <span class="autorun-action-card__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="m9 7 8 5-8 5V7Z" /></svg>
@@ -492,9 +489,33 @@ function formatCountdown(milliseconds: number) {
             <i v-if="runActionMessage">{{ runActionMessage }}</i>
           </span>
           <b>
-            <span v-if="runActionStatus === 'loading'">处理中…</span>
-            <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+            <span v-if="runActionStatus === 'loading'">执行中</span>
+            <span v-else-if="runActionStatus === 'success'">已完成</span>
+            <span v-else-if="runActionStatus === 'error'">需重试</span>
+            <span v-else>待执行</span>
           </b>
+        </article>
+
+        <button
+          type="button"
+          class="autorun-run-command"
+          :class="`is-${runActionStatus}`"
+          :disabled="runActionStatus === 'loading'"
+          :aria-busy="runActionStatus === 'loading'"
+          aria-label="生成并提交校园跑记录"
+          @click="runOnce"
+        >
+          <span class="autorun-run-command__kicker">
+            {{ runActionStatus === 'loading' ? '跑步记录生成中' : '校园跑执行按钮' }}
+          </span>
+          <svg class="autorun-run-command__flag" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M20 52V12" />
+            <path d="M22 15h26L41 25l7 10H22" />
+          </svg>
+          <strong>{{ runActionStatus === 'loading' ? '严肃处理中' : '郑重开跑' }}</strong>
+          <small v-if="runActionStatus === 'success'">记录已郑重提交，任务圆满完成</small>
+          <small v-else-if="runActionStatus === 'error'">执行未果，请再次郑重尝试</small>
+          <small v-else>事关本学期运动大局，请认真轻点</small>
         </button>
       </section>
     </section>
