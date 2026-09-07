@@ -144,10 +144,14 @@ select:focus-visible {
 .bottom-navigation {
   --bottom-navigation-outer-radius: 32px;
   --bottom-navigation-inner-radius: 27px;
+  --bottom-navigation-min-gap: 0px;
 
   position: fixed;
   z-index: 50;
-  bottom: max(0px, calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 12px));
+  bottom: max(
+    var(--bottom-navigation-min-gap),
+    calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 12px)
+  );
   left: 50%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -165,6 +169,10 @@ select:focus-visible {
   transform: translateX(-50%);
   -webkit-backdrop-filter: blur(18px) saturate(165%);
   backdrop-filter: blur(18px) saturate(165%);
+}
+
+html[data-platform='android'] .bottom-navigation {
+  --bottom-navigation-min-gap: 4px;
 }
 
 .bottom-navigation__item {
