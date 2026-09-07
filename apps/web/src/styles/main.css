@@ -172,7 +172,7 @@ select:focus-visible {
 }
 
 html[data-platform='android'] .bottom-navigation {
-  --bottom-navigation-min-gap: 4px;
+  --bottom-navigation-min-gap: 2px;
 }
 
 .bottom-navigation__item {
