@@ -11,6 +11,8 @@ import { registerAndroidLiveUpdates } from './features/app-updates'
 import { registerPwaInstall } from './features/pwa-install'
 import './styles/main.css'
 
+document.documentElement.dataset.platform = Capacitor.getPlatform()
+
 registerPwaInstall()
 registerNativeRuntime()
 if (!Capacitor.isNativePlatform()) {
