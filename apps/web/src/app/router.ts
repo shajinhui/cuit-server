@@ -81,6 +81,12 @@ const router = createRouter({
       name: 'campus-map',
       component: () => import('@/pages/CampusMapPage.vue'),
     },
+    {
+      path: '/campus-run',
+      name: 'autorun',
+      component: () => import('@/pages/AutoRunPage.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })

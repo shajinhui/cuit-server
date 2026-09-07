@@ -8,6 +8,7 @@ import examRoomIcon from '@/assets/icons/tool-exam-room.png'
 import gradesIcon from '@/assets/icons/tool-grades.png'
 import libraryIcon from '@/assets/icons/tool-library.png'
 import mapIcon from '@/assets/icons/tool-campus-map.png'
+import autoRunIcon from '@/assets/icons/tool-campus-run.svg'
 import newStudentIcon from '@/assets/icons/tool-new-student.png'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
 import {
@@ -40,6 +41,7 @@ const tools: ToolItem[] = [
   { label: '校历', icon: calendarIcon, route: 'calendar' },
   { label: '考场查询', icon: examRoomIcon, route: 'exams' },
   { label: '校园地图', icon: mapIcon, route: 'campus-map' },
+  { label: '校园跑与俱乐部', icon: autoRunIcon, route: 'autorun' },
   { label: '历年试卷', icon: pastExamsIcon, comingSoon: true },
   { label: '新生指引', icon: newStudentIcon, comingSoon: true },
   { label: '图书馆', icon: libraryIcon, comingSoon: true },
