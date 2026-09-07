@@ -16,9 +16,9 @@
   min-height: 100dvh;
   margin: 0 auto;
   padding:
-    calc(90px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
+    calc(20px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)))
     14px
-    calc(28px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+    calc(84px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   color: var(--autorun-text);
   background: var(--autorun-bg);
 }
@@ -57,16 +57,25 @@
   backdrop-filter: blur(18px) saturate(140%);
 }
 
-.autorun-topbar {
+.autorun-bottom-bar {
+  --bottom-navigation-min-gap: 0px;
+
   position: fixed;
   z-index: 45;
-  top: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  bottom: max(
+    var(--bottom-navigation-min-gap),
+    calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 12px)
+  );
   left: 50%;
   display: flex;
   width: min(456px, calc(100% - 24px));
   align-items: center;
   gap: 8px;
   transform: translateX(-50%);
+}
+
+html[data-platform='android'] .autorun-bottom-bar {
+  --bottom-navigation-min-gap: 2px;
 }
 
 .autorun-back {
@@ -984,6 +993,10 @@
   color: #c3261f;
 }
 
+.autorun-login .autorun-login__status {
+  color: #536171;
+}
+
 .autorun-login__back {
   min-height: 44px;
   color: #57575c;
@@ -1057,7 +1070,7 @@
     max-width: 760px;
   }
 
-  .autorun-topbar {
+  .autorun-bottom-bar {
     width: min(736px, calc(100% - 32px));
   }
 
@@ -1077,7 +1090,7 @@
     padding-left: 16px;
   }
 
-  .autorun-topbar {
+  .autorun-bottom-bar {
     width: calc(100% - 16px);
     gap: 6px;
   }

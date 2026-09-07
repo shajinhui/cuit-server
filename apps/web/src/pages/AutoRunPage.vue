@@ -2,9 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import campusRunIcon from '@/assets/icons/nav-campus-run.svg'
+import clubIcon from '@/assets/icons/nav-club.svg'
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
-import scheduleIcon from '@/assets/icons/nav-schedule.png'
-import toolsIcon from '@/assets/icons/nav-tools.png'
 import BottomNavigation from '@/app/components/BottomNavigation.vue'
 import {
   AutoRunApiError,
@@ -83,8 +83,8 @@ const now = ref(Date.now())
 let clockTimer: number | undefined
 
 const tabs: Array<{ name: PageTab; label: string; icon: string; iconClass: string }> = [
-  { name: 'run', label: '校园跑', icon: scheduleIcon, iconClass: 'schedule' },
-  { name: 'club', label: '俱乐部', icon: toolsIcon, iconClass: 'tools' },
+  { name: 'run', label: '校园跑', icon: campusRunIcon, iconClass: 'campus-run' },
+  { name: 'club', label: '俱乐部', icon: clubIcon, iconClass: 'club' },
   { name: 'mine', label: '我的', icon: profileIcon, iconClass: 'profile' },
 ]
 const pageTitle = computed(() => {
@@ -408,23 +408,6 @@ function formatCountdown(milliseconds: number) {
 
 <template>
   <main class="autorun-page" :class="`is-${activeTab}`">
-    <div class="autorun-topbar">
-      <button type="button" class="autorun-back" aria-label="返回工具页" @click="goBack">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m14.5 5-7 7 7 7" />
-        </svg>
-      </button>
-      <BottomNavigation
-        class="autorun-tab-navigation"
-        :items="tabs"
-        :active-name="activeTab"
-        aria-label="校园运动功能"
-        inline
-        compact
-        @select="selectTab"
-      />
-    </div>
-
     <header v-if="activeTab === 'run'" class="autorun-run-header">
       <div>
         <h1>校园跑</h1>
@@ -636,6 +619,23 @@ function formatCountdown(milliseconds: number) {
       <button type="button" class="autorun-logout" @click="logout">退出校园跑账号</button>
     </section>
 
+    <div class="autorun-bottom-bar">
+      <button type="button" class="autorun-back" aria-label="返回工具页" @click="goBack">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m14.5 5-7 7 7 7" />
+        </svg>
+      </button>
+      <BottomNavigation
+        class="autorun-tab-navigation"
+        :items="tabs"
+        :active-name="activeTab"
+        aria-label="校园运动功能"
+        inline
+        compact
+        @select="selectTab"
+      />
+    </div>
+
     <div v-if="toasts.length" class="autorun-toasts" role="status" aria-live="polite">
       <div v-for="toast in toasts" :key="toast.id" :class="toast.tone">{{ toast.message }}</div>
     </div>
@@ -650,7 +650,10 @@ function formatCountdown(milliseconds: number) {
         <p>请输入 unirun 手机号和密码，登录后密码不会保存。</p>
         <label><span>手机号</span><input v-model="phone" autocomplete="username" inputmode="tel" placeholder="请输入手机号" /></label>
         <label><span>密码</span><input v-model="password" type="password" autocomplete="current-password" placeholder="请输入密码" /></label>
-        <p v-if="loginError" class="autorun-login__error" role="alert">{{ loginError }}</p>
+        <p v-if="loginLoading" class="autorun-login__status" role="status" aria-live="polite">
+          正在连接校园跑服务，最长等待 20 秒…
+        </p>
+        <p v-else-if="loginError" class="autorun-login__error" role="alert">{{ loginError }}</p>
         <button type="submit" class="autorun-primary" :disabled="loginLoading || authChecking">
           {{ loginLoading || authChecking ? '验证中…' : '登录' }}
         </button>

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  AUTORUN_LOGIN_TIMEOUT_MS,
   AutoRunApiError,
   DEFAULT_AUTORUN_API_BASE_URL,
   getAutoRunInfo,
@@ -8,6 +9,7 @@ import {
 } from './api'
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -74,5 +76,39 @@ describe('校园跑 API 客户端', () => {
     await expect(getAutoRunInfo('expired')).rejects.toEqual(
       new AutoRunApiError('登录态已过期', 401, 40100),
     )
+  })
+
+  it('登录请求超过 20 秒后中断并返回超时提示', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn().mockImplementation(
+      (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const loginRequest = loginToAutoRun('13800000000', 'example-password')
+    const rejection = expect(loginRequest).rejects.toMatchObject({
+      message: '请求超时，请检查网络后重试',
+      status: 0,
+      code: 40800,
+    })
+
+    await vi.advanceTimersByTimeAsync(AUTORUN_LOGIN_TIMEOUT_MS)
+    await rejection
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(request.signal?.aborted).toBe(true)
+  })
+
+  it('网络连接失败时返回可读提示', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(loginToAutoRun('13800000000', 'example-password')).rejects.toMatchObject({
+      message: '无法连接校园跑服务，请检查网络后重试',
+      status: 0,
+      code: 50300,
+    })
   })
 })
