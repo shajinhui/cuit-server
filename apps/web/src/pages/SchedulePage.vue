@@ -4,10 +4,14 @@ import { useRouter } from 'vue-router'
 
 import {
   AddCourseSheet,
+  CalendarExportSheet,
   CourseDetailSheet,
   ScheduleGrid,
+  createScheduleCalendarExport,
+  shareCalendarFile,
   useScheduleCalendar,
   useScheduleStore,
+  type CalendarExportResult,
   type CourseBlock,
   type CourseEditTarget,
   type CourseSlotCourse,
@@ -39,6 +43,11 @@ const removingCourse = ref(false)
 const removeCourseError = ref('')
 const savingCourseColor = ref(false)
 const courseColorError = ref('')
+const calendarExportOpen = ref(false)
+const calendarExportPreview = ref<CalendarExportResult | null>(null)
+const calendarExportError = ref('')
+const exportingCalendar = ref(false)
+const calendarReminderMinutes = ref(10)
 let noticeTimer: number | undefined
 
 const {
@@ -128,6 +137,58 @@ function openAddCourse() {
   addCourseError.value = ''
   editingCourse.value = null
   addCourseOpen.value = true
+}
+
+function buildCalendarExport() {
+  const semester = store.semesters.find((item) => item.ID === store.selectedSemesterID)
+  if (!semester || !store.table) throw new Error('请先加载可用课表')
+
+  return createScheduleCalendarExport({
+    semester,
+    table: store.table,
+    manualCourses: store.manualCourses,
+    courseOverrides: store.courseOverrides,
+    campusName: profileStore.profile?.Campus,
+    reminderMinutes: calendarReminderMinutes.value,
+  })
+}
+
+function openCalendarExport() {
+  closeMoreMenu()
+  calendarExportError.value = ''
+  try {
+    calendarExportPreview.value = buildCalendarExport()
+    calendarExportOpen.value = true
+  } catch (error) {
+    showNotice(error instanceof Error ? error.message : '日历生成失败')
+  }
+}
+
+function closeCalendarExport() {
+  if (exportingCalendar.value) return
+  calendarExportOpen.value = false
+  calendarExportError.value = ''
+}
+
+async function exportCalendar() {
+  if (exportingCalendar.value) return
+  exportingCalendar.value = true
+  calendarExportError.value = ''
+  try {
+    const calendarExport = buildCalendarExport()
+    const result = await shareCalendarFile(
+      calendarExport.content,
+      calendarExport.fileName,
+      calendarExport.calendarName,
+    )
+    calendarExportOpen.value = false
+    showNotice(result === 'shared' ? '课表文件已交给系统日历' : '课表文件已下载')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    calendarExportError.value = error instanceof Error ? error.message : '日历生成失败，请稍后重试'
+  } finally {
+    exportingCalendar.value = false
+  }
 }
 
 function closeAddCourse() {
@@ -404,6 +465,22 @@ async function refreshSchedule() {
                     </svg>
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  class="schedule-semester-option schedule-calendar-export-option"
+                  :disabled="store.loading || !store.table || !store.selectedSemesterID"
+                  @click="openCalendarExport"
+                >
+                  <span>
+                    <strong>导入系统日历</strong>
+                    <small>生成当前学期的 ICS 文件</small>
+                  </span>
+                  <svg aria-hidden="true" viewBox="0 0 20 20">
+                    <rect x="2.5" y="3.5" width="15" height="14" rx="2.5" />
+                    <path d="M6 2v3M14 2v3M2.5 7.5h15M10 10v5M7.5 12.5H12.5" />
+                  </svg>
+                </button>
               </div>
             </Transition>
           </div>
@@ -477,6 +554,19 @@ async function refreshSchedule() {
         :initial-course="editingCourse"
         @close="closeAddCourse"
         @submit="saveCourse"
+      />
+
+      <CalendarExportSheet
+        :open="calendarExportOpen"
+        :semester-label="selectedSemesterLabel"
+        :course-count="calendarExportPreview?.courseCount ?? 0"
+        :event-count="calendarExportPreview?.eventCount ?? 0"
+        :reminder-minutes="calendarReminderMinutes"
+        :exporting="exportingCalendar"
+        :error="calendarExportError"
+        @close="closeCalendarExport"
+        @export="exportCalendar"
+        @update:reminder-minutes="calendarReminderMinutes = $event"
       />
 
       <Transition name="toast">
