@@ -1,10 +1,16 @@
 .app-shell.app-shell--schedule {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   color: #101722;
   background: #c9d5e7;
 }
 
 .app-shell--schedule .app-shell__content {
+  height: 100%;
+  min-height: 0;
   padding-bottom: 0;
+  overflow: hidden;
 }
 
 .schedule-page {
