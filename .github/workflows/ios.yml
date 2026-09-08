@@ -3,6 +3,14 @@ name: iOS IPA
 on:
   workflow_dispatch:
     inputs:
+      signing_mode:
+        description: Sign on the runner or sign the IPA yourself later
+        required: true
+        default: unsigned
+        type: choice
+        options:
+          - unsigned
+          - signed
       web_mode:
         description: Web assets bundled in the IPA
         required: true
@@ -34,6 +42,7 @@ jobs:
       IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
       IOS_EXPORT_METHOD: ${{ inputs.export_method }}
       IOS_WEB_MODE: ${{ inputs.web_mode }}
+      IOS_SIGNING_MODE: ${{ inputs.signing_mode }}
 
     steps:
       - name: Checkout
@@ -52,6 +61,7 @@ jobs:
           cache-dependency-path: apps/web/pnpm-lock.yaml
 
       - name: Validate signing secrets
+        if: inputs.signing_mode == 'signed'
         env:
           IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
           IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -71,6 +81,7 @@ jobs:
           pnpm run "ios:sync:$IOS_WEB_MODE"
 
       - name: Install signing certificate and profile
+        if: inputs.signing_mode == 'signed'
         id: signing
         env:
           IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}

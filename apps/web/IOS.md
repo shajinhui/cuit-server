@@ -15,7 +15,7 @@
 
 ## 在 Mac 上生成 IPA
 
-需要 Xcode 16 或更高版本、Node.js 24、pnpm 10.26.1，以及与 Bundle ID 匹配的 Apple 证书和 provisioning profile。先在钥匙串中导入带私钥的证书，并安装 `.mobileprovision`。
+需要 Xcode 16 或更高版本、Node.js 24、pnpm 10.26.1。签名导出时还需要与 Bundle ID 匹配的 Apple 证书和 provisioning profile；未签名构建不需要它们。
 
 ```bash
 cd apps/web
@@ -30,9 +30,13 @@ pnpm run build:ipa
 
 如果 Mac 已经执行过一次 `pnpm install` 且 Xcode 已解析 Swift Packages，后续可以断网重复归档。依赖缓存不完整时仍需短暂联网一次；Windows 无法运行 Xcode，因此不能在本机直接生成已签名 IPA。
 
-## GitHub Actions 签名
+未签名 IPA 只能交给签名工具处理，不能直接安装到 iPhone。使用自己的 Apple ID 或证书在 Sideloadly、AltStore、SideStore 等工具中重新签名后安装；免费 Apple ID 通常有 7 天有效期，开发者账号签名时长取决于 provisioning profile。
 
-工作流 `.github/workflows/ios.yml` 在 GitHub 的 macOS Runner 上构建。只需在网络可用的短时间内把源码推送并配置 Secrets，之后下载最终 Artifact；远端构建不依赖本机 VPN 持续在线。仓库 Secrets 需要配置：
+## GitHub Actions 构建
+
+工作流 `.github/workflows/ios.yml` 在 GitHub 的 macOS Runner 上构建。运行时默认选择 `unsigned`，不需要上传任何证书或私钥；下载 `chengxin-youyou-unsigned.ipa` 后，用你自己的 Sideloadly、AltStore、SideStore 或其他签名工具签名安装。远端构建不依赖本机 VPN 持续在线。
+
+只有希望 Runner 直接导出已签名 IPA 时，才选择 `signed` 并配置以下 Secrets：
 
 | Secret | 内容 |
 | --- | --- |
