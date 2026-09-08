@@ -116,6 +116,30 @@ export function buildCourseBlocks(
   courseOverrides: CourseOverride[] = [],
   colorPreferences: CourseColorPreference[] = [],
 ): CourseBlock[] {
+  return groupCourseSlots(
+    buildScheduleCourseEntries(
+      courses,
+      selectedWeek,
+      manualCourses,
+      courseOverrides,
+      colorPreferences,
+    ),
+    selectedWeek,
+  ).sort((left, right) => Number(left.muted) - Number(right.muted))
+}
+
+/**
+ * Produces one entry per course/time slot before courses at the same time are
+ * grouped for display. Calendar export uses this form so concurrent courses
+ * remain separate events.
+ */
+export function buildScheduleCourseEntries(
+  courses: Course[] | null | undefined,
+  selectedWeek: number,
+  manualCourses: ManualCourse[] = [],
+  courseOverrides: CourseOverride[] = [],
+  colorPreferences: CourseColorPreference[] = [],
+): CourseBlock[] {
   const blocks: CourseBlock[] = []
   const courseList = courses ?? []
   const toneByIdentity = buildCourseToneMap([
@@ -224,9 +248,7 @@ export function buildCourseBlocks(
       conflict: false,
     })
   }
-  return groupCourseSlots(blocks, selectedWeek).sort(
-    (left, right) => Number(left.muted) - Number(right.muted),
-  )
+  return blocks
 }
 
 function applyCourseOverride(
