@@ -61,28 +61,6 @@ describe('校园跑 API 客户端', () => {
     expect(request.body).toBe('{}')
   })
 
-  it('当前应用会话有账号凭据时一并发送，供服务端自动续登', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      Response.json({
-        code: 10000,
-        msg: 'ok',
-        response: { runStandard: {}, runInfo: {}, tokenSrc: 'relogin' },
-      }),
-    )
-    vi.stubGlobal('fetch', fetchMock)
-
-    await getAutoRunInfo('session-example', {
-      phone: ' 13800000000 ',
-      password: 'example-password',
-    })
-
-    const request = fetchMock.mock.calls[0]?.[1] as RequestInit
-    expect(request.headers).toMatchObject({ Authorization: 'Bearer session-example' })
-    expect(request.body).toBe(
-      JSON.stringify({ phone: '13800000000', password: 'example-password' }),
-    )
-  })
-
   it('能识别被 502 包装的上游登录失效错误', () => {
     expect(
       isAutoRunAuthExpiredError(

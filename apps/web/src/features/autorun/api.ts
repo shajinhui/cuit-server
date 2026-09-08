@@ -11,11 +11,6 @@ export interface AutoRunApiResult<T> {
   message: string
 }
 
-export interface AutoRunCredentials {
-  phone: string
-  password: string
-}
-
 export interface AutoRunSession {
   userId: number
   studentId: number
@@ -178,15 +173,6 @@ async function callAutoRunApi<T>(
   }
 }
 
-function withCredentials(
-  body: Record<string, unknown>,
-  credentials?: AutoRunCredentials,
-): Record<string, unknown> {
-  const phone = credentials?.phone.trim() ?? ''
-  const password = credentials?.password ?? ''
-  return phone && password ? { ...body, phone, password } : body
-}
-
 export function loginToAutoRun(phone: string, password: string) {
   return callAutoRunApi<AutoRunSession>(
     'login',
@@ -196,78 +182,34 @@ export function loginToAutoRun(phone: string, password: string) {
   )
 }
 
-export function restoreAutoRunSession(sessionKey: string, credentials?: AutoRunCredentials) {
-  return callAutoRunApi<AutoRunSession>(
-    'session_bootstrap',
-    withCredentials({}, credentials),
-    sessionKey,
-  )
+export function restoreAutoRunSession(sessionKey: string) {
+  return callAutoRunApi<AutoRunSession>('session_bootstrap', {}, sessionKey)
 }
 
-export function getAutoRunInfo(sessionKey: string, credentials?: AutoRunCredentials) {
-  return callAutoRunApi<AutoRunRunData>('run_info', withCredentials({}, credentials), sessionKey)
+export function getAutoRunInfo(sessionKey: string) {
+  return callAutoRunApi<AutoRunRunData>('run_info', {}, sessionKey)
 }
 
-export function submitAutoRun(sessionKey: string, credentials?: AutoRunCredentials) {
-  return callAutoRunApi<AutoRunActionResult>('run', withCredentials({}, credentials), sessionKey)
+export function submitAutoRun(sessionKey: string) {
+  return callAutoRunApi<AutoRunActionResult>('run', {}, sessionKey)
 }
 
-export function getAutoRunClubData(
-  sessionKey: string,
-  queryDate: string,
-  credentials?: AutoRunCredentials,
-) {
-  return callAutoRunApi<AutoRunClubData>(
-    'club_data',
-    withCredentials({ queryDate }, credentials),
-    sessionKey,
-  )
+export function getAutoRunClubData(sessionKey: string, queryDate: string) {
+  return callAutoRunApi<AutoRunClubData>('club_data', { queryDate }, sessionKey)
 }
 
-export function signAutoRunClub(
-  sessionKey: string,
-  signType: '1' | '2',
-  credentials?: AutoRunCredentials,
-) {
-  return callAutoRunApi<AutoRunActionResult>(
-    'club_sign',
-    withCredentials({ signType }, credentials),
-    sessionKey,
-  )
+export function signAutoRunClub(sessionKey: string, signType: '1' | '2') {
+  return callAutoRunApi<AutoRunActionResult>('club_sign', { signType }, sessionKey)
 }
 
-export function joinAutoRunClub(
-  sessionKey: string,
-  activityId: number,
-  credentials?: AutoRunCredentials,
-) {
-  return callAutoRunApi<AutoRunActionResult>(
-    'club_join',
-    withCredentials({ activityId }, credentials),
-    sessionKey,
-  )
+export function joinAutoRunClub(sessionKey: string, activityId: number) {
+  return callAutoRunApi<AutoRunActionResult>('club_join', { activityId }, sessionKey)
 }
 
-export function cancelAutoRunClub(
-  sessionKey: string,
-  activityId: number,
-  credentials?: AutoRunCredentials,
-) {
-  return callAutoRunApi<AutoRunActionResult>(
-    'club_cancel',
-    withCredentials({ activityId }, credentials),
-    sessionKey,
-  )
+export function cancelAutoRunClub(sessionKey: string, activityId: number) {
+  return callAutoRunApi<AutoRunActionResult>('club_cancel', { activityId }, sessionKey)
 }
 
-export function setAutoRunClubSchedule(
-  sessionKey: string,
-  enabled: boolean,
-  credentials?: AutoRunCredentials,
-) {
-  return callAutoRunApi<AutoRunActionResult>(
-    'club_schedule_set',
-    withCredentials({ enabled }, credentials),
-    sessionKey,
-  )
+export function setAutoRunClubSchedule(sessionKey: string, enabled: boolean) {
+  return callAutoRunApi<AutoRunActionResult>('club_schedule_set', { enabled }, sessionKey)
 }

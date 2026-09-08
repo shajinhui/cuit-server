@@ -1,8 +1,4 @@
-import type { AutoRunCredentials } from './api'
-
 export const AUTO_RUN_SESSION_STORAGE_KEY = 'autorun.sessionKey'
-
-let memoryCredentials: AutoRunCredentials | undefined
 
 interface SessionStorageLike {
   getItem(key: string): string | null
@@ -76,18 +72,4 @@ export function clearAutoRunSessionKey(
 ) {
   remove(persistentStorage, AUTO_RUN_SESSION_STORAGE_KEY)
   remove(legacySessionStorage, AUTO_RUN_SESSION_STORAGE_KEY)
-}
-
-export function loadAutoRunCredentials() {
-  return memoryCredentials ? { ...memoryCredentials } : undefined
-}
-
-export function saveAutoRunCredentials(phone: string, password: string) {
-  const normalizedPhone = phone.trim()
-  if (!normalizedPhone || !password) return
-  memoryCredentials = { phone: normalizedPhone, password }
-}
-
-export function clearAutoRunCredentials() {
-  memoryCredentials = undefined
 }

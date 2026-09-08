@@ -14,7 +14,6 @@ export {
 export type {
   AutoRunActionResult,
   AutoRunApiResult,
-  AutoRunCredentials,
   AutoRunClubData,
   AutoRunClubSchedule,
   AutoRunSession,
@@ -37,10 +36,7 @@ export type {
   AutoRunProgressCard,
 } from './model'
 export {
-  clearAutoRunCredentials,
   clearAutoRunSessionKey,
-  loadAutoRunCredentials,
   loadAutoRunSessionKey,
-  saveAutoRunCredentials,
   saveAutoRunSessionKey,
 } from './session-storage'

@@ -10,7 +10,6 @@ import {
   autoRunProgressPercent,
   buildAutoRunProgressCards,
   cancelAutoRunClub,
-  clearAutoRunCredentials,
   clearAutoRunSessionKey,
   createAutoRunWeekDates,
   describeAutoRunClubSignTask,
@@ -21,14 +20,12 @@ import {
   isAutoRunAuthExpiredError,
   isSignedStatus,
   joinAutoRunClub,
-  loadAutoRunCredentials,
   loadAutoRunSessionKey,
   loginToAutoRun,
   normalizeAutoRunClubActivities,
   normalizeAutoRunClubSignTask,
   resolveAutoRunClubSignAction,
   restoreAutoRunSession,
-  saveAutoRunCredentials,
   saveAutoRunSessionKey,
   setAutoRunClubSchedule,
   signAutoRunClub,
@@ -54,9 +51,8 @@ interface ToastMessage {
 const router = useRouter()
 const activeTab = ref<PageTab>('run')
 const sessionKey = ref(loadAutoRunSessionKey(window.localStorage, window.sessionStorage))
-const rememberedCredentials = loadAutoRunCredentials()
-const phone = ref(rememberedCredentials?.phone ?? '')
-const password = ref(rememberedCredentials?.password ?? '')
+const phone = ref('')
+const password = ref('')
 const authChecking = ref(true)
 const authenticated = ref(false)
 const showLogin = ref(false)
@@ -87,6 +83,7 @@ const clubScheduleSaving = ref(false)
 const clubScheduleMessage = ref('定时未开启')
 const now = ref(Date.now())
 let clockTimer: number | undefined
+let resumeCheckInFlight = false
 
 const tabs: Array<{ name: PageTab; label: string; icon: string; iconClass: string }> = [
   { name: 'run', label: '校园跑', icon: campusRunIcon, iconClass: 'campus-run' },
@@ -118,11 +115,13 @@ usePageTheme('#f2f2f7')
 
 onMounted(() => {
   clockTimer = window.setInterval(() => (now.value = Date.now()), 1000)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   void initializeAutoRun()
 })
 
 onBeforeUnmount(() => {
   window.clearInterval(clockTimer)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
   toastTimers.forEach((timer) => window.clearTimeout(timer))
 })
 
@@ -141,7 +140,7 @@ async function initializeAutoRun() {
   }
 
   try {
-    const result = await restoreAutoRunSession(savedSession, currentCredentials())
+    const result = await restoreAutoRunSession(savedSession)
     updateSessionKey(result.data.sessionKey)
     authenticated.value = true
     showLogin.value = false
@@ -175,11 +174,10 @@ async function login() {
   try {
     const result = await loginToAutoRun(normalizedPhone, normalizedPassword)
     phone.value = normalizedPhone
-    password.value = normalizedPassword
-    saveAutoRunCredentials(normalizedPhone, normalizedPassword)
     updateSessionKey(result.data.sessionKey)
     authenticated.value = true
     showLogin.value = false
+    password.value = ''
     pushToast('登录成功', 'success')
     if (activeTab.value === 'club') await loadClubData()
     else await loadRunData()
@@ -206,9 +204,7 @@ async function loadRunData(manual = false) {
   if (!requireSession()) return
   if (runCards.value.length === 0) runStatus.value = 'loading'
   try {
-    const result = await withManualLoading(manual, () =>
-      getAutoRunInfo(sessionKey.value, currentCredentials()),
-    )
+    const result = await withManualLoading(manual, () => getAutoRunInfo(sessionKey.value))
     adoptRotatedSession(result.data)
     runCards.value = buildAutoRunProgressCards(result.data)
     runStatus.value = 'ready'
@@ -224,9 +220,7 @@ async function runOnce() {
   runActionStatus.value = 'loading'
   runActionMessage.value = '处理中…'
   try {
-    const result = await withManualLoading(true, () =>
-      submitAutoRun(sessionKey.value, currentCredentials()),
-    )
+    const result = await withManualLoading(true, () => submitAutoRun(sessionKey.value))
     adoptRotatedSession(result.data)
     const message = result.message || '提交成功'
     runActionStatus.value = 'success'
@@ -246,7 +240,7 @@ async function loadClubData(manual = false) {
   if (clubActivities.value.length === 0) clubStatus.value = 'loading'
   try {
     const result = await withManualLoading(manual, () =>
-      getAutoRunClubData(sessionKey.value, clubQueryDate.value, currentCredentials()),
+      getAutoRunClubData(sessionKey.value, clubQueryDate.value),
     )
     const data = result.data
     adoptRotatedSession(data)
@@ -276,8 +270,8 @@ async function toggleClubJoin(activity: AutoRunClubActivityView) {
   try {
     const result = await withManualLoading(true, () =>
       activity.isJoined
-        ? cancelAutoRunClub(sessionKey.value, activity.activityId, currentCredentials())
-        : joinAutoRunClub(sessionKey.value, activity.activityId, currentCredentials()),
+        ? cancelAutoRunClub(sessionKey.value, activity.activityId)
+        : joinAutoRunClub(sessionKey.value, activity.activityId),
     )
     adoptRotatedSession(result.data)
     pushToast(activity.isJoined ? '已取消报名' : '报名成功', 'success')
@@ -295,7 +289,7 @@ async function handleClubSign() {
   clubSignLoading.value = true
   try {
     const result = await withManualLoading(true, () =>
-      signAutoRunClub(sessionKey.value, action.signType, currentCredentials()),
+      signAutoRunClub(sessionKey.value, action.signType),
     )
     adoptRotatedSession(result.data)
     if (result.data.success !== true) throw new Error(result.message || '当前暂不可操作')
@@ -315,7 +309,7 @@ async function saveClubSchedule(enabled: boolean) {
   clubScheduleSaving.value = true
   try {
     const result = await withManualLoading(true, () =>
-      setAutoRunClubSchedule(sessionKey.value, enabled, currentCredentials()),
+      setAutoRunClubSchedule(sessionKey.value, enabled),
     )
     adoptRotatedSession(result.data)
     const schedule = result.data.schedule
@@ -357,20 +351,42 @@ function adoptRotatedSession(value: { sessionKey?: string }) {
   if (value.sessionKey) updateSessionKey(value.sessionKey)
 }
 
-function currentCredentials() {
-  const normalizedPhone = phone.value.trim()
-  const normalizedPassword = password.value.trim()
-  return normalizedPhone && normalizedPassword
-    ? { phone: normalizedPhone, password: normalizedPassword }
-    : undefined
-}
-
 function clearSession() {
   authenticated.value = false
   sessionKey.value = ''
   password.value = ''
-  clearAutoRunCredentials()
   clearAutoRunSessionKey(window.localStorage, window.sessionStorage)
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState !== 'visible') return
+  void revalidateSessionOnResume()
+}
+
+async function revalidateSessionOnResume() {
+  if (
+    resumeCheckInFlight ||
+    authChecking.value ||
+    loginLoading.value ||
+    !authenticated.value ||
+    !sessionKey.value
+  ) {
+    return
+  }
+
+  resumeCheckInFlight = true
+  try {
+    const result = await restoreAutoRunSession(sessionKey.value)
+    updateSessionKey(result.data.sessionKey)
+  } catch (error) {
+    if (isAutoRunAuthExpiredError(error)) {
+      clearSession()
+      loginError.value = '账号已在其他设备重新登录，请重新输入手机号和密码'
+      showLogin.value = true
+    }
+  } finally {
+    resumeCheckInFlight = false
+  }
 }
 
 function handleApiError(error: unknown, fallback: string) {
