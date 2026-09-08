@@ -11,6 +11,7 @@ import {
   autoRunProgressPercent,
   buildAutoRunProgressCards,
   cancelAutoRunClub,
+  clearAutoRunSessionKey,
   createAutoRunWeekDates,
   describeAutoRunClubSignTask,
   formatAutoRunNumber,
@@ -19,11 +20,13 @@ import {
   getAutoRunInfo,
   isSignedStatus,
   joinAutoRunClub,
+  loadAutoRunSessionKey,
   loginToAutoRun,
   normalizeAutoRunClubActivities,
   normalizeAutoRunClubSignTask,
   resolveAutoRunClubSignAction,
   restoreAutoRunSession,
+  saveAutoRunSessionKey,
   setAutoRunClubSchedule,
   signAutoRunClub,
   submitAutoRun,
@@ -45,10 +48,9 @@ interface ToastMessage {
   tone: 'success' | 'error'
 }
 
-const SESSION_KEY_STORAGE = 'autorun.sessionKey'
 const router = useRouter()
 const activeTab = ref<PageTab>('run')
-const sessionKey = ref(window.sessionStorage.getItem(SESSION_KEY_STORAGE) ?? '')
+const sessionKey = ref(loadAutoRunSessionKey(window.localStorage, window.sessionStorage))
 const phone = ref('')
 const password = ref('')
 const authChecking = ref(true)
@@ -141,9 +143,16 @@ async function initializeAutoRun() {
     showLogin.value = false
     await loadRunData()
   } catch (error) {
-    clearSession()
-    loginError.value = readableError(error, '登录态已过期，请重新登录')
-    showLogin.value = true
+    if (error instanceof AutoRunApiError && error.status === 401) {
+      clearSession()
+      loginError.value = '登录态已失效，请重新输入手机号和密码'
+      showLogin.value = true
+    } else {
+      authenticated.value = true
+      showLogin.value = false
+      runStatus.value = 'empty'
+      runMessage.value = readableError(error, '暂时无法校验登录态，请稍后刷新')
+    }
   } finally {
     authChecking.value = false
   }
@@ -169,7 +178,7 @@ async function login() {
     if (activeTab.value === 'club') await loadClubData()
     else await loadRunData()
   } catch (error) {
-    clearSession()
+    if (error instanceof AutoRunApiError && error.status === 401) clearSession()
     loginError.value = readableError(error, '登录失败')
   } finally {
     loginLoading.value = false
@@ -331,7 +340,7 @@ function updateSessionKey(value: string) {
   const normalized = value.trim()
   if (!normalized) return
   sessionKey.value = normalized
-  window.sessionStorage.setItem(SESSION_KEY_STORAGE, normalized)
+  saveAutoRunSessionKey(normalized, window.localStorage, window.sessionStorage)
 }
 
 function adoptRotatedSession(value: { sessionKey?: string }) {
@@ -342,7 +351,7 @@ function clearSession() {
   authenticated.value = false
   sessionKey.value = ''
   password.value = ''
-  window.sessionStorage.removeItem(SESSION_KEY_STORAGE)
+  clearAutoRunSessionKey(window.localStorage, window.sessionStorage)
 }
 
 function handleApiError(error: unknown, fallback: string) {
@@ -631,7 +640,7 @@ function formatCountdown(milliseconds: number) {
     <section v-else class="autorun-account">
       <div class="autorun-section-heading">
         <h2>校园跑账号</h2>
-        <p>登录凭证只保留在当前应用会话中，关闭后需要重新登录。</p>
+        <p>登录凭证仅保存在此设备，不保存密码；退出账号或服务确认失效时会自动清除。</p>
       </div>
       <div class="autorun-account-card autorun-glass">
         <span class="autorun-account-icon" aria-hidden="true">✓</span>

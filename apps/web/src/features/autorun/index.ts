@@ -34,3 +34,8 @@ export type {
   AutoRunClubSignTaskView,
   AutoRunProgressCard,
 } from './model'
+export {
+  clearAutoRunSessionKey,
+  loadAutoRunSessionKey,
+  saveAutoRunSessionKey,
+} from './session-storage'
