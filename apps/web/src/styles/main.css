@@ -155,7 +155,7 @@ select:focus-visible {
   );
   left: 50%;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--navigation-item-count, 3), 1fr);
   width: calc(100% - 56px);
   max-width: 396px;
   min-height: 64px;
@@ -211,7 +211,7 @@ html[data-platform='android'] .bottom-navigation {
   top: 5px;
   bottom: 5px;
   left: 7px;
-  width: calc((100% - 10px) / 3 - 4px);
+  width: calc((100% - 10px) / var(--navigation-item-count, 3) - 4px);
   pointer-events: none;
   background: rgba(116, 116, 128, 0.12);
   border: 0;
