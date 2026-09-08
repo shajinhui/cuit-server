@@ -81,10 +81,16 @@
   margin-top: 20px;
 }
 
-.app-update-dialog__actions button {
+.app-update-dialog__actions button,
+.app-update-dialog__actions a {
+  display: flex;
   min-height: 50px;
+  align-items: center;
+  justify-content: center;
   font-size: 17px;
   font-weight: 600;
+  text-align: center;
+  text-decoration: none;
   border: 0;
   border-radius: 25px;
   transition: transform 140ms var(--ease-out);
@@ -100,7 +106,8 @@
   background: #0088ff;
 }
 
-.app-update-dialog__actions button:active {
+.app-update-dialog__actions button:active,
+.app-update-dialog__actions a:active {
   transform: scale(0.97);
 }
 
@@ -143,6 +150,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .app-update-dialog__actions button,
+  .app-update-dialog__actions a,
   .app-update-enter-active,
   .app-update-leave-active,
   .app-update-enter-active .app-update-dialog,
@@ -150,7 +158,8 @@
     transition: none;
   }
 
-  .app-update-dialog__actions button:active {
+  .app-update-dialog__actions button:active,
+  .app-update-dialog__actions a:active {
     transform: none;
   }
 }

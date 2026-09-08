@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { AppAnnouncement } from '@/features/announcements'
-import { AppUpdatePrompt, useAndroidLiveUpdate } from '@/features/app-updates'
+import {
+  AndroidAppDownloadPrompt,
+  AppUpdatePrompt,
+  shouldPromptAndroidAppDownload,
+  useAndroidLiveUpdate,
+} from '@/features/app-updates'
 import { PwaInstallPrompt } from '@/features/pwa-install'
 
 import BottomNavigation from './components/BottomNavigation.vue'
@@ -15,7 +20,14 @@ const navigationRoutes = new Set(['schedule', 'tools', 'profile'])
 const resolvingInitialRoute = computed(() => !route.name)
 const showBottomNavigation = computed(() => navigationRoutes.has(String(route.name)))
 const { readyUpdate } = useAndroidLiveUpdate()
-const allowAnnouncement = computed(() => showBottomNavigation.value && !readyUpdate.value)
+const androidAppDownloadOpen = ref(false)
+const allowAnnouncement = computed(
+  () => showBottomNavigation.value && !readyUpdate.value && !androidAppDownloadOpen.value,
+)
+
+onMounted(async () => {
+  androidAppDownloadOpen.value = await shouldPromptAndroidAppDownload()
+})
 </script>
 
 <template>
@@ -37,8 +49,12 @@ const allowAnnouncement = computed(() => showBottomNavigation.value && !readyUpd
   <BottomNavigation v-if="showBottomNavigation" />
   <AppAnnouncement :allow-presentation="allowAnnouncement" />
   <PwaInstallPrompt
-    :allow-promotion="showBottomNavigation"
+    :allow-promotion="showBottomNavigation && !androidAppDownloadOpen"
     :with-bottom-navigation="showBottomNavigation"
   />
   <AppUpdatePrompt />
+  <AndroidAppDownloadPrompt
+    :open="androidAppDownloadOpen"
+    @close="androidAppDownloadOpen = false"
+  />
 </template>
