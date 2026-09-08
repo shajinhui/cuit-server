@@ -1,0 +1,1 @@
+var e=``+new URL(`../icons/app-icon-192.png`,import.meta.url).href;export{e as t};

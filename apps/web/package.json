@@ -11,13 +11,18 @@
     "build:pages": "pnpm run build:web && pnpm run build:update",
     "build:update": "vite build --mode android --outDir .ota/web && node scripts/package-android-update.mjs",
     "build:android": "vue-tsc --noEmit && vite build --mode android",
+    "build:ios": "vue-tsc --noEmit && vite build --mode ios",
     "check": "pnpm lint && pnpm test && pnpm run typecheck && pnpm run build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
-    "android:sync": "pnpm run build:android && cap sync android"
+    "android:sync": "pnpm run build:android && cap sync android",
+    "ios:sync": "pnpm run ios:sync:source",
+    "ios:sync:source": "pnpm run build:ios && cap sync ios && node scripts/fix-ios-spm-paths.mjs",
+    "ios:sync:apk": "node scripts/prepare-apk-snapshot.mjs && cap sync ios && node scripts/fix-ios-spm-paths.mjs",
+    "build:ipa": "bash scripts/build-ios-ipa.sh"
   },
   "dependencies": {
     "@capacitor/android": "8.4.2",
@@ -25,6 +30,7 @@
     "@capacitor/core": "8.4.2",
     "@capacitor/device": "8.0.3",
     "@capacitor/filesystem": "8.1.3",
+    "@capacitor/ios": "8.4.2",
     "@capacitor/share": "8.0.1",
     "@capgo/capacitor-updater": "8.51.2",
     "pinia": "4.0.2",
