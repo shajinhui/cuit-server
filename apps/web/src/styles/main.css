@@ -246,7 +246,7 @@ html[data-platform='android'] .bottom-navigation {
   --nav-icon-offset-y: 0px;
 }
 
-/* Vector tabs already fill their 24px viewBox; the PNG overscan above would crop them. */
+/* These custom icons already fill their canvas; the default PNG overscan would crop them. */
 .bottom-navigation__icon--campus-run,
 .bottom-navigation__icon--club {
   --nav-icon-size: 100%;

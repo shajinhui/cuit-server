@@ -2,8 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import campusRunIcon from '@/assets/icons/nav-campus-run.svg'
-import clubIcon from '@/assets/icons/nav-club.svg'
+import campusRunIcon from '@/assets/icons/nav-campus-run.png'
+import clubIcon from '@/assets/icons/nav-club.png'
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
 import BottomNavigation from '@/app/components/BottomNavigation.vue'
 import {
