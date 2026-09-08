@@ -11,6 +11,8 @@ export default tseslint.config(
       '.ota/**',
       'coverage/**',
       'android/**',
+      'ios/**',
+      'reference/**',
       '**/*.d.ts',
     ],
   },
