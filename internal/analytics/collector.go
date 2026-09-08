@@ -38,6 +38,7 @@ type Collector struct {
 	mu            sync.Mutex
 	requests      map[requestKey]RequestMetric
 	activities    map[activityKey]UserActivity
+	devices       map[int64]UserDevice
 	stop          chan struct{}
 	done          chan struct{}
 	startOnce     sync.Once
@@ -61,6 +62,7 @@ func NewCollector(
 		now:           time.Now,
 		requests:      make(map[requestKey]RequestMetric),
 		activities:    make(map[activityKey]UserActivity),
+		devices:       make(map[int64]UserDevice),
 		stop:          make(chan struct{}),
 		done:          make(chan struct{}),
 	}
@@ -121,6 +123,12 @@ func (c *Collector) Middleware() app.HandlerFunc {
 			duration,
 			userID,
 		)
+		c.recordDevice(
+			finishedAt,
+			userID,
+			string(request.GetHeader("X-Client-Platform")),
+			string(request.GetHeader("X-Client-Brand")),
+		)
 	}
 }
 
@@ -169,12 +177,56 @@ func (c *Collector) Record(
 	c.mu.Unlock()
 }
 
+func (c *Collector) recordDevice(at time.Time, userID int64, platform string, brand string) {
+	platform = strings.ToLower(strings.TrimSpace(platform))
+	if userID <= 0 || (platform != "ios" && platform != "android") {
+		return
+	}
+	brand = normalizeBrand(platform, brand)
+
+	c.mu.Lock()
+	device := c.devices[userID]
+	device.UserID = userID
+	device.Platform = platform
+	device.Brand = brand
+	if device.FirstSeenAt.IsZero() || at.Before(device.FirstSeenAt) {
+		device.FirstSeenAt = at
+	}
+	if device.LastSeenAt.IsZero() || at.After(device.LastSeenAt) {
+		device.LastSeenAt = at
+	}
+	c.devices[userID] = device
+	c.mu.Unlock()
+}
+
+func normalizeBrand(platform string, brand string) string {
+	if platform == "ios" {
+		return "Apple"
+	}
+	brand = strings.TrimSpace(brand)
+	if brand == "Other" {
+		return "其他 Android"
+	}
+	allowed := map[string]struct{}{
+		"ASUS": {}, "Google": {}, "Honor": {}, "Huawei": {}, "iQOO": {}, "Lenovo": {},
+		"Meizu": {}, "Motorola": {}, "Nothing": {}, "Nubia": {}, "OnePlus": {},
+		"OPPO": {}, "POCO": {}, "realme": {}, "Redmi": {}, "Samsung": {},
+		"vivo": {}, "Xiaomi": {}, "ZTE": {}, "其他 Android": {},
+	}
+	if _, ok := allowed[brand]; ok {
+		return brand
+	}
+	return "其他 Android"
+}
+
 func (c *Collector) Flush(ctx context.Context) error {
 	c.mu.Lock()
 	requests := c.requests
 	activities := c.activities
+	devices := c.devices
 	c.requests = make(map[requestKey]RequestMetric)
 	c.activities = make(map[activityKey]UserActivity)
+	c.devices = make(map[int64]UserDevice)
 	c.mu.Unlock()
 
 	requestBatch := make([]RequestMetric, 0, len(requests))
@@ -185,8 +237,12 @@ func (c *Collector) Flush(ctx context.Context) error {
 	for _, activity := range activities {
 		activityBatch = append(activityBatch, activity)
 	}
-	if err := c.repository.Flush(ctx, requestBatch, activityBatch); err != nil {
-		c.restore(requests, activities)
+	deviceBatch := make([]UserDevice, 0, len(devices))
+	for _, device := range devices {
+		deviceBatch = append(deviceBatch, device)
+	}
+	if err := c.repository.Flush(ctx, requestBatch, activityBatch, deviceBatch); err != nil {
+		c.restore(requests, activities, devices)
 		return err
 	}
 	return nil
@@ -225,6 +281,7 @@ func (c *Collector) flushLoop() {
 func (c *Collector) restore(
 	requests map[requestKey]RequestMetric,
 	activities map[activityKey]UserActivity,
+	devices map[int64]UserDevice,
 ) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -246,6 +303,19 @@ func (c *Collector) restore(
 			failed.LastSeenAt = current.LastSeenAt
 		}
 		c.activities[key] = failed
+	}
+	for userID, failed := range devices {
+		current := c.devices[userID]
+		if !current.LastSeenAt.IsZero() && current.LastSeenAt.After(failed.LastSeenAt) {
+			failed.Platform = current.Platform
+			failed.Brand = current.Brand
+			failed.LastSeenAt = current.LastSeenAt
+		}
+		if failed.FirstSeenAt.IsZero() ||
+			(!current.FirstSeenAt.IsZero() && current.FirstSeenAt.Before(failed.FirstSeenAt)) {
+			failed.FirstSeenAt = current.FirstSeenAt
+		}
+		c.devices[userID] = failed
 	}
 }
 

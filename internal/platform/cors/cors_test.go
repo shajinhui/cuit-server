@@ -63,7 +63,8 @@ func TestPreflightStopsBeforeAPIHandler(t *testing.T) {
 	if called {
 		t.Fatal("preflight reached API handler")
 	}
-	if got := string(response.Header.Peek("Access-Control-Allow-Headers")); got != "Content-Type, Authorization" {
+	if got := string(response.Header.Peek("Access-Control-Allow-Headers")); got !=
+		"Content-Type, Authorization, X-Client-Platform, X-Client-Brand" {
 		t.Fatalf("unexpected allow headers: %q", got)
 	}
 }

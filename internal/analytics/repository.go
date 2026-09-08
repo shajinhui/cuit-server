@@ -21,8 +21,9 @@ func (r *Repository) Flush(
 	ctx context.Context,
 	requests []RequestMetric,
 	activities []UserActivity,
+	devices []UserDevice,
 ) error {
-	if len(requests) == 0 && len(activities) == 0 {
+	if len(requests) == 0 && len(activities) == 0 && len(devices) == 0 {
 		return nil
 	}
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -74,6 +75,27 @@ ON CONFLICT(day, user_id) DO UPDATE SET
 		}
 	}
 
+	for _, device := range devices {
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO user_devices (
+    user_id, platform, brand, first_seen_at, last_seen_at
+)
+VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(user_id) DO UPDATE SET
+    platform = excluded.platform,
+    brand = excluded.brand,
+    first_seen_at = MIN(first_seen_at, excluded.first_seen_at),
+    last_seen_at = MAX(last_seen_at, excluded.last_seen_at)`,
+			device.UserID,
+			device.Platform,
+			device.Brand,
+			device.FirstSeenAt.UTC(),
+			device.LastSeenAt.UTC(),
+		); err != nil {
+			return fmt.Errorf("analytics: save user device: %w", err)
+		}
+	}
+
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("analytics: commit flush: %w", err)
 	}
@@ -108,6 +130,9 @@ func (r *Repository) Stats(ctx context.Context, days int, now time.Time) (Stats,
 	if err := r.readUsers(ctx, startDay, dailyByDate, &result); err != nil {
 		return Stats{}, err
 	}
+	if err := r.readDevices(ctx, &result); err != nil {
+		return Stats{}, err
+	}
 	if err := r.readActivity(ctx, startDay, today, dailyByDate, &result); err != nil {
 		return Stats{}, err
 	}
@@ -119,6 +144,55 @@ func (r *Repository) Stats(ctx context.Context, days int, now time.Time) (Stats,
 		return Stats{}, err
 	}
 	result.TopRoutes = topRoutes
+	return result, nil
+}
+
+func (r *Repository) readDevices(ctx context.Context, result *Stats) error {
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM user_devices`).Scan(
+		&result.Devices.TrackedUsers,
+	); err != nil {
+		return fmt.Errorf("analytics: count tracked devices: %w", err)
+	}
+	result.Devices.UntrackedUsers = max(result.Summary.TotalUsers-result.Devices.TrackedUsers, 0)
+
+	platforms, err := r.readDeviceGroups(ctx, "platform")
+	if err != nil {
+		return err
+	}
+	brands, err := r.readDeviceGroups(ctx, "brand")
+	if err != nil {
+		return err
+	}
+	result.Devices.Platforms = platforms
+	result.Devices.Brands = brands
+	return nil
+}
+
+func (r *Repository) readDeviceGroups(ctx context.Context, column string) ([]DeviceGroup, error) {
+	if column != "platform" && column != "brand" {
+		return nil, fmt.Errorf("analytics: unsupported device group %q", column)
+	}
+	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
+SELECT %s, COUNT(*) AS users
+FROM user_devices
+GROUP BY %s
+ORDER BY users DESC, %s`, column, column, column))
+	if err != nil {
+		return nil, fmt.Errorf("analytics: list device %s groups: %w", column, err)
+	}
+	defer rows.Close()
+
+	result := make([]DeviceGroup, 0)
+	for rows.Next() {
+		var group DeviceGroup
+		if err := rows.Scan(&group.Name, &group.Count); err != nil {
+			return nil, fmt.Errorf("analytics: scan device %s group: %w", column, err)
+		}
+		result = append(result, group)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("analytics: iterate device %s groups: %w", column, err)
+	}
 	return result, nil
 }
 

@@ -26,7 +26,10 @@ func New(allowedOrigin string) app.HandlerFunc {
 		c.Header("Access-Control-Allow-Origin", allowedOrigin)
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header(
+			"Access-Control-Allow-Headers",
+			"Content-Type, Authorization, X-Client-Platform, X-Client-Brand",
+		)
 		c.Header("Access-Control-Expose-Headers", "Retry-After")
 		c.Header("Vary", "Origin")
 

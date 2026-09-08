@@ -20,6 +20,14 @@ type UserActivity struct {
 	LastSeenAt   time.Time
 }
 
+type UserDevice struct {
+	UserID      int64
+	Platform    string
+	Brand       string
+	FirstSeenAt time.Time
+	LastSeenAt  time.Time
+}
+
 type Stats struct {
 	PeriodDays  int            `json:"period_days"`
 	GeneratedAt time.Time      `json:"generated_at"`
@@ -27,7 +35,20 @@ type Stats struct {
 	Cache       CacheStats     `json:"cache"`
 	Daily       []DailyStats   `json:"daily"`
 	TopRoutes   []RouteStats   `json:"top_routes"`
+	Devices     DeviceStats    `json:"devices"`
 	Feedback    []FeedbackItem `json:"feedback"`
+}
+
+type DeviceStats struct {
+	TrackedUsers   int64         `json:"tracked_users"`
+	UntrackedUsers int64         `json:"untracked_users"`
+	Platforms      []DeviceGroup `json:"platforms"`
+	Brands         []DeviceGroup `json:"brands"`
+}
+
+type DeviceGroup struct {
+	Name  string `json:"name"`
+	Count int64  `json:"count"`
 }
 
 type StatsSummary struct {

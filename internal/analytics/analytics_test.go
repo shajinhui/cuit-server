@@ -45,6 +45,8 @@ func TestCollectorAggregatesRequestsAndActiveUsers(t *testing.T) {
 		"/api/v1/items/42",
 		nil,
 		ut.Header{Key: "Cookie", Value: "campus_session=test-session"},
+		ut.Header{Key: "X-Client-Platform", Value: "android"},
+		ut.Header{Key: "X-Client-Brand", Value: "Xiaomi"},
 	).Result()
 	if response.StatusCode() != http.StatusOK {
 		t.Fatalf("unexpected response status: %d", response.StatusCode())
@@ -68,6 +70,15 @@ func TestCollectorAggregatesRequestsAndActiveUsers(t *testing.T) {
 	}
 	if len(stats.TopRoutes) != 2 {
 		t.Fatalf("unexpected top routes: %+v", stats.TopRoutes)
+	}
+	if stats.Devices.TrackedUsers != 1 ||
+		stats.Devices.UntrackedUsers != 0 ||
+		len(stats.Devices.Platforms) != 1 ||
+		stats.Devices.Platforms[0].Name != "android" ||
+		stats.Devices.Platforms[0].Count != 1 ||
+		len(stats.Devices.Brands) != 1 ||
+		stats.Devices.Brands[0].Name != "Xiaomi" {
+		t.Fatalf("unexpected device stats: %+v", stats.Devices)
 	}
 	var normalizedRouteFound bool
 	for _, route := range stats.TopRoutes {
