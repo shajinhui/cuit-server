@@ -52,6 +52,18 @@ export interface FeedbackItem {
   created_at: string
 }
 
+export interface DeviceGroup {
+  name: string
+  count: number
+}
+
+export interface DeviceStats {
+  tracked_users: number
+  untracked_users: number
+  platforms: DeviceGroup[]
+  brands: DeviceGroup[]
+}
+
 export interface ServiceStats {
   period_days: number
   generated_at: string
@@ -59,6 +71,7 @@ export interface ServiceStats {
   cache: CacheStats
   daily: DailyStats[]
   top_routes: RouteStats[]
+  devices: DeviceStats
   feedback: FeedbackItem[]
 }
 
@@ -66,6 +79,31 @@ export interface ChartSeries {
   label: string
   color: string
   values: number[]
+}
+
+export interface DeviceDistributionItem {
+  platform: 'android' | 'ios'
+  label: string
+  count: number
+  share: number
+}
+
+export function platformDeviceDistribution(devices?: DeviceStats): DeviceDistributionItem[] {
+  const total = devices?.tracked_users ?? 0
+  const count = (platform: DeviceDistributionItem['platform']) =>
+    devices?.platforms.find((item) => item.name === platform)?.count ?? 0
+  const ios = count('ios')
+  const android = count('android')
+
+  return [
+    { platform: 'ios', label: 'iOS', count: ios, share: percentage(ios, total) },
+    {
+      platform: 'android',
+      label: 'Android',
+      count: android,
+      share: percentage(android, total),
+    },
+  ]
 }
 
 export function percentage(part: number, total: number): number {

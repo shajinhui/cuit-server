@@ -57,6 +57,7 @@ const activeIndex = computed(() => {
       'bottom-navigation--inline': inline,
       'bottom-navigation--compact': compact,
     }"
+    :style="{ '--navigation-item-count': resolvedItems.length }"
     :aria-label="ariaLabel"
   >
     <span

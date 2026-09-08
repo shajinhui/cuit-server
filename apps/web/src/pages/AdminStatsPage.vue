@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import overviewIcon from '@/assets/icons/nav-tools.png'
+import devicesIcon from '@/assets/icons/nav-profile-tab.png'
+import BottomNavigation from '@/app/components/BottomNavigation.vue'
 import {
   fetchServiceStats,
   percentage,
+  platformDeviceDistribution,
   StatsTrendChart,
   type ChartSeries,
   type ServiceStats,
@@ -26,6 +30,11 @@ const periodDays = ref(30)
 const stats = ref<ServiceStats>()
 const loading = ref(false)
 const error = ref('')
+const activeSection = ref<'overview' | 'devices'>('overview')
+const adminNavigationItems = [
+  { name: 'overview', label: '服务概览', icon: overviewIcon, iconClass: 'tools' },
+  { name: 'devices', label: '用户设备', icon: devicesIcon, iconClass: 'profile' },
+] as const
 
 usePageTheme('#f4f6fa')
 
@@ -76,6 +85,21 @@ const updatedAt = computed(() => {
     minute: '2-digit',
   }).format(new Date(stats.value.generated_at))
 })
+const deviceDistribution = computed(() => platformDeviceDistribution(stats.value?.devices))
+const deviceTrackedUsers = computed(() => stats.value?.devices?.tracked_users ?? 0)
+const deviceCoverage = computed(() =>
+  percentage(deviceTrackedUsers.value, stats.value?.summary.total_users ?? 0),
+)
+const brandDistribution = computed(() =>
+  (stats.value?.devices?.brands ?? []).map((item) => ({
+    ...item,
+    share: percentage(item.count, deviceTrackedUsers.value),
+  })),
+)
+const iosShare = computed(
+  () => deviceDistribution.value.find((item) => item.platform === 'ios')?.share ?? 0,
+)
+const deviceChartStyle = computed(() => ({ '--ios-share': `${iosShare.value}%` }))
 
 onMounted(() => {
   const savedToken = window.sessionStorage.getItem(tokenStorageKey)
@@ -161,6 +185,10 @@ function formatDateTime(value: string): string {
 function feedbackTypeLabel(type: 'suggestion' | 'bug'): string {
   return type === 'bug' ? 'Bug' : '建议'
 }
+
+function selectAdminSection(name: string) {
+  if (name === 'overview' || name === 'devices') activeSection.value = name
+}
 </script>
 
 <template>
@@ -219,8 +247,22 @@ function feedbackTypeLabel(type: 'suggestion' | 'bug'): string {
       </form>
     </section>
 
-    <section v-else class="admin-dashboard">
-      <header class="admin-dashboard-heading">
+    <template v-else>
+      <div class="admin-tabbar-shell">
+        <BottomNavigation
+          class="admin-tab-navigation"
+          :items="adminNavigationItems"
+          :active-name="activeSection"
+          aria-label="统计页面导航"
+          inline
+          compact
+          @select="selectAdminSection"
+        />
+      </div>
+
+      <section class="admin-dashboard">
+        <template v-if="activeSection === 'overview'">
+          <header class="admin-dashboard-heading">
         <div>
           <p class="admin-eyebrow">OVERVIEW</p>
           <h1>服务概览</h1>
@@ -245,9 +287,9 @@ function feedbackTypeLabel(type: 'suggestion' | 'bug'): string {
             </svg>
           </button>
         </div>
-      </header>
+          </header>
 
-      <p v-if="error" class="admin-dashboard-error" role="alert">{{ error }}</p>
+          <p v-if="error" class="admin-dashboard-error" role="alert">{{ error }}</p>
 
       <section class="admin-metric-grid" aria-label="核心指标">
         <article class="admin-metric-card admin-metric-card--blue">
@@ -405,7 +447,7 @@ function feedbackTypeLabel(type: 'suggestion' | 'bug'): string {
         </div>
       </section>
 
-      <section class="admin-feedback-card" aria-labelledby="admin-feedback-title">
+          <section class="admin-feedback-card" aria-labelledby="admin-feedback-title">
         <header class="admin-card-heading">
           <div>
             <h2 id="admin-feedback-title">用户反馈</h2>
@@ -431,7 +473,110 @@ function feedbackTypeLabel(type: 'suggestion' | 'bug'): string {
           <p>暂无用户反馈</p>
           <span>用户通过“问题反馈”提交后会显示在这里。</span>
         </div>
+          </section>
+        </template>
+
+        <section v-else class="admin-device-dashboard" aria-labelledby="admin-device-title">
+          <header class="admin-dashboard-heading admin-device-heading">
+            <div>
+              <p class="admin-eyebrow">DEVICES</p>
+              <h1 id="admin-device-title">用户设备</h1>
+              <p>按账号去重，展示最近一次识别到的移动设备</p>
+            </div>
+            <button
+              type="button"
+              class="admin-device-refresh"
+              aria-label="刷新设备统计"
+              :disabled="loading"
+              @click="refreshStats"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" :class="{ 'is-spinning': loading }">
+                <path d="M20 6v5h-5M19 11a7 7 0 1 0 .2 5" />
+              </svg>
+            </button>
+          </header>
+
+          <p v-if="error" class="admin-dashboard-error" role="alert">{{ error }}</p>
+
+          <section class="admin-device-overview" aria-labelledby="admin-device-distribution-title">
+            <header class="admin-card-heading">
+              <div>
+                <h2 id="admin-device-distribution-title">设备分布</h2>
+                <p>
+                  已识别 {{ formatNumber(deviceTrackedUsers) }} / {{ formatNumber(stats.summary.total_users) }}
+                  位用户
+                </p>
+              </div>
+              <span>{{ deviceCoverage.toFixed(1) }}% 覆盖</span>
+            </header>
+
+            <div class="admin-device-coverage" aria-hidden="true">
+              <span :style="{ width: `${deviceCoverage}%` }" />
+            </div>
+
+            <div v-if="deviceTrackedUsers" class="admin-device-distribution">
+              <div class="admin-device-ring" :style="deviceChartStyle" aria-hidden="true">
+                <div>
+                  <strong>{{ formatNumber(deviceTrackedUsers) }}</strong>
+                  <span>位用户</span>
+                </div>
+              </div>
+              <div class="admin-device-platforms">
+                <article
+                  v-for="item in deviceDistribution"
+                  :key="item.platform"
+                  :class="`is-${item.platform}`"
+                >
+                  <span class="admin-device-platform-icon" aria-hidden="true">
+                    <svg v-if="item.platform === 'ios'" viewBox="0 0 24 24">
+                      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+                      <path d="M10 5h4M11 18.5h2" />
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24">
+                      <path d="m8 6-2-3M16 6l2-3M6 9h12v9.5a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM6 11H4v6M18 11h2v6M9 20.5V23M15 20.5V23" />
+                      <circle cx="9.5" cy="9" r=".5" fill="currentColor" stroke="none" />
+                      <circle cx="14.5" cy="9" r=".5" fill="currentColor" stroke="none" />
+                    </svg>
+                  </span>
+                  <div>
+                    <span>{{ item.label }}</span>
+                    <strong>{{ item.share.toFixed(1) }}%</strong>
+                    <small>{{ formatNumber(item.count) }} 位用户</small>
+                  </div>
+                </article>
+              </div>
+            </div>
+            <div v-else class="admin-empty-state admin-device-empty">
+              <p>暂无设备数据</p>
+              <span>用户再次打开应用后会自动完成识别。</span>
+            </div>
+          </section>
+
+          <section class="admin-device-brands" aria-labelledby="admin-device-brands-title">
+            <header class="admin-card-heading">
+              <div>
+                <h2 id="admin-device-brands-title">品牌分布</h2>
+                <p>按已识别用户的最近一次设备统计</p>
+              </div>
+              <span>{{ brandDistribution.length }} 个品牌</span>
+            </header>
+            <div v-if="brandDistribution.length" class="admin-device-brand-list">
+              <article v-for="item in brandDistribution" :key="item.name">
+                <header>
+                  <strong>{{ item.name }}</strong>
+                  <span>{{ formatNumber(item.count) }} 人 · {{ item.share.toFixed(1) }}%</span>
+                </header>
+                <div aria-hidden="true"><span :style="{ width: `${item.share}%` }" /></div>
+              </article>
+            </div>
+            <div v-else class="admin-empty-state admin-device-empty">
+              <p>暂无品牌数据</p>
+              <span>用户再次打开应用后会自动完成识别。</span>
+            </div>
+          </section>
+
+        </section>
       </section>
-    </section>
+    </template>
   </main>
 </template>
