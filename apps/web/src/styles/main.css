@@ -246,6 +246,13 @@ html[data-platform='android'] .bottom-navigation {
   --nav-icon-offset-y: 0px;
 }
 
+/* Vector tabs already fill their 24px viewBox; the PNG overscan above would crop them. */
+.bottom-navigation__icon--campus-run,
+.bottom-navigation__icon--club {
+  --nav-icon-size: 100%;
+  --nav-icon-offset-y: 0px;
+}
+
 .bottom-navigation__item.is-active {
   color: #007aff;
   background: transparent;
