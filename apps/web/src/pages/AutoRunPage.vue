@@ -420,7 +420,7 @@ function formatCountdown(milliseconds: number) {
     <header v-if="activeTab === 'run'" class="autorun-run-header">
       <div>
         <h1>校园跑</h1>
-        <p>{{ runMessage }}</p>
+        <p>查看本学期运动进度</p>
       </div>
       <button
         type="button"
@@ -442,68 +442,61 @@ function formatCountdown(milliseconds: number) {
     </header>
 
     <section v-if="activeTab === 'run'" class="autorun-content">
-      <div class="autorun-cards">
-        <template v-if="runStatus === 'loading'">
-          <div v-for="index in 2" :key="index" class="autorun-card autorun-skeleton">
-            <span class="autorun-skeleton__icon" />
-            <span class="autorun-skeleton__lines"><i /><i /><i /></span>
+      <section class="autorun-overview" aria-labelledby="autorun-overview-title">
+        <div class="autorun-overview__heading">
+          <div>
+            <span>本学期概览</span>
+            <h2 id="autorun-overview-title">运动进度</h2>
           </div>
-        </template>
+          <p class="autorun-overview__sync" :class="`is-${runStatus}`">
+            <i aria-hidden="true" />{{ runMessage }}
+          </p>
+        </div>
 
-        <template v-else-if="runStatus === 'ready'">
-          <article v-for="card in runCards" :key="card.id" class="autorun-card">
-            <span class="autorun-card__icon" :style="{ background: card.accent }">
-              {{ card.id === 'count-progress' ? '次' : 'km' }}
-            </span>
-            <div class="autorun-card__body">
-              <div class="autorun-card__heading">
-                <p class="autorun-card__title">{{ card.title }}</p>
-                <strong>{{ autoRunProgressPercent(card.current, card.target) }}%</strong>
+        <div v-if="runStatus === 'loading'" class="autorun-metrics" aria-label="正在加载校园跑进度">
+          <article v-for="index in 2" :key="index" class="autorun-metric autorun-metric--skeleton autorun-skeleton">
+            <i /><i /><i />
+          </article>
+        </div>
+
+        <div v-else-if="runStatus === 'ready'" class="autorun-metrics">
+          <article v-for="card in runCards" :key="card.id" class="autorun-metric">
+            <div class="autorun-metric__heading">
+              <span :style="{ background: card.accent }">
+                {{ card.id === 'count-progress' ? '次' : 'km' }}
+              </span>
+              <div>
+                <p>{{ card.id === 'count-progress' ? '有效次数' : '有效距离' }}</p>
               </div>
-              <p class="autorun-card__value">
-                {{ formatAutoRunNumber(card.current) }}/{{ formatAutoRunNumber(card.target) }}
-                <small>{{ card.unit }}</small>
-              </p>
-              <div class="autorun-progress" :aria-label="`${card.title}进度`">
-                <span
-                  :style="{
-                    width: `${autoRunProgressPercent(card.current, card.target)}%`,
-                    background: card.accent,
-                  }"
-                />
-              </div>
-              <p class="autorun-card__subtitle">{{ card.subtitle }}</p>
+              <strong>{{ autoRunProgressPercent(card.current, card.target) }}%</strong>
+            </div>
+            <p class="autorun-metric__value">
+              {{ formatAutoRunNumber(card.current) }}
+              <span>/ {{ formatAutoRunNumber(card.target) }} {{ card.unit }}</span>
+            </p>
+            <div class="autorun-metric__progress" :aria-label="`${card.title}进度`">
+              <span
+                :style="{
+                  width: `${autoRunProgressPercent(card.current, card.target)}%`,
+                  background: card.accent,
+                }"
+              />
             </div>
           </article>
-        </template>
+        </div>
 
-        <div v-else class="autorun-empty autorun-glass">
-          <h2>暂无数据</h2>
-          <p>{{ runMessage }}</p>
+        <div v-else class="autorun-overview__empty">
+          <div><strong>暂时没有进度数据</strong><p>{{ runMessage }}</p></div>
           <button type="button" class="autorun-secondary" @click="loadRunData(true)">重新加载</button>
         </div>
-      </div>
+      </section>
 
-      <section class="autorun-actions">
-        <article
-          class="autorun-action-card"
-          :class="`is-${runActionStatus}`"
-        >
-          <span class="autorun-action-card__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="m9 7 8 5-8 5V7Z" /></svg>
-          </span>
-          <span class="autorun-action-card__copy">
-            <strong>生成跑步记录</strong>
-            <small>生成轨迹并提交至校园跑</small>
-            <i v-if="runActionMessage">{{ runActionMessage }}</i>
-          </span>
-          <b>
-            <span v-if="runActionStatus === 'loading'">执行中</span>
-            <span v-else-if="runActionStatus === 'success'">已完成</span>
-            <span v-else-if="runActionStatus === 'error'">需重试</span>
-            <span v-else>待执行</span>
-          </b>
-        </article>
+      <section class="autorun-run-zone" :class="`is-${runActionStatus}`">
+        <div class="autorun-run-zone__heading">
+          <span>跑步记录</span>
+          <h2>生成并提交</h2>
+          <p>{{ runActionMessage || '自动生成轨迹并提交至校园跑' }}</p>
+        </div>
 
         <button
           type="button"
@@ -671,7 +664,27 @@ function formatCountdown(milliseconds: number) {
     </div>
 
     <div v-if="manualLoadingCount > 0" class="autorun-loading" role="status" aria-label="请求处理中">
-      <div><span class="autorun-loading__runner" aria-hidden="true">●</span><p>请求处理中…</p></div>
+      <div>
+        <div class="autorun-loading__wheel" role="img" aria-label="仓鼠在滚轮中奔跑">
+          <div class="wheel" />
+          <div class="hamster">
+            <div class="hamster__body">
+              <div class="hamster__head">
+                <div class="hamster__ear" />
+                <div class="hamster__eye" />
+                <div class="hamster__nose" />
+              </div>
+              <div class="hamster__limb hamster__limb--fr" />
+              <div class="hamster__limb hamster__limb--fl" />
+              <div class="hamster__limb hamster__limb--br" />
+              <div class="hamster__limb hamster__limb--bl" />
+              <div class="hamster__tail" />
+            </div>
+          </div>
+          <div class="spoke" />
+        </div>
+        <p>请求处理中…</p>
+      </div>
     </div>
 
     <div v-if="showLogin" class="autorun-login-backdrop" role="dialog" aria-modal="true" aria-label="校园跑登录">

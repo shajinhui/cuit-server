@@ -95,7 +95,7 @@ export function buildAutoRunProgressCards(data: AutoRunRunData): AutoRunProgress
       target: countTarget,
       unit: '次',
       subtitle: '本学期有效打卡次数',
-      accent: 'linear-gradient(90deg, #4f8cff, #55d6ff)',
+      accent: 'linear-gradient(135deg, #64748b, #8290a3)',
     },
     {
       id: 'distance-progress',
@@ -104,7 +104,7 @@ export function buildAutoRunProgressCards(data: AutoRunRunData): AutoRunProgress
       target: Number(distanceTarget.toFixed(1)),
       unit: 'km',
       subtitle: '本学期累计有效距离',
-      accent: 'linear-gradient(90deg, #ff9f43, #ffd166)',
+      accent: 'linear-gradient(135deg, #78806d, #959d86)',
     },
   ]
 }
