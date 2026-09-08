@@ -7,10 +7,10 @@ import clubIcon from '@/assets/icons/nav-club.png'
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
 import BottomNavigation from '@/app/components/BottomNavigation.vue'
 import {
-  AutoRunApiError,
   autoRunProgressPercent,
   buildAutoRunProgressCards,
   cancelAutoRunClub,
+  clearAutoRunCredentials,
   clearAutoRunSessionKey,
   createAutoRunWeekDates,
   describeAutoRunClubSignTask,
@@ -18,14 +18,17 @@ import {
   formatLocalDate,
   getAutoRunClubData,
   getAutoRunInfo,
+  isAutoRunAuthExpiredError,
   isSignedStatus,
   joinAutoRunClub,
+  loadAutoRunCredentials,
   loadAutoRunSessionKey,
   loginToAutoRun,
   normalizeAutoRunClubActivities,
   normalizeAutoRunClubSignTask,
   resolveAutoRunClubSignAction,
   restoreAutoRunSession,
+  saveAutoRunCredentials,
   saveAutoRunSessionKey,
   setAutoRunClubSchedule,
   signAutoRunClub,
@@ -51,8 +54,9 @@ interface ToastMessage {
 const router = useRouter()
 const activeTab = ref<PageTab>('run')
 const sessionKey = ref(loadAutoRunSessionKey(window.localStorage, window.sessionStorage))
-const phone = ref('')
-const password = ref('')
+const rememberedCredentials = loadAutoRunCredentials()
+const phone = ref(rememberedCredentials?.phone ?? '')
+const password = ref(rememberedCredentials?.password ?? '')
 const authChecking = ref(true)
 const authenticated = ref(false)
 const showLogin = ref(false)
@@ -137,13 +141,13 @@ async function initializeAutoRun() {
   }
 
   try {
-    const result = await restoreAutoRunSession(savedSession)
+    const result = await restoreAutoRunSession(savedSession, currentCredentials())
     updateSessionKey(result.data.sessionKey)
     authenticated.value = true
     showLogin.value = false
     await loadRunData()
   } catch (error) {
-    if (error instanceof AutoRunApiError && error.status === 401) {
+    if (isAutoRunAuthExpiredError(error)) {
       clearSession()
       loginError.value = '登录态已失效，请重新输入手机号和密码'
       showLogin.value = true
@@ -170,15 +174,17 @@ async function login() {
   loginError.value = ''
   try {
     const result = await loginToAutoRun(normalizedPhone, normalizedPassword)
+    phone.value = normalizedPhone
+    password.value = normalizedPassword
+    saveAutoRunCredentials(normalizedPhone, normalizedPassword)
     updateSessionKey(result.data.sessionKey)
     authenticated.value = true
     showLogin.value = false
-    password.value = ''
     pushToast('登录成功', 'success')
     if (activeTab.value === 'club') await loadClubData()
     else await loadRunData()
   } catch (error) {
-    if (error instanceof AutoRunApiError && error.status === 401) clearSession()
+    if (isAutoRunAuthExpiredError(error)) clearSession()
     loginError.value = readableError(error, '登录失败')
   } finally {
     loginLoading.value = false
@@ -200,7 +206,9 @@ async function loadRunData(manual = false) {
   if (!requireSession()) return
   if (runCards.value.length === 0) runStatus.value = 'loading'
   try {
-    const result = await withManualLoading(manual, () => getAutoRunInfo(sessionKey.value))
+    const result = await withManualLoading(manual, () =>
+      getAutoRunInfo(sessionKey.value, currentCredentials()),
+    )
     adoptRotatedSession(result.data)
     runCards.value = buildAutoRunProgressCards(result.data)
     runStatus.value = 'ready'
@@ -216,7 +224,9 @@ async function runOnce() {
   runActionStatus.value = 'loading'
   runActionMessage.value = '处理中…'
   try {
-    const result = await withManualLoading(true, () => submitAutoRun(sessionKey.value))
+    const result = await withManualLoading(true, () =>
+      submitAutoRun(sessionKey.value, currentCredentials()),
+    )
     adoptRotatedSession(result.data)
     const message = result.message || '提交成功'
     runActionStatus.value = 'success'
@@ -236,7 +246,7 @@ async function loadClubData(manual = false) {
   if (clubActivities.value.length === 0) clubStatus.value = 'loading'
   try {
     const result = await withManualLoading(manual, () =>
-      getAutoRunClubData(sessionKey.value, clubQueryDate.value),
+      getAutoRunClubData(sessionKey.value, clubQueryDate.value, currentCredentials()),
     )
     const data = result.data
     adoptRotatedSession(data)
@@ -266,8 +276,8 @@ async function toggleClubJoin(activity: AutoRunClubActivityView) {
   try {
     const result = await withManualLoading(true, () =>
       activity.isJoined
-        ? cancelAutoRunClub(sessionKey.value, activity.activityId)
-        : joinAutoRunClub(sessionKey.value, activity.activityId),
+        ? cancelAutoRunClub(sessionKey.value, activity.activityId, currentCredentials())
+        : joinAutoRunClub(sessionKey.value, activity.activityId, currentCredentials()),
     )
     adoptRotatedSession(result.data)
     pushToast(activity.isJoined ? '已取消报名' : '报名成功', 'success')
@@ -285,7 +295,7 @@ async function handleClubSign() {
   clubSignLoading.value = true
   try {
     const result = await withManualLoading(true, () =>
-      signAutoRunClub(sessionKey.value, action.signType),
+      signAutoRunClub(sessionKey.value, action.signType, currentCredentials()),
     )
     adoptRotatedSession(result.data)
     if (result.data.success !== true) throw new Error(result.message || '当前暂不可操作')
@@ -305,7 +315,7 @@ async function saveClubSchedule(enabled: boolean) {
   clubScheduleSaving.value = true
   try {
     const result = await withManualLoading(true, () =>
-      setAutoRunClubSchedule(sessionKey.value, enabled),
+      setAutoRunClubSchedule(sessionKey.value, enabled, currentCredentials()),
     )
     adoptRotatedSession(result.data)
     const schedule = result.data.schedule
@@ -347,15 +357,24 @@ function adoptRotatedSession(value: { sessionKey?: string }) {
   if (value.sessionKey) updateSessionKey(value.sessionKey)
 }
 
+function currentCredentials() {
+  const normalizedPhone = phone.value.trim()
+  const normalizedPassword = password.value.trim()
+  return normalizedPhone && normalizedPassword
+    ? { phone: normalizedPhone, password: normalizedPassword }
+    : undefined
+}
+
 function clearSession() {
   authenticated.value = false
   sessionKey.value = ''
   password.value = ''
+  clearAutoRunCredentials()
   clearAutoRunSessionKey(window.localStorage, window.sessionStorage)
 }
 
 function handleApiError(error: unknown, fallback: string) {
-  if (error instanceof AutoRunApiError && error.status === 401) {
+  if (isAutoRunAuthExpiredError(error)) {
     clearSession()
     showLogin.value = true
     loginError.value = '登录态已失效，请重新输入手机号和密码'

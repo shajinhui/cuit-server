@@ -1,11 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 
 import {
   AUTO_RUN_SESSION_STORAGE_KEY,
+  clearAutoRunCredentials,
   clearAutoRunSessionKey,
+  loadAutoRunCredentials,
   loadAutoRunSessionKey,
+  saveAutoRunCredentials,
   saveAutoRunSessionKey,
 } from './session-storage'
+
+afterEach(() => clearAutoRunCredentials())
 
 function createStorage(initial: Record<string, string> = {}) {
   const values = new Map(Object.entries(initial))
@@ -59,5 +64,17 @@ describe('校园跑登录态存储', () => {
 
     saveAutoRunSessionKey('fallback-key', persistent, fallback)
     expect(fallback.getItem(AUTO_RUN_SESSION_STORAGE_KEY)).toBe('fallback-key')
+  })
+
+  it('账号凭据只保留在当前内存中并可主动清除', () => {
+    saveAutoRunCredentials(' 13800000000 ', 'example-password')
+
+    expect(loadAutoRunCredentials()).toEqual({
+      phone: '13800000000',
+      password: 'example-password',
+    })
+
+    clearAutoRunCredentials()
+    expect(loadAutoRunCredentials()).toBeUndefined()
   })
 })

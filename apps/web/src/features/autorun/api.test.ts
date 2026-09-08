@@ -5,6 +5,7 @@ import {
   AutoRunApiError,
   DEFAULT_AUTORUN_API_BASE_URL,
   getAutoRunInfo,
+  isAutoRunAuthExpiredError,
   loginToAutoRun,
 } from './api'
 
@@ -58,6 +59,41 @@ describe('校园跑 API 客户端', () => {
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit
     expect(request.headers).toMatchObject({ Authorization: 'Bearer session-example' })
     expect(request.body).toBe('{}')
+  })
+
+  it('当前应用会话有账号凭据时一并发送，供服务端自动续登', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        code: 10000,
+        msg: 'ok',
+        response: { runStandard: {}, runInfo: {}, tokenSrc: 'relogin' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await getAutoRunInfo('session-example', {
+      phone: ' 13800000000 ',
+      password: 'example-password',
+    })
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(request.headers).toMatchObject({ Authorization: 'Bearer session-example' })
+    expect(request.body).toBe(
+      JSON.stringify({ phone: '13800000000', password: 'example-password' }),
+    )
+  })
+
+  it('能识别被 502 包装的上游登录失效错误', () => {
+    expect(
+      isAutoRunAuthExpiredError(
+        new AutoRunApiError('加载校园跑进度失败：token 已失效，请重新登录', 502, 50200),
+      ),
+    ).toBe(true)
+    expect(
+      isAutoRunAuthExpiredError(
+        new AutoRunApiError('加载校园跑进度失败：上游网络请求失败', 502, 50200),
+      ),
+    ).toBe(false)
   })
 
   it('拒绝非 JSON 响应和业务错误响应', async () => {
