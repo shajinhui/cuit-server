@@ -12,9 +12,9 @@ on:
           - unsigned
           - signed
       web_mode:
-        description: Web assets bundled in the IPA
+        description: Web assets bundled in the IPA (source includes campus run and clubs)
         required: true
-        default: apk
+        default: source
         type: choice
         options:
           - apk
