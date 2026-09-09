@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 
 export const ANDROID_APK_URL =
-  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v0.2.2/app-release-signed-4.apk'
+  'https://github.com/shajinhui/cuit-server/releases/download/v0.2.2/app-release-signed.apk'
 export const MIN_ANDROID_APP_VERSION = '0.2.2'
 const MIN_ANDROID_APP_BUILD = 4
 
