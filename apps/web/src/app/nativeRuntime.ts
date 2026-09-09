@@ -2,7 +2,7 @@ import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 
 export function registerNativeRuntime() {
-  if (!Capacitor.isNativePlatform()) return
+  if (Capacitor.getPlatform() !== 'android') return
 
   void App.addListener('backButton', ({ canGoBack }) => {
     if (canGoBack) {

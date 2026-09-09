@@ -1,0 +1,1 @@
+import{S as e,T as t,h as n,lt as r,s as i,u as a}from"./runtime-core.esm-bundler-BRbtUjwm.js";var o={class:`app-shell__content`},s=n({name:`AppShell`,__name:`AppShell`,props:{variant:{}},setup(n){return(s,c)=>(e(),a(`main`,{class:r([`app-shell`,n.variant?`app-shell--${n.variant}`:void 0])},[i(`div`,o,[t(s.$slots,`default`)])],2))}});export{s as t};
