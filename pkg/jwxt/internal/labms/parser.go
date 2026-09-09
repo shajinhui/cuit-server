@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"cuit-server/pkg/jwxt/internal/coursetable"
 	"cuit-server/pkg/jwxt/internal/jwxterr"
@@ -34,7 +36,7 @@ func ToCourseTable(items []ScheduleItem, semesterID string) (coursetable.CourseT
 			course = &coursetable.Course{
 				LessonID:      "labms:" + identity,
 				Code:          strings.TrimSpace(item.CourseNo),
-				Name:          strings.TrimSpace(item.CourseName),
+				Name:          displayCourseName(item.CourseName, item.ProjectType),
 				TeachingClass: normalizeJoinedNames(item.ClassName),
 				Teachers:      splitNames(item.TeacherName),
 				Activities:    make([]coursetable.CourseActivity, 0),
@@ -47,7 +49,7 @@ func ToCourseTable(items []ScheduleItem, semesterID string) (coursetable.CourseT
 		}
 		course.Activities = append(course.Activities, coursetable.CourseActivity{
 			Teachers:     splitNames(item.TeacherName),
-			RoomName:     strings.TrimSpace(item.Location),
+			RoomName:     displayLocation(item.Location),
 			Weekday:      weekday,
 			StartSection: sections[0],
 			EndSection:   sections[len(sections)-1],
@@ -80,13 +82,113 @@ func SemesterName(schoolYear string, term string) (string, error) {
 }
 
 func courseIdentity(item ScheduleItem) string {
+	category := "regular"
+	if isExperiment(item.ProjectType) {
+		category = "experiment"
+	}
 	for _, value := range []string{string(item.CourseID), string(item.TaskID), item.CourseNo} {
 		if value = strings.TrimSpace(value); value != "" {
-			return value
+			return value + ":" + category
 		}
 	}
-	sum := sha256.Sum256([]byte(strings.TrimSpace(item.CourseName) + "\x00" + normalizeJoinedNames(item.ClassName)))
+	sum := sha256.Sum256([]byte(strings.TrimSpace(item.CourseName) + "\x00" + normalizeJoinedNames(item.ClassName) + "\x00" + category))
 	return hex.EncodeToString(sum[:8])
+}
+
+// displayCourseName keeps the compact EAMS-style label used by the timetable.
+// LABMS may attach a leading activity kind to the course name; regular classes
+// do not need that noise, while experimental activities get one stable marker.
+func displayCourseName(courseName string, projectType string) string {
+	name := strings.Join(strings.Fields(courseName), " ")
+	if isExperiment(projectType) {
+		name = trimLeadingActivityMarker(name, "实验")
+		if strings.HasPrefix(name, "实验") {
+			return name
+		}
+		if strings.HasSuffix(name, "实验") && len([]rune(name)) > len([]rune("实验")) {
+			name = strings.TrimSpace(strings.TrimSuffix(name, "实验"))
+		}
+		if name == "" {
+			return "实验"
+		}
+		return "实验 " + name
+	}
+	return trimLeadingActivityMarker(name, "理论")
+}
+
+func isExperiment(projectType string) bool {
+	return strings.Contains(strings.TrimSpace(projectType), "实验")
+}
+
+func trimLeadingActivityMarker(value string, marker string) string {
+	value = strings.TrimSpace(value)
+	for _, prefix := range []string{
+		"【" + marker + "】",
+		"[" + marker + "]",
+		"（" + marker + "）",
+		"(" + marker + ")",
+	} {
+		if strings.HasPrefix(value, prefix) {
+			return strings.TrimSpace(value[len(prefix):])
+		}
+	}
+	for _, prefix := range []string{marker + "课", marker} {
+		if !strings.HasPrefix(value, prefix) {
+			continue
+		}
+		remainder := value[len(prefix):]
+		if remainder == "" {
+			return ""
+		}
+		first, _ := utf8.DecodeRuneInString(remainder)
+		if unicode.IsSpace(first) || strings.ContainsRune(":：-－—·|｜", first) {
+			return strings.TrimSpace(strings.TrimLeftFunc(remainder, func(r rune) bool {
+				return unicode.IsSpace(r) || strings.ContainsRune(":：-－—·|｜", r)
+			}))
+		}
+	}
+	return value
+}
+
+// displayLocation removes the LABMS campus/building/lab hierarchy. The final
+// room or venue is the useful part on a narrow timetable card.
+func displayLocation(location string) string {
+	value := strings.Join(strings.Fields(location), " ")
+	parts := strings.FieldsFunc(value, func(r rune) bool {
+		return r == '>' || r == '＞'
+	})
+	if len(parts) > 0 {
+		value = strings.TrimSpace(parts[len(parts)-1])
+	}
+
+	for _, separator := range []string{"-", "－", "—"} {
+		index := strings.LastIndex(value, separator)
+		if index < 0 {
+			continue
+		}
+		candidate := strings.TrimSpace(value[index+len(separator):])
+		if containsDigit(candidate) {
+			value = candidate
+			break
+		}
+	}
+	value = strings.TrimSpace(value)
+	for _, prefix := range []string{"教室：", "教室:", "教室"} {
+		if strings.HasPrefix(value, prefix) && len(value) > len(prefix) {
+			value = strings.TrimSpace(value[len(prefix):])
+			break
+		}
+	}
+	return value
+}
+
+func containsDigit(value string) bool {
+	for _, r := range value {
+		if unicode.IsDigit(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizedPositiveInts(values []int) []int {

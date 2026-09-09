@@ -87,7 +87,7 @@ func (s *CachedCourseTableService) RefreshCourseTable(
 }
 
 func courseTableCacheKey(userID int64, semesterID string) string {
-	return "cuit:v2:user:" + strconv.FormatInt(userID, 10) + ":course-table:" + semesterID
+	return "cuit:v3:user:" + strconv.FormatInt(userID, 10) + ":course-table:" + semesterID
 }
 
 func (s *CachedCourseTableService) GetClassroomOptions(

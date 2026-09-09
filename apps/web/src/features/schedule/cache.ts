@@ -18,7 +18,7 @@ const courseOverridesRecordKey = 'course-overrides'
 const courseColorPreferencesRecordKey = 'course-color-preferences'
 
 export interface CachedSchedule {
-  version: 2
+  version: 3
   semesters: Semester[]
   selectedSemesterID: string
   table: CourseTable
@@ -250,7 +250,7 @@ function isCachedSchedule(value: unknown): value is CachedSchedule {
 
   const cache = value as Partial<CachedSchedule>
   return (
-    cache.version === 2 &&
+    cache.version === 3 &&
     Array.isArray(cache.semesters) &&
     typeof cache.selectedSemesterID === 'string' &&
     Boolean(cache.table) &&

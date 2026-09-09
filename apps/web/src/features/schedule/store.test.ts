@@ -311,7 +311,7 @@ function createTable(semesterID: string, courseName = '示例课程'): CourseTab
 
 function createCache(semester: Semester, table: CourseTable): CachedSchedule {
   return {
-    version: 2,
+    version: 3,
     semesters: [semester],
     selectedSemesterID: semester.ID,
     table,

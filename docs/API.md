@@ -531,7 +531,7 @@ GET /api/v1/jwxt/course-table?semester_id=1106&refresh=1
 | `ActivityType` | string | LABMS 的课程安排类型，例如“理论”或“实验”；EAMS 数据可能为空 |
 | `ProjectName` | string | LABMS 的实验项目名称；没有项目或 EAMS 数据时为空 |
 
-服务端课表缓存键使用 v2 结构，缓存时间为一小时。数据源切换由部署环境控制：
+服务端课表缓存键使用 v3 结构，缓存时间为一小时。数据源切换由部署环境控制：
 
 - `LABMS_SCHEDULE_MODE=off`：仅使用 EAMS（默认）。
 - `LABMS_SCHEDULE_MODE=shadow`：接口仍返回 EAMS，同时对纳入比例的用户查询 LABMS，并只记录课程数、周次、节次和地点的聚合差异。
