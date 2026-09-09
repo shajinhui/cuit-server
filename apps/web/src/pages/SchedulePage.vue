@@ -522,7 +522,7 @@ async function refreshSchedule() {
             role="status"
             aria-live="polite"
           >
-            <div class="schedule-semester-loading__circle">
+            <div class="schedule-semester-loading__content">
               <HamsterWheel class="schedule-semester-loading__wheel" />
               <p>正在切换课表…</p>
             </div>
