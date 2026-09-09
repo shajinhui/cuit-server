@@ -23,6 +23,7 @@ import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
 import AppShell from '@/shared/ui/AppShell.vue'
+import HamsterWheel from '@/shared/ui/HamsterWheel.vue'
 
 defineOptions({ name: 'SchedulePage' })
 
@@ -33,6 +34,7 @@ const session = useSessionStore()
 const notice = ref('')
 const moreMenuOpen = ref(false)
 const semesterListOpen = ref(false)
+const switchingSemester = ref(false)
 const moreMenuRef = ref<HTMLElement | null>(null)
 const addCourseOpen = ref(false)
 const addingCourse = ref(false)
@@ -306,7 +308,15 @@ async function switchSemester(semesterID: string) {
   closeMoreMenu()
   if (!semesterID || semesterID === store.selectedSemesterID) return
 
-  await store.load({ semesterID })
+  switchingSemester.value = true
+  const startedAt = Date.now()
+  try {
+    await store.load({ semesterID })
+  } finally {
+    const remaining = 420 - (Date.now() - startedAt)
+    if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining))
+    switchingSemester.value = false
+  }
   if (store.selectedSemesterID !== semesterID) {
     showNotice(store.syncError || store.error || '学期切换失败')
     return
@@ -505,6 +515,20 @@ async function refreshSchedule() {
       </div>
 
       <div class="schedule-board">
+        <Transition name="schedule-semester-loading">
+          <div
+            v-if="switchingSemester"
+            class="schedule-semester-loading"
+            role="status"
+            aria-live="polite"
+          >
+            <div class="schedule-semester-loading__circle">
+              <HamsterWheel class="schedule-semester-loading__wheel" />
+              <p>正在切换课表…</p>
+            </div>
+          </div>
+        </Transition>
+
         <div v-if="store.loading && !store.table" class="schedule-state" aria-live="polite">
           <span class="schedule-state__spinner" aria-hidden="true" />
           <p>正在同步课表…</p>
