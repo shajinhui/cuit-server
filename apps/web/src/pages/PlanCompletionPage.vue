@@ -11,6 +11,7 @@ import {
 } from '@/features/plan-completion'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'PlanCompletionPage' })
 
@@ -76,9 +77,8 @@ function courseMeta(item: PlanCompletionItem) {
     </header>
 
     <section class="completion-content">
-      <div v-if="store.loading && !store.data" class="completion-state" aria-live="polite">
-        <span class="completion-spinner" aria-hidden="true" />
-        <p>正在读取培养方案…</p>
+      <div v-if="store.loading && !store.data" class="completion-state">
+        <HamsterLoader label="正在读取培养方案…" />
       </div>
 
       <div v-else-if="store.error && !store.data" class="completion-state completion-state--error" role="alert">

@@ -23,7 +23,7 @@ import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
 import AppShell from '@/shared/ui/AppShell.vue'
-import HamsterWheel from '@/shared/ui/HamsterWheel.vue'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'SchedulePage' })
 
@@ -519,19 +519,17 @@ async function refreshSchedule() {
           <div
             v-if="switchingSemester"
             class="schedule-semester-loading"
-            role="status"
-            aria-live="polite"
           >
-            <div class="schedule-semester-loading__content">
-              <HamsterWheel class="schedule-semester-loading__wheel" />
-              <p>正在切换课表…</p>
-            </div>
+            <HamsterLoader
+              class="schedule-semester-loading__content"
+              label="正在切换课表…"
+              :size="120"
+            />
           </div>
         </Transition>
 
-        <div v-if="store.loading && !store.table" class="schedule-state" aria-live="polite">
-          <span class="schedule-state__spinner" aria-hidden="true" />
-          <p>正在同步课表…</p>
+        <div v-if="store.loading && !store.table" class="schedule-state">
+          <HamsterLoader label="正在同步课表…" />
         </div>
 
         <div v-else-if="store.error" class="schedule-state schedule-state--error" role="alert">

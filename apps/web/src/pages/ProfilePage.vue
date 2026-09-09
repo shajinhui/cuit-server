@@ -12,6 +12,7 @@ import { usePwaInstall } from '@/features/pwa-install'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppShell from '@/shared/ui/AppShell.vue'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'ProfilePage' })
 
@@ -170,9 +171,8 @@ function maskStudentNumber(studentNo: string) {
             </div>
           </div>
         </div>
-        <div v-else-if="profileStore.loading" class="profile-status" aria-live="polite">
-          <h2>正在同步个人信息…</h2>
-          <p>请稍候</p>
+        <div v-else-if="profileStore.loading" class="profile-status">
+          <HamsterLoader label="正在同步个人信息…" :size="76" />
         </div>
         <div v-else class="profile-status profile-status--error" role="alert">
           <h2>个人信息暂时无法读取</h2>

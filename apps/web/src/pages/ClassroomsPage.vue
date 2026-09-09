@@ -11,6 +11,7 @@ import {
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'ClassroomsPage' })
 
@@ -185,9 +186,8 @@ function handleSheetKeydown(event: KeyboardEvent) {
     </header>
 
     <section class="classroom-content">
-      <div v-if="store.initializing && !store.initialized" class="classroom-state" aria-live="polite">
-        <span class="classroom-spinner" aria-hidden="true" />
-        <p>正在准备查询条件…</p>
+      <div v-if="store.initializing && !store.initialized" class="classroom-state">
+        <HamsterLoader label="正在准备查询条件…" />
       </div>
 
       <div

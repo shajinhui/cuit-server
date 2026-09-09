@@ -468,30 +468,6 @@
   backdrop-filter: blur(4px);
 }
 
-.schedule-semester-loading__content {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  color: rgba(16, 23, 34, 0.72);
-}
-
-.autorun-loading__wheel.schedule-semester-loading__wheel {
-  font-size: 10px;
-  background: rgba(239, 244, 250, 0.86);
-  border-radius: 50%;
-  box-shadow:
-    0 12px 30px rgba(32, 44, 61, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.72);
-}
-
-.schedule-semester-loading__content p {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.3;
-  text-shadow: 0 1px 10px rgba(239, 244, 250, 0.96);
-}
-
 .schedule-semester-loading-enter-active,
 .schedule-semester-loading-leave-active {
   transition: opacity 160ms ease-out;
@@ -530,7 +506,7 @@
   font-size: 17px;
 }
 
-.schedule-state p {
+.schedule-state > p {
   max-width: 280px;
   margin: 8px 0 0;
   font-size: 13px;
@@ -547,15 +523,6 @@
   border: 0;
   border-radius: 18px;
   box-shadow: 0 5px 16px rgba(39, 54, 74, 0.12);
-}
-
-.schedule-state__spinner {
-  width: 25px;
-  height: 25px;
-  border: 2px solid rgba(16, 23, 34, 0.16);
-  border-top-color: rgba(16, 23, 34, 0.72);
-  border-radius: 50%;
-  animation: schedule-spin 720ms linear infinite;
 }
 
 .schedule-state--error p {
@@ -1666,12 +1633,6 @@
   transform: translateY(100%);
 }
 
-@keyframes schedule-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes schedule-sync-spin {
   to {
     transform: rotate(360deg);
@@ -1687,10 +1648,6 @@
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-  }
-
-  .schedule-state__spinner {
-    animation-duration: 1.5s;
   }
 
   .schedule-header__actions .round-action.is-syncing svg {

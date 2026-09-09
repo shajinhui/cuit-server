@@ -141,7 +141,7 @@
   backdrop-filter: blur(12px);
 }
 
-.calendar-state p {
+.calendar-state > p {
   max-width: 270px;
   margin: 8px 0 0;
   font-size: 13px;
@@ -163,15 +163,6 @@
   border: 0;
   border-radius: 19px;
   box-shadow: 0 5px 16px rgba(35, 39, 45, 0.07);
-}
-
-.calendar-spinner {
-  width: 26px;
-  height: 26px;
-  border: 2px solid rgba(60, 60, 67, 0.15);
-  border-top-color: rgba(60, 60, 67, 0.66);
-  border-radius: 50%;
-  animation: calendar-spin 720ms linear infinite;
 }
 
 .calendar-toolbar {
@@ -235,20 +226,11 @@
   text-align: center;
 }
 
-@keyframes calendar-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .calendar-icon-button {
     transition: none;
   }
 
-  .calendar-spinner {
-    animation-duration: 1.5s;
-  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
