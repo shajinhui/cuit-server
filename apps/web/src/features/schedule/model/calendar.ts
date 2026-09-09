@@ -449,6 +449,32 @@ function arrangementSignature(arrangements: CourseArrangement[]) {
 }
 
 function groupCourseSlots(blocks: CourseBlock[], selectedWeek: number) {
+  if (selectedWeek <= 0) {
+    return exactSlotGroups(blocks).map((slotBlocks) => buildSlotGroup(slotBlocks, selectedWeek))
+  }
+
+  const activeGroups = overlappingSlotGroups(blocks.filter((block) => !block.muted))
+  const remainingInactive: CourseBlock[] = []
+  for (const inactive of blocks.filter((block) => block.muted)) {
+    const activeGroup = activeGroups.find((group) =>
+      group.some((active) => blocksOverlap(active, inactive)),
+    )
+    if (activeGroup) {
+      // Keep alternate-week details on the active card without drawing another
+      // card over the currently active schedule.
+      activeGroup.push(inactive)
+    } else {
+      remainingInactive.push(inactive)
+    }
+  }
+
+  return [
+    ...activeGroups,
+    ...selectNonOverlappingInactiveGroups(remainingInactive, selectedWeek),
+  ].map((slotBlocks) => buildSlotGroup(slotBlocks, selectedWeek))
+}
+
+function exactSlotGroups(blocks: CourseBlock[]) {
   const slots = new Map<string, CourseBlock[]>()
   for (const block of blocks) {
     const key = `${block.day}-${block.start}-${block.span}`
@@ -456,41 +482,102 @@ function groupCourseSlots(blocks: CourseBlock[], selectedWeek: number) {
     courses.push(block)
     slots.set(key, courses)
   }
+  return [...slots.values()]
+}
 
-  return [...slots.values()].map((slotBlocks) => {
-    if (slotBlocks.length === 1) {
-      const onlyBlock = slotBlocks[0]
-      return {
-        ...onlyBlock,
-        courses: [toSlotCourse(onlyBlock)],
-        conflict: false,
-      }
+function overlappingSlotGroups(blocks: CourseBlock[]) {
+  const groups: CourseBlock[][] = []
+  const sorted = [...blocks].sort(
+    (left, right) =>
+      left.day - right.day ||
+      left.start - right.start ||
+      left.span - right.span ||
+      left.name.localeCompare(right.name),
+  )
+
+  for (const block of sorted) {
+    const current = groups[groups.length - 1]
+    if (!current || !current.some((candidate) => blocksOverlap(candidate, block))) {
+      groups.push([block])
+    } else {
+      current.push(block)
     }
+  }
+  return groups
+}
 
-    const activeBlocks = slotBlocks.filter((block) => !block.muted)
-    const primary =
-      activeBlocks[0] ??
-      slotBlocks.reduce((nearest, block) =>
-        distanceToWeeks(block.weeks, selectedWeek) < distanceToWeeks(nearest.weeks, selectedWeek)
-          ? block
-          : nearest,
+function selectNonOverlappingInactiveGroups(blocks: CourseBlock[], selectedWeek: number) {
+  const candidates = exactSlotGroups(blocks)
+    .map((slotBlocks) => ({ slotBlocks, primary: primaryBlock(slotBlocks, selectedWeek) }))
+    .sort((left, right) => {
+      const distanceDifference =
+        distanceToWeeks(left.primary.weeks, selectedWeek) -
+        distanceToWeeks(right.primary.weeks, selectedWeek)
+      if (distanceDifference !== 0) return distanceDifference
+      return (
+        left.primary.span - right.primary.span ||
+        left.primary.day - right.primary.day ||
+        left.primary.start - right.primary.start ||
+        left.primary.name.localeCompare(right.primary.name)
       )
-    const courses = slotBlocks.map(toSlotCourse).sort((left, right) => {
-      const mutedDifference = Number(left.muted) - Number(right.muted)
-      if (mutedDifference !== 0) return mutedDifference
-      return (left.weeks[0] ?? 0) - (right.weeks[0] ?? 0) || left.name.localeCompare(right.name)
     })
+  const selected: typeof candidates = []
+  for (const candidate of candidates) {
+    if (selected.some((item) => blocksOverlap(item.primary, candidate.primary))) continue
+    selected.push(candidate)
+  }
+  return selected.map((candidate) => candidate.slotBlocks)
+}
 
+function blocksOverlap(left: CourseBlock, right: CourseBlock) {
+  if (left.day !== right.day) return false
+  const leftEnd = left.start + left.span - 1
+  const rightEnd = right.start + right.span - 1
+  return left.start <= rightEnd && right.start <= leftEnd
+}
+
+function primaryBlock(slotBlocks: CourseBlock[], selectedWeek: number) {
+  const active = slotBlocks.find((block) => !block.muted)
+  if (active) return active
+  return slotBlocks.reduce((nearest, block) =>
+    distanceToWeeks(block.weeks, selectedWeek) < distanceToWeeks(nearest.weeks, selectedWeek)
+      ? block
+      : nearest,
+  )
+}
+
+function buildSlotGroup(slotBlocks: CourseBlock[], selectedWeek: number): CourseBlock {
+  if (slotBlocks.length === 1) {
+    const onlyBlock = slotBlocks[0]
     return {
-      ...primary,
-      id: `slot-${primary.day}-${primary.start}-${primary.span}-${courses
-        .map((course) => course.id)
-        .sort()
-        .join('|')}`,
-      courses,
-      conflict: selectedWeek > 0 && activeBlocks.length > 1,
+      ...onlyBlock,
+      courses: [toSlotCourse(onlyBlock)],
+      conflict: false,
     }
+  }
+
+  const activeBlocks = slotBlocks.filter((block) => !block.muted)
+  const primary = primaryBlock(slotBlocks, selectedWeek)
+  const geometryBlocks = activeBlocks.length > 0 ? activeBlocks : [primary]
+  const start = Math.min(...geometryBlocks.map((block) => block.start))
+  const end = Math.max(...geometryBlocks.map((block) => block.start + block.span - 1))
+  const courses = slotBlocks.map(toSlotCourse).sort((left, right) => {
+    const mutedDifference = Number(left.muted) - Number(right.muted)
+    if (mutedDifference !== 0) return mutedDifference
+    return (left.weeks[0] ?? 0) - (right.weeks[0] ?? 0) || left.name.localeCompare(right.name)
   })
+
+  return {
+    ...primary,
+    id: `slot-${primary.day}-${start}-${end - start + 1}-${courses
+      .map((course) => course.id)
+      .sort()
+      .join('|')}`,
+    start,
+    span: end - start + 1,
+    courses,
+    conflict: new Set(activeBlocks.map((block) => block.colorKey)).size > 1,
+  }
 }
 
 function toSlotCourse(block: CourseBlock): CourseSlotCourse {

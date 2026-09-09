@@ -45,6 +45,7 @@ const emit = defineEmits<{
         {
           'is-muted': course.muted,
           'has-status': course.muted || course.conflict,
+          'has-experiment-time': course.experimentStartTime && course.experimentEndTime,
         },
       ]"
       :style="{

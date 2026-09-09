@@ -348,6 +348,39 @@ describe('schedule calendar model', () => {
     expect(buildCourseBlocks([course], 1)).toHaveLength(2)
   })
 
+  it('does not draw overlapping inactive schedule variants', () => {
+    const course = createCourse('实验 数字电路与逻辑设计B', [
+      createActivity({
+        Weekday: 3,
+        StartSection: 5,
+        EndSection: 6,
+        Weeks: [8, 9, 10, 11],
+        ActivityType: '实验',
+      }),
+      createActivity({
+        Weekday: 3,
+        StartSection: 5,
+        EndSection: 8,
+        Weeks: [12, 13],
+        ActivityType: '实验',
+      }),
+      createActivity({
+        Weekday: 3,
+        StartSection: 7,
+        EndSection: 8,
+        Weeks: [8, 9, 10, 11],
+        ActivityType: '实验',
+      }),
+    ])
+
+    const blocks = buildCourseBlocks([course], 1)
+
+    expect(blocks.map(({ start, span }) => ({ start, span }))).toEqual([
+      { start: 5, span: 2 },
+      { start: 7, span: 2 },
+    ])
+  })
+
   it('preserves an every-week arrangement when duplicate activities are combined', () => {
     const course = createCourse('每周课程', [
       createActivity({ RoomName: 'H2101', Weeks: [] }),
