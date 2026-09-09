@@ -118,7 +118,7 @@ describe('schedule store loading', () => {
     await store.load()
 
     expect(listSemestersMock).toHaveBeenCalledOnce()
-    expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID)
+    expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID, false)
     expect(store.table).toEqual(table)
     // 即使旧后端仍返回 3，已核实校历也不会被覆盖。
     expect(store.currentWeek).toBe(1)
@@ -132,8 +132,22 @@ describe('schedule store loading', () => {
 
     await store.load({ refresh: true })
 
-    expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID)
+    expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID, true)
     expect(store.table?.Courses?.[0]?.Name).toBe('刷新后的课程')
+  })
+
+  it('keeps the last successful table when an explicit refresh fails', async () => {
+    const cached = createTable(currentSemester.ID, '缓存课程')
+    readScheduleCacheMock.mockResolvedValue(createCache(currentSemester, cached))
+    listSemestersMock.mockResolvedValue([currentSemester])
+    getCourseTableMock.mockRejectedValue(new Error('学校系统暂时不可用'))
+    const store = useScheduleStore()
+
+    await store.load({ refresh: true })
+
+    expect(store.table).toEqual(cached)
+    expect(store.usingCachedData).toBe(true)
+    expect(store.syncError).toBe('学校系统暂时不可用')
   })
 
   it('queries the selected semester when the user switches away from the cached semester', async () => {
@@ -144,7 +158,7 @@ describe('schedule store loading', () => {
 
     await store.load({ semesterID: currentSemester.ID })
 
-    expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID)
+    expect(getCourseTableMock).toHaveBeenCalledWith(currentSemester.ID, false)
     expect(store.selectedSemesterID).toBe(currentSemester.ID)
   })
 
@@ -297,7 +311,7 @@ function createTable(semesterID: string, courseName = '示例课程'): CourseTab
 
 function createCache(semester: Semester, table: CourseTable): CachedSchedule {
   return {
-    version: 1,
+    version: 2,
     semesters: [semester],
     selectedSemesterID: semester.ID,
     table,

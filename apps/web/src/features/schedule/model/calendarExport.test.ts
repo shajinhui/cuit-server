@@ -62,6 +62,33 @@ describe('schedule calendar export', () => {
     expect(result.content).not.toContain('BEGIN:VALARM')
   })
 
+  it('prefers precise LABMS times over the fixed section clock', () => {
+    const result = createScheduleCalendarExport({
+      semester,
+      table: createTable([
+        createCourse({
+          Activities: [
+            {
+              ...createActivity('实验楼 A201', [6]),
+              Weekday: 3,
+              StartSection: 10,
+              EndSection: 12,
+              StartTime: '18:30',
+              EndTime: '21:30',
+              ActivityType: '实验',
+              ProjectName: '信号采集实验',
+            },
+          ],
+        }),
+      ]),
+    })
+
+    expect(result.content).toContain('DTSTART;TZID=Asia/Shanghai:20261014T183000')
+    expect(result.content).toContain('DTEND;TZID=Asia/Shanghai:20261014T213000')
+    expect(result.content).toContain('课程类型：实验')
+    expect(result.content).toContain('授课项目：信号采集实验')
+  })
+
   it('includes manual courses and applies saved course overrides', () => {
     const course = createCourse()
     const result = createScheduleCalendarExport({
