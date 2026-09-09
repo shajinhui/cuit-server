@@ -681,6 +681,28 @@
   overflow-wrap: anywhere;
 }
 
+.course-block.is-single-section .course-block__name {
+  font-size: clamp(10px, 2.7vw, 12px);
+  line-height: 1.12;
+  -webkit-line-clamp: 2;
+}
+
+.course-block.is-single-section .course-block__room {
+  overflow: hidden;
+  font-size: clamp(9px, 2.5vw, 11px);
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-block.is-single-section.has-experiment-time {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+.course-block.is-single-section .course-block__time {
+  display: none;
+}
+
 .course-block.has-status {
   padding-bottom: 18px;
 }

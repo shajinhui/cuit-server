@@ -44,6 +44,7 @@ const emit = defineEmits<{
         `course-block--${course.tone}`,
         {
           'is-muted': course.muted,
+          'is-single-section': course.span === 1,
           'has-status': course.muted || course.conflict,
           'has-experiment-time': course.experimentStartTime && course.experimentEndTime,
         },
