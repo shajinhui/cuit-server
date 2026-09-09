@@ -11,6 +11,10 @@ export interface CourseActivity {
   StartSection: number
   EndSection: number
   Weeks: number[] | null
+  StartTime?: string
+  EndTime?: string
+  ActivityType?: string
+  ProjectName?: string
 }
 
 export interface Course {
@@ -31,7 +35,8 @@ export interface CourseTable {
   Courses: Course[] | null
 }
 
-export function getCourseTable(semesterID: string) {
+export function getCourseTable(semesterID: string, refresh = false) {
   const query = new URLSearchParams({ semester_id: semesterID })
+  if (refresh) query.set('refresh', '1')
   return request<CourseTable>(`/api/v1/jwxt/course-table?${query}`)
 }

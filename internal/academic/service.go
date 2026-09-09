@@ -24,12 +24,14 @@ const defaultClientIdleTTL = 3 * time.Minute
 
 type JWXTClient interface {
 	Login(ctx context.Context, username string, password string) error
+	LoginLABMS(ctx context.Context, username string, password string) error
 	GetStudentProfile(ctx context.Context) (jwxt.StudentProfile, error)
 	GetPlanCompletion(ctx context.Context) (jwxt.PlanCompletion, error)
 	ListSemesters(ctx context.Context) ([]jwxt.Semester, error)
 	GetGrades(ctx context.Context, semesterID string) ([]jwxt.Grade, error)
 	GetExamsByType(ctx context.Context, semesterID string, examType string) ([]jwxt.Exam, error)
 	GetCourseTable(ctx context.Context, semesterID string) (jwxt.CourseTable, error)
+	GetLABMSCourseTable(ctx context.Context, semesterID string) (jwxt.CourseTable, error)
 	GetClassroomOptions(ctx context.Context, semesterID string, campusID string) (jwxt.ClassroomOptions, error)
 	GetAvailableClassrooms(ctx context.Context, query jwxt.AvailableClassroomQuery) ([]jwxt.Classroom, error)
 	GetClassroomSchedule(ctx context.Context, semesterID string, campusID string) (jwxt.ClassroomSchedule, error)
@@ -178,6 +180,48 @@ func (s *Service) GetCourseTable(
 	return withClient(s, ctx, sessionID, func(client JWXTClient) (jwxt.CourseTable, error) {
 		return client.GetCourseTable(ctx, semesterID)
 	})
+}
+
+// GetLABMSCourseTable 使用独立于 EAMS 的 LABMS CookieJar；LABMS 会话失效时只重建该会话，
+// 不丢弃仍然可用的 EAMS Client，也不会扩大为通用网络重试。
+func (s *Service) GetLABMSCourseTable(
+	ctx context.Context,
+	sessionID string,
+	semesterID string,
+) (jwxt.CourseTable, error) {
+	semesterID = strings.TrimSpace(semesterID)
+	if semesterID == "" {
+		return jwxt.CourseTable{}, ErrInvalidInput
+	}
+	entry, tokenHash, err := s.sessionEntry(ctx, sessionID)
+	if err != nil {
+		return jwxt.CourseTable{}, err
+	}
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.revoked {
+		return jwxt.CourseTable{}, ErrUnauthenticated
+	}
+	client, err := s.ensureClientLocked(ctx, tokenHash, entry)
+	if err != nil {
+		return jwxt.CourseTable{}, err
+	}
+	table, err := client.GetLABMSCourseTable(ctx, semesterID)
+	if errors.Is(err, jwxt.ErrSessionExpired) {
+		password, decryptErr := s.credentials.Decrypt(entry.user.EncryptedPassword)
+		if decryptErr != nil {
+			return jwxt.CourseTable{}, decryptErr
+		}
+		if loginErr := client.LoginLABMS(ctx, entry.user.StudentNo, password); loginErr != nil {
+			return jwxt.CourseTable{}, loginErr
+		}
+		table, err = client.GetLABMSCourseTable(ctx, semesterID)
+	}
+	if entry.client != nil && !entry.revoked {
+		entry.lastUsed = s.now()
+		s.scheduleClientReleaseLocked(entry)
+	}
+	return table, err
 }
 
 func (s *Service) GetClassroomOptions(

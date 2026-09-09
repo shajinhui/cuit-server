@@ -21,6 +21,13 @@ SQLite 文件默认位于 `data/cuit-server.db`，可通过 `SQLITE_PATH` 修改
 通过 `REDIS_URL` 配置 Redis，例如 `redis://127.0.0.1:6379/0`。Redis
 不可用时服务会跳过缓存并继续访问学校系统，不影响 SQLite 会话和登录主流程。
 缓存只保存有有效期的查询结果，不保存密码、Cookie、Ticket 或 JWXT Client。
+个人课表缓存时间为一小时；`course-table` 接口传 `refresh=1` 会绕过缓存，只有学校
+数据源成功返回时才覆盖旧值；失败且已有旧值时直接返回最后一次成功课表。
+
+LABMS 个人课表源按稳定用户分桶灰度：`LABMS_SCHEDULE_MODE` 可设为 `off`、
+`shadow` 或 `primary`，`LABMS_SCHEDULE_ROLLOUT_PERCENT` 可设为 `0` 到 `100`。
+`shadow` 仍返回 EAMS，只记录两边课程数、周次、节次和地点的聚合差异；`primary`
+优先返回 LABMS，失败时回退 EAMS。首次部署保持 `off/0`，观察阶段再逐步提高比例。
 
 `LOGIN_MAX_CONCURRENCY` 控制同时执行的学校认证请求数量，默认值为 `200`。
 达到上限的登录请求不会排队，而是返回 `503` 和 `Retry-After: 5`。

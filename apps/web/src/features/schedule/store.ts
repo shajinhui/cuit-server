@@ -104,7 +104,7 @@ export const useScheduleStore = defineStore('schedule', {
           : (findCurrentSemester(semesters)?.ID ?? '')
 
         const [tableResult, weekResult] = await Promise.allSettled([
-          getCourseTable(selectedSemesterID),
+          getCourseTable(selectedSemesterID, options.refresh === true),
           getCurrentWeek(),
         ])
         if (tableResult.status === 'rejected') throw tableResult.reason
@@ -123,7 +123,7 @@ export const useScheduleStore = defineStore('schedule', {
         this.usingCachedData = false
         useSessionStore().markAuthenticated()
         await writeScheduleCache({
-          version: 1,
+          version: 2,
           semesters,
           selectedSemesterID,
           table: tableResult.value,

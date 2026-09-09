@@ -81,18 +81,19 @@ export function createScheduleCalendarExport({
   const events: CalendarEvent[] = []
 
   for (const entry of entries) {
-    const startTime = timeSlots[entry.start - 1]?.[0]
     const endSection = entry.start + entry.span - 1
-    const endTime = timeSlots[endSection - 1]?.[1]
-    if (!startTime || !endTime) {
-      throw new Error(`“${entry.name}”使用了尚未配置时间的第 ${entry.start}–${endSection} 节`)
-    }
 
     for (let week = 1; week <= weekCount; week += 1) {
       const activeArrangements = entry.arrangements.filter(
         (arrangement) => arrangement.weeks.length === 0 || arrangement.weeks.includes(week),
       )
       if (activeArrangements.length === 0) continue
+
+      const startTime = activeArrangements[0]?.startTime || timeSlots[entry.start - 1]?.[0]
+      const endTime = activeArrangements[0]?.endTime || timeSlots[endSection - 1]?.[1]
+      if (!startTime || !endTime) {
+        throw new Error(`“${entry.name}”使用了尚未配置时间的第 ${entry.start}–${endSection} 节`)
+      }
 
       const date = dateForSemesterWeek(semester, week, entry.day)
       if (!date) continue
@@ -102,6 +103,8 @@ export function createScheduleCalendarExport({
       const startsAt = withTime(date, startTime)
       const endsAt = withTime(date, endTime)
       const description = [
+        activeArrangements[0]?.activityType ? `课程类型：${activeArrangements[0].activityType}` : '',
+        activeArrangements[0]?.projectName ? `授课项目：${activeArrangements[0].projectName}` : '',
         effectiveTeachers.length > 0 ? `教师：${effectiveTeachers.join('、')}` : '',
         entry.teachingClass ? `教学班：${entry.teachingClass}` : '',
         entry.code ? `课程代码：${entry.code}` : '',

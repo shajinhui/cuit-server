@@ -47,6 +47,10 @@ export interface CourseArrangement {
   room: string
   teachers: string[]
   weeks: number[]
+  startTime?: string
+  endTime?: string
+  activityType?: string
+  projectName?: string
 }
 
 const weekdays = ['一', '二', '三', '四', '五', '六', '日']
@@ -336,7 +340,11 @@ function buildArrangements(activities: NonNullable<Course['Activities']>): Cours
   for (const activity of activities) {
     const room = activity.RoomName || '地点待定'
     const teachers = uniqueStrings(activity.Teachers ?? [])
-    const key = `${room}\u0000${teachers.join('\u0000')}`
+    const startTime = activity.StartTime?.trim() || undefined
+    const endTime = activity.EndTime?.trim() || undefined
+    const activityType = activity.ActivityType?.trim() || undefined
+    const projectName = activity.ProjectName?.trim() || undefined
+    const key = `${room}\u0000${teachers.join('\u0000')}\u0000${startTime ?? ''}\u0000${endTime ?? ''}\u0000${activityType ?? ''}\u0000${projectName ?? ''}`
     const existing = arrangements.get(key)
     if (existing) {
       existing.weeks = mergeWeeks(existing.weeks, activity.Weeks ?? [])
@@ -346,6 +354,10 @@ function buildArrangements(activities: NonNullable<Course['Activities']>): Cours
       room,
       teachers,
       weeks: uniqueNumbers(activity.Weeks ?? []),
+      startTime,
+      endTime,
+      activityType,
+      projectName,
     })
   }
 
@@ -415,7 +427,7 @@ function arrangementSignature(arrangements: CourseArrangement[]) {
   return arrangements
     .map(
       (arrangement) =>
-        `${arrangement.room}\u0000${arrangement.teachers.join('\u0000')}\u0000${arrangement.weeks.join(',')}`,
+        `${arrangement.room}\u0000${arrangement.teachers.join('\u0000')}\u0000${arrangement.weeks.join(',')}\u0000${arrangement.startTime ?? ''}\u0000${arrangement.endTime ?? ''}`,
     )
     .join('\u0001')
 }
@@ -479,6 +491,10 @@ function toSlotCourse(block: CourseBlock): CourseSlotCourse {
       room: arrangement.room,
       teachers: [...arrangement.teachers],
       weeks: [...arrangement.weeks],
+      startTime: arrangement.startTime,
+      endTime: arrangement.endTime,
+      activityType: arrangement.activityType,
+      projectName: arrangement.projectName,
     })),
     source: block.source,
     colorKey: block.colorKey,

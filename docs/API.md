@@ -441,7 +441,7 @@ GET /api/v1/jwxt/exams?semester_id=1006&exam_type=final
 ### 6.1 查询指定学期课表
 
 ```http
-GET /api/v1/jwxt/course-table?semester_id=1106
+GET /api/v1/jwxt/course-table?semester_id=1106&refresh=1
 ```
 
 查询参数：
@@ -449,6 +449,7 @@ GET /api/v1/jwxt/course-table?semester_id=1106
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `semester_id` | string | 是 | `/api/v1/jwxt/semesters` 返回的 `ID` |
+| `refresh` | string | 否 | 传 `1` 时跳过一小时服务端缓存并重新查询；查询失败时返回且不覆盖最后一次成功缓存 |
 
 成功响应：
 
@@ -478,7 +479,11 @@ GET /api/v1/jwxt/course-table?semester_id=1106
             "Weekday": 1,
             "StartSection": 1,
             "EndSection": 2,
-            "Weeks": [1, 2, 3, 4]
+            "Weeks": [1, 2, 3, 4],
+            "StartTime": "08:20",
+            "EndTime": "10:00",
+            "ActivityType": "理论",
+            "ProjectName": ""
           }
         ]
       }
@@ -491,7 +496,7 @@ GET /api/v1/jwxt/course-table?semester_id=1106
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `SemesterID` | string | 查询的 EAMS 学期 ID |
+| `SemesterID` | string | 查询使用的 EAMS 学期 ID（课表内容可来自 EAMS 或 LABMS） |
 | `WeekCount` | number | 该学期课表覆盖的最大教学周 |
 | `SectionsPerDay` | number | 每天的总节次数量 |
 | `Courses` | array | 该学期课程及上课安排 |
@@ -500,7 +505,7 @@ GET /api/v1/jwxt/course-table?semester_id=1106
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `LessonID` | string | EAMS 教学任务 ID |
+| `LessonID` | string | 数据源内的稳定教学任务标识 |
 | `Code` | string | 课程代码 |
 | `Name` | string | 课程名称 |
 | `Credits` | string | 学分，保留小数形式 |
@@ -513,7 +518,7 @@ GET /api/v1/jwxt/course-table?semester_id=1106
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `TeacherIDs` | string[] | EAMS 教师内部 ID |
+| `TeacherIDs` | string[] | 教师内部 ID；数据源未提供时为 `null` |
 | `Teachers` | string[] | 本次上课的教师列表 |
 | `RoomID` | string | EAMS 教室内部 ID |
 | `RoomName` | string | 教室名称 |
@@ -521,6 +526,17 @@ GET /api/v1/jwxt/course-table?semester_id=1106
 | `StartSection` | number | 起始节次，从 `1` 开始，包含该节 |
 | `EndSection` | number | 结束节次，从 `1` 开始，包含该节 |
 | `Weeks` | number[] | 实际上课周次，可表达连续周、单双周和不规则周次 |
+| `StartTime` | string | LABMS 提供的精确开始时间，格式 `HH:mm`；EAMS 数据可能为空 |
+| `EndTime` | string | LABMS 提供的精确结束时间，格式 `HH:mm`；EAMS 数据可能为空 |
+| `ActivityType` | string | LABMS 的课程安排类型，例如“理论”或“实验”；EAMS 数据可能为空 |
+| `ProjectName` | string | LABMS 的实验项目名称；没有项目或 EAMS 数据时为空 |
+
+服务端课表缓存键使用 v2 结构，缓存时间为一小时。数据源切换由部署环境控制：
+
+- `LABMS_SCHEDULE_MODE=off`：仅使用 EAMS（默认）。
+- `LABMS_SCHEDULE_MODE=shadow`：接口仍返回 EAMS，同时对纳入比例的用户查询 LABMS，并只记录课程数、周次、节次和地点的聚合差异。
+- `LABMS_SCHEDULE_MODE=primary`：纳入比例的用户优先使用 LABMS，失败时自动回退 EAMS。
+- `LABMS_SCHEDULE_ROLLOUT_PERCENT=0..100`：按稳定用户 ID 分桶，控制影子查询或主源切换比例。
 
 ### 6.2 查询空教室筛选项
 

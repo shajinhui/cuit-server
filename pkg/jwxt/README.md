@@ -4,11 +4,11 @@
 
 职责边界：
 
-- 访问 EAMS。
+- 访问 EAMS 和 LABMS 实验教学系统。
 - 跳转 CAS。
 - 管理独立 CookieJar。
 - 登录并保持会话。
-- 查询学期、成绩、个人课表、整学期教室占用快照、空闲教室和考试考场。
+- 查询学期、成绩、EAMS/LABMS 个人课表、整学期教室占用快照、空闲教室和考试考场。
 - 解析教务页面。
 - 判断 Session 是否失效。
 
@@ -33,11 +33,13 @@ client.go          对外 Client、NewClient、IsLoggedIn 等入口
 config.go          SDK 配置
 errors.go          SDK 错误
 grade.go           学期和成绩查询入口
-course_table.go    个人课表和空闲教室查询入口
+course_table.go    EAMS 个人课表和空闲教室查询入口
+labms_course_table.go LABMS 登录和个人课表查询入口
 exam.go            考试批次和考场查询入口
 internal/login/    CAS/EAMS 登录私有实现
 internal/grade/    学期请求、成绩请求和纯解析
 internal/coursetable/  课表请求、教室占用请求和纯解析
+internal/labms/    LABMS 请求、响应兼容和纯解析
 internal/exam/     考试批次请求、考场请求和纯解析
 ```
 
@@ -77,4 +79,14 @@ CUIT_JWXT_USERNAME='<学号>' \
 CUIT_JWXT_PASSWORD='<密码>' \
 CUIT_JWXT_SEMESTER_ID='<学期ID>' \
 go test -tags jwxt_live ./pkg/jwxt -run TestLiveExamQuery
+```
+
+LABMS 课表真实链路使用相同环境变量运行：
+
+```bash
+CUIT_JWXT_LIVE_TEST=1 \
+CUIT_JWXT_USERNAME='<学号>' \
+CUIT_JWXT_PASSWORD='<密码>' \
+CUIT_JWXT_SEMESTER_ID='<学期ID>' \
+go test -tags jwxt_live ./pkg/jwxt -run TestLiveLABMSCourseTable
 ```

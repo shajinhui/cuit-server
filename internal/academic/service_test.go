@@ -27,6 +27,13 @@ type fakeJWXTClient struct {
 	examErr              error
 	courseTable          jwxt.CourseTable
 	courseTableErr       error
+	labmsLoginUsername   string
+	labmsLoginPassword   string
+	labmsLoginCalls      int
+	labmsLoginErr        error
+	labmsCourseTable     jwxt.CourseTable
+	labmsCourseTableErr  error
+	labmsCourseCalls     int
 	classroomOptions     jwxt.ClassroomOptions
 	classroomOptionsErr  error
 	availableRooms       []jwxt.Classroom
@@ -84,6 +91,23 @@ func (f *fakeJWXTClient) GetExamsByType(context.Context, string, string) ([]jwxt
 
 func (f *fakeJWXTClient) GetCourseTable(context.Context, string) (jwxt.CourseTable, error) {
 	return f.courseTable, f.courseTableErr
+}
+
+func (f *fakeJWXTClient) LoginLABMS(_ context.Context, username string, password string) error {
+	f.labmsLoginUsername = username
+	f.labmsLoginPassword = password
+	f.labmsLoginCalls++
+	return f.labmsLoginErr
+}
+
+func (f *fakeJWXTClient) GetLABMSCourseTable(context.Context, string) (jwxt.CourseTable, error) {
+	f.labmsCourseCalls++
+	if f.labmsCourseTableErr != nil {
+		err := f.labmsCourseTableErr
+		f.labmsCourseTableErr = nil
+		return jwxt.CourseTable{}, err
+	}
+	return f.labmsCourseTable, nil
 }
 
 func (f *fakeJWXTClient) GetClassroomOptions(context.Context, string, string) (jwxt.ClassroomOptions, error) {
@@ -239,6 +263,34 @@ func TestCourseTableQueryReloginsAfterEAMSSessionExpires(t *testing.T) {
 	}
 	if restored.loginUsername != "test-student" {
 		t.Fatal("replacement client was not logged in")
+	}
+}
+
+func TestLABMSCourseTableReloginsOnlyLABMSSession(t *testing.T) {
+	repository := newMemoryRepository()
+	credentials := testCredentialCipher(t)
+	client := &fakeJWXTClient{
+		labmsCourseTable:    jwxt.CourseTable{SemesterID: "1106", WeekCount: 19},
+		labmsCourseTableErr: jwxt.ErrSessionExpired,
+	}
+	service := NewService(func() (JWXTClient, error) { return client, nil }, repository, credentials, time.Hour)
+
+	sessionID, err := service.Login(context.Background(), "test-student", "test-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	table, err := service.GetLABMSCourseTable(context.Background(), sessionID, "1106")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if table.SemesterID != "1106" || client.labmsCourseCalls != 2 || client.labmsLoginCalls != 1 {
+		t.Fatalf("unexpected LABMS recovery: table=%+v query_calls=%d login_calls=%d", table, client.labmsCourseCalls, client.labmsLoginCalls)
+	}
+	if client.labmsLoginUsername != "test-student" || client.labmsLoginPassword != "test-password" {
+		t.Fatal("LABMS recovery did not use the stored credential")
+	}
+	if client.loginUsername != "test-student" {
+		t.Fatal("the existing EAMS client should remain in use")
 	}
 }
 

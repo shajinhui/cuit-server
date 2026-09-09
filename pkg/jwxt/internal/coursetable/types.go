@@ -32,6 +32,11 @@ type CourseActivity struct {
 	StartSection int   // 从1开始，包含该节。
 	EndSection   int   // 从1开始，包含该节。
 	Weeks        []int // 保存确切教学周，能够直接表达连续周、单双周和不规则周次。
+	// LABMS 的实验、实习可能不遵循统一节次作息；精确时间存在时应优先于节次推算。
+	StartTime    string
+	EndTime      string
+	ActivityType string
+	ProjectName  string
 }
 
 // AvailableClassroomQuery 指定需要查询的教学周、星期、节次和教室筛选条件。

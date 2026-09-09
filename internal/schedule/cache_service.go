@@ -11,13 +11,16 @@ import (
 )
 
 const (
-	courseTableCacheTTL       = 6 * time.Hour
+	courseTableCacheTTL       = time.Hour
 	classroomOptionsCacheTTL  = 24 * time.Hour
 	classroomScheduleCacheTTL = 24 * time.Hour
 )
 
 type cachedCourseTableSource interface {
-	CourseTableService
+	GetCourseTable(ctx context.Context, sessionID string, semesterID string) (jwxt.CourseTable, error)
+	GetClassroomOptions(ctx context.Context, sessionID string, semesterID string, campusID string) (jwxt.ClassroomOptions, error)
+	GetAvailableClassrooms(ctx context.Context, sessionID string, query jwxt.AvailableClassroomQuery) ([]jwxt.Classroom, error)
+	GetClassroomSchedule(ctx context.Context, sessionID string, semesterID string, campusID string) (jwxt.ClassroomSchedule, error)
 	ResolveUserID(ctx context.Context, sessionID string) (int64, error)
 }
 
@@ -47,7 +50,7 @@ func (s *CachedCourseTableService) GetCourseTable(
 	if err != nil {
 		return jwxt.CourseTable{}, err
 	}
-	key := "cuit:v1:user:" + strconv.FormatInt(userID, 10) + ":course-table:" + semesterID
+	key := courseTableCacheKey(userID, semesterID)
 	return platformcache.GetOrLoad(
 		ctx,
 		s.cache,
@@ -57,6 +60,34 @@ func (s *CachedCourseTableService) GetCourseTable(
 			return s.source.GetCourseTable(ctx, sessionID, semesterID)
 		},
 	)
+}
+
+func (s *CachedCourseTableService) RefreshCourseTable(
+	ctx context.Context,
+	sessionID string,
+	semesterID string,
+) (jwxt.CourseTable, error) {
+	semesterID = strings.TrimSpace(semesterID)
+	if semesterID == "" {
+		return s.source.GetCourseTable(ctx, sessionID, semesterID)
+	}
+	userID, err := s.source.ResolveUserID(ctx, sessionID)
+	if err != nil {
+		return jwxt.CourseTable{}, err
+	}
+	return platformcache.Refresh(
+		ctx,
+		s.cache,
+		courseTableCacheKey(userID, semesterID),
+		courseTableCacheTTL,
+		func(ctx context.Context) (jwxt.CourseTable, error) {
+			return s.source.GetCourseTable(ctx, sessionID, semesterID)
+		},
+	)
+}
+
+func courseTableCacheKey(userID int64, semesterID string) string {
+	return "cuit:v2:user:" + strconv.FormatInt(userID, 10) + ":course-table:" + semesterID
 }
 
 func (s *CachedCourseTableService) GetClassroomOptions(

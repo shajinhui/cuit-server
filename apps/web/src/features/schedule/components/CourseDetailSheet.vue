@@ -53,7 +53,7 @@ const detailRows = computed(() => {
           {
             label: '上课安排',
             value: props.course.arrangements
-              .map((arrangement) => `${formatWeeks(arrangement.weeks)} · ${arrangement.room}`)
+              .map(formatArrangement)
               .join('\n'),
           },
         ]
@@ -128,10 +128,19 @@ function confirmRemoval() {
 
 function formatSlotCourse(course: CourseSlotCourse) {
   const arrangements = course.arrangements
-    .map((arrangement) => `${formatWeeks(arrangement.weeks)} · ${arrangement.room}`)
+    .map(formatArrangement)
     .join('；')
   const teachers = course.teachers.length > 0 ? ` · ${course.teachers.join('、')}` : ''
   return `${course.name}\n${arrangements}${teachers}`
+}
+
+function formatArrangement(arrangement: CourseSlotCourse['arrangements'][number]) {
+  const exactTime =
+    arrangement.startTime && arrangement.endTime
+      ? ` · ${arrangement.startTime}–${arrangement.endTime}`
+      : ''
+  const project = arrangement.projectName ? ` · ${arrangement.projectName}` : ''
+  return `${formatWeeks(arrangement.weeks)} · ${arrangement.room}${exactTime}${project}`
 }
 
 function formatWeeks(weeks: number[]) {

@@ -108,9 +108,25 @@ func main() {
 		// 每次教务登录都创建独立 Client，确保不同学生不会共享 CookieJar。
 		return jwxt.NewClient()
 	}, repository, credentials, 3*time.Minute)
+	labmsMode := strings.ToLower(strings.TrimSpace(os.Getenv("LABMS_SCHEDULE_MODE")))
+	labmsRolloutPercent, err := boundedEnvironmentInt("LABMS_SCHEDULE_ROLLOUT_PERCENT", 0, 0, 100)
+	if err != nil {
+		log.Fatal(err)
+	}
+	scheduleSource, err := schedule.NewSwitchingCourseTableService(jwxtService, schedule.SwitchingSourceConfig{
+		Mode:           schedule.SourceMode(labmsMode),
+		RolloutPercent: labmsRolloutPercent,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if labmsMode == "" {
+		labmsMode = string(schedule.SourceModeOff)
+	}
+	log.Printf("LABMS 课表源: mode=%s rollout=%d%%", labmsMode, labmsRolloutPercent)
 	cacheLoader := platformcache.NewLoader(cacheStore)
 	academicService := academic.NewCachedService(jwxtService, cacheLoader)
-	scheduleService := schedule.NewCachedCourseTableService(jwxtService, cacheLoader)
+	scheduleService := schedule.NewCachedCourseTableService(scheduleSource, cacheLoader)
 	currentWeekService := schedule.NewCachedCurrentWeekService(schedule.NewCalendarClient(), cacheLoader)
 	academicHandler := academic.NewHandler(academicService, secureCookie, loginLimiter)
 	scheduleHandler := schedule.NewHandler(scheduleService, currentWeekService)
@@ -165,6 +181,18 @@ func positiveEnvironmentInt(name string, fallback int) (int, error) {
 	value, err := strconv.Atoi(raw)
 	if err != nil || value < 1 {
 		return 0, errors.New(name + " must be a positive integer")
+	}
+	return value, nil
+}
+
+func boundedEnvironmentInt(name string, fallback int, minimum int, maximum int) (int, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value < minimum || value > maximum {
+		return 0, errors.New(name + " must be between " + strconv.Itoa(minimum) + " and " + strconv.Itoa(maximum))
 	}
 	return value, nil
 }

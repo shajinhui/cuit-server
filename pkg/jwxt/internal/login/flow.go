@@ -8,6 +8,7 @@ package login
 
 import (
 	"context"
+	"net/url"
 
 	"cuit-server/pkg/jwxt/internal/jwxterr"
 	"github.com/go-resty/resty/v2"
@@ -38,4 +39,37 @@ func Login(ctx context.Context, client *resty.Client, cfg Config, username strin
 		return err
 	}
 	return nil
+}
+
+// LoginTarget 复用一网通办账号登录任意受学校 CAS 保护的业务系统。
+// startURL 必须由目标系统生成，其中的 service/redirect 参数必须原样保留。
+func LoginTarget(
+	ctx context.Context,
+	client *resty.Client,
+	cfg Config,
+	startURL *url.URL,
+	username string,
+	password string,
+) error {
+	loginPage, err := follow(ctx, client, startURL, cfg.MaxRedirects)
+	if err != nil {
+		return err
+	}
+	if !isCASLoginURL(loginPage.URL) {
+		return jwxterr.WithURL(jwxterr.ErrUnsupportedLoginPage, "target-login-start", loginPage.URL, loginPage.Status, "final page is not CAS login")
+	}
+	route, err := ParsePortalRoute(loginPage.URL, loginPage.Body)
+	if err != nil {
+		// 部分目标系统的 CAS 登录页在已有 Portal Cookie 时不再输出跳转链接。
+		// 学校公开登录页对应的固定入口仍是 loginType=cas，redirectUrl 必须使用当前完整 CAS URL。
+		portalPage := cloneURL(cfg.PortalBaseURL)
+		portalPage.Path = "/"
+		portalPage.Fragment = "/login"
+		route = &PortalRoute{
+			PageURL:     portalPage,
+			LoginType:   "cas",
+			RedirectURL: loginPage.URL.String(),
+		}
+	}
+	return loginTargetViaPortal(ctx, client, cfg, route, username, password)
 }

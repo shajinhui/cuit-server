@@ -81,6 +81,45 @@ func GetOrLoad[T any](
 	}
 }
 
+// Refresh 跳过前置缓存读取；上游失败时回读并返回最后一次成功缓存，且不会覆盖它。
+// 只有上游和旧缓存都不可用时，才把刷新错误返回调用方。
+func Refresh[T any](
+	ctx context.Context,
+	loader *Loader,
+	key string,
+	ttl time.Duration,
+	source func(context.Context) (T, error),
+) (T, error) {
+	var zero T
+	loader.requests.Add(1)
+	resultChannel := loader.group.DoChan("refresh:"+key, func() (any, error) {
+		loader.sourceLoads.Add(1)
+		value, err := source(ctx)
+		if err != nil {
+			if stale, found := readJSON[T](ctx, loader, key); found {
+				loader.hits.Add(1)
+				return stale, nil
+			}
+			return nil, err
+		}
+		writeJSON(ctx, loader, key, value, ttl)
+		return value, nil
+	})
+	select {
+	case <-ctx.Done():
+		return zero, ctx.Err()
+	case result := <-resultChannel:
+		if result.Err != nil {
+			return zero, result.Err
+		}
+		value, ok := result.Val.(T)
+		if !ok {
+			return zero, fmt.Errorf("cache: unexpected refreshed value type for key %s", key)
+		}
+		return value, nil
+	}
+}
+
 type Snapshot struct {
 	Enabled           bool      `json:"enabled"`
 	Reachable         bool      `json:"reachable"`

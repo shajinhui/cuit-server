@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,8 @@ import (
 type cachedCourseSource struct {
 	mu            sync.Mutex
 	scheduleCalls int
+	courseCalls   int
+	courseErr     error
 }
 
 func (s *cachedCourseSource) ResolveUserID(context.Context, string) (int64, error) {
@@ -24,7 +27,11 @@ func (s *cachedCourseSource) GetCourseTable(
 	string,
 	string,
 ) (jwxt.CourseTable, error) {
-	return jwxt.CourseTable{}, nil
+	s.mu.Lock()
+	s.courseCalls++
+	call := s.courseCalls
+	s.mu.Unlock()
+	return jwxt.CourseTable{WeekCount: call}, s.courseErr
 }
 
 func (s *cachedCourseSource) GetClassroomOptions(
@@ -73,6 +80,55 @@ func TestCachedCourseTableServiceSharesClassroomScheduleAcrossUsers(t *testing.T
 	defer source.mu.Unlock()
 	if source.scheduleCalls != 1 {
 		t.Fatalf("same semester and campus should query JWXT once, got %d", source.scheduleCalls)
+	}
+}
+
+func TestRefreshCourseTableBypassesAndReplacesCache(t *testing.T) {
+	source := &cachedCourseSource{}
+	cached := NewCachedCourseTableService(source, platformcache.NewLoader(newScheduleCacheStore()))
+	first, err := cached.GetCourseTable(context.Background(), "session", "1106")
+	if err != nil || first.WeekCount != 1 {
+		t.Fatalf("unexpected first table: table=%+v err=%v", first, err)
+	}
+	refreshed, err := cached.RefreshCourseTable(context.Background(), "session", "1106")
+	if err != nil || refreshed.WeekCount != 2 {
+		t.Fatalf("refresh did not call upstream: table=%+v err=%v", refreshed, err)
+	}
+	cachedAgain, err := cached.GetCourseTable(context.Background(), "session", "1106")
+	if err != nil || cachedAgain.WeekCount != 2 {
+		t.Fatalf("refreshed value was not cached: table=%+v err=%v", cachedAgain, err)
+	}
+}
+
+func TestRefreshCourseTableFailurePreservesLastSuccessfulValue(t *testing.T) {
+	source := &cachedCourseSource{}
+	cached := NewCachedCourseTableService(source, platformcache.NewLoader(newScheduleCacheStore()))
+	first, err := cached.GetCourseTable(context.Background(), "session", "1106")
+	if err != nil || first.WeekCount != 1 {
+		t.Fatalf("unexpected first table: table=%+v err=%v", first, err)
+	}
+
+	source.courseErr = errors.New("upstream unavailable")
+	stale, err := cached.RefreshCourseTable(context.Background(), "session", "1106")
+	if err != nil || stale.WeekCount != 1 {
+		t.Fatalf("failed refresh should return the last successful value: table=%+v err=%v", stale, err)
+	}
+	source.courseErr = nil
+
+	cachedAgain, err := cached.GetCourseTable(context.Background(), "session", "1106")
+	if err != nil || cachedAgain.WeekCount != 1 {
+		t.Fatalf("failed refresh replaced last successful value: table=%+v err=%v", cachedAgain, err)
+	}
+	if source.courseCalls != 2 {
+		t.Fatalf("cache lookup should not call upstream again, calls=%d", source.courseCalls)
+	}
+}
+
+func TestRefreshCourseTableFailureWithoutPreviousValueReturnsError(t *testing.T) {
+	source := &cachedCourseSource{courseErr: errors.New("upstream unavailable")}
+	cached := NewCachedCourseTableService(source, platformcache.NewLoader(newScheduleCacheStore()))
+	if _, err := cached.RefreshCourseTable(context.Background(), "session", "1106"); err == nil {
+		t.Fatal("refresh without a previous successful value should return the upstream error")
 	}
 }
 

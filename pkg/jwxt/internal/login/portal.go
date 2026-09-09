@@ -186,6 +186,31 @@ func loginViaPortal(ctx context.Context, client *resty.Client, cfg Config, route
 	return followPortalRedirect(ctx, client, cfg, redirectURL)
 }
 
+func loginTargetViaPortal(ctx context.Context, client *resty.Client, cfg Config, route *PortalRoute, username string, password string) error {
+	if strings.TrimSpace(username) == "" || password == "" {
+		return jwxterr.WithMessage(jwxterr.ErrInvalidCredentials, "empty username or password")
+	}
+	loginURL := resolvePortalPath(cfg.PortalBaseURL, "/api/base/login")
+	result, status, err := submitPortalLogin(ctx, client, loginURL, route, username, password)
+	if err != nil {
+		return err
+	}
+	// 切换到学校账号只建立身份上下文；返回的 redirect 可能仍指向上一次登录的 EAMS service。
+	// 目标系统登录必须继续使用本次 route，不能被旧 redirect 覆盖。
+	if _, err := switchSchoolAccount(ctx, client, cfg); err != nil {
+		return err
+	}
+	redirect := route.RedirectURL
+	if result.Code == http.StatusFound {
+		redirect = firstNonEmpty(result.RedirectURI, result.RedirectURL, redirect)
+	}
+	redirectURL, err := url.Parse(redirect)
+	if err != nil || redirectURL.Host == "" {
+		return jwxterr.WithURL(jwxterr.ErrLoginVerificationFailed, "portal-target-login", loginURL, status, "invalid portal redirect")
+	}
+	return followPortalRedirect(ctx, client, cfg, redirectURL)
+}
+
 func submitPortalLogin(ctx context.Context, client *resty.Client, loginURL *url.URL, route *PortalRoute, username string, password string) (portalLoginResponse, int, error) {
 	payload := map[string]string{
 		"username":     username,

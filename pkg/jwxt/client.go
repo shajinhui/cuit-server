@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"time"
 
 	"cuit-server/pkg/jwxt/internal/jwxterr"
 	loginflow "cuit-server/pkg/jwxt/internal/login"
@@ -21,9 +22,11 @@ import (
 // Client 是 JWXT SDK 的核心客户端类型，封装了 HTTP 客户端、配置和会话状态。
 // 注意：每个 Client 实例维护自己的 CookieJar（在 NewClient 中创建），以避免多用户会话混淆。
 type Client struct {
-	resty    *resty.Client
-	cfg      Config
-	loggedIn bool
+	resty         *resty.Client
+	labmsResty    *resty.Client
+	cfg           Config
+	loggedIn      bool
+	labmsLoggedIn bool
 }
 
 // NewClient 创建一个新的 JWXT SDK 客户端实例。
@@ -38,6 +41,9 @@ func NewClient(options ...Option) (*Client, error) {
 	}
 	if cfg.PortalBaseURL == "" {
 		cfg.PortalBaseURL = DefaultConfig().PortalBaseURL
+	}
+	if cfg.LABMSBaseURL == "" {
+		cfg.LABMSBaseURL = DefaultConfig().LABMSBaseURL
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = DefaultConfig().Timeout
@@ -60,17 +66,40 @@ func NewClient(options ...Option) (*Client, error) {
 	if _, err := url.ParseRequestURI(cfg.PortalBaseURL); err != nil {
 		return nil, jwxterr.WithMessage(ErrUnsupportedLoginPage, "invalid portal base URL")
 	}
+	if _, err := url.ParseRequestURI(cfg.LABMSBaseURL); err != nil {
+		return nil, jwxterr.WithMessage(ErrUnsupportedLoginPage, "invalid LABMS base URL")
+	}
 
 	// 每个用户必须使用独立 CookieJar。CAS Cookie、EAMS JSESSIONID 和一次性
 	// ticket 都属于某个用户的认证上下文；如果多个用户共享 CookieJar，可能出现
 	// 会话串号、身份混淆和隐私泄露。
+	restyClient, err := newHTTPClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	labmsClient, err := newHTTPClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	// 真实课表请求在学校系统侧可能超过一分钟；保留两分钟有限上限，
+	// 避免沿用 EAMS 的短超时把已经正确发出的 LABMS 查询提前取消。
+	if cfg.Timeout < 2*time.Minute {
+		labmsClient.SetTimeout(2 * time.Minute)
+	}
+
+	return &Client{
+		resty:      restyClient,
+		labmsResty: labmsClient,
+		cfg:        cfg,
+	}, nil
+}
+
+func newHTTPClient(cfg Config) (*resty.Client, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, jwxterr.WithMessage(ErrRemoteUnavailable, "create cookie jar failed")
 	}
-
-	restyClient := resty.New().
-		SetCookieJar(jar).
+	return resty.New().SetCookieJar(jar).
 		SetTimeout(cfg.Timeout).
 		SetRetryCount(0).
 		SetHeader("User-Agent", cfg.UserAgent).
@@ -79,12 +108,7 @@ func NewClient(options ...Option) (*Client, error) {
 		SetRedirectPolicy(resty.RedirectPolicyFunc(func(_ *http.Request, _ []*http.Request) error {
 			// 保留 3xx 响应交给 SDK 自己处理，避免 Resty.NoRedirectPolicy 把正常跳转当成错误。
 			return http.ErrUseLastResponse
-		}))
-
-	return &Client{
-		resty: restyClient,
-		cfg:   cfg,
-	}, nil
+		})), nil
 }
 
 func (c *Client) InspectLoginFlow(ctx context.Context) error {

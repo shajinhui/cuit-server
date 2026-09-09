@@ -1,0 +1,42 @@
+{
+  "status": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": "sample-1",
+      "courseId": "sample-course-1",
+      "taskId": "sample-task-1",
+      "courseNo": "COURSE001",
+      "courseName": "示例课程1",
+      "projectType": "理论",
+      "projectName": "",
+      "location": "示例教学地点1",
+      "teacherName": "示例教师1",
+      "className": "示例班级1",
+      "weekDay": 5,
+      "sections": [5, 6],
+      "weeks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+      "week": 15,
+      "startTime": "14:00:00",
+      "endTime": "15:40:00"
+    },
+    {
+      "id": "sample-2",
+      "courseId": "sample-course-2",
+      "taskId": "sample-task-2",
+      "courseNo": "COURSE002",
+      "courseName": "示例课程2",
+      "projectType": "实验",
+      "projectName": "示例实验项目1",
+      "location": "示例教学地点2",
+      "teacherName": "示例教师2",
+      "className": "示例班级2",
+      "weekDay": 3,
+      "sections": [10, 11, 12],
+      "weeks": [6, 7],
+      "week": 7,
+      "startTime": "18:30:00",
+      "endTime": "21:30:00"
+    }
+  ]
+}

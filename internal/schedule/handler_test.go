@@ -19,6 +19,14 @@ type fakeCourseTableService struct {
 	err               error
 	availableQuery    func(jwxt.AvailableClassroomQuery)
 	scheduleQuery     func(string, string)
+	refreshCalled     *bool
+}
+
+func (f fakeCourseTableService) RefreshCourseTable(context.Context, string, string) (jwxt.CourseTable, error) {
+	if f.refreshCalled != nil {
+		*f.refreshCalled = true
+	}
+	return f.table, f.err
 }
 
 type fakeCurrentWeekService struct {
@@ -84,6 +92,22 @@ func TestCourseTableEndpointReturnsSchedule(t *testing.T) {
 	body := string(response.Body())
 	if !strings.Contains(body, `"SemesterID":"1106"`) || !strings.Contains(body, `"Code":"COURSE001"`) {
 		t.Fatalf("unexpected response: %s", body)
+	}
+}
+
+func TestCourseTableRefreshBypassesCache(t *testing.T) {
+	h := server.Default()
+	called := false
+	service := fakeCourseTableService{refreshCalled: &called, table: jwxt.CourseTable{SemesterID: "1106"}}
+	NewHandler(service, fakeCurrentWeekService{}).Register(h)
+	response := ut.PerformRequest(
+		h.Engine,
+		"GET",
+		"/api/v1/jwxt/course-table?semester_id=1106&refresh=1",
+		nil,
+	).Result()
+	if response.StatusCode() != 200 || !called {
+		t.Fatalf("refresh was not forwarded: status=%d called=%t", response.StatusCode(), called)
 	}
 }
 

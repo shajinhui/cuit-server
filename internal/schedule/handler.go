@@ -21,6 +21,7 @@ const sessionCookieName = "campus_session"
 // CourseTableService 只描述课表 Handler 所需能力，具体会话恢复仍由现有 JWXT 会话服务负责。
 type CourseTableService interface {
 	GetCourseTable(ctx context.Context, sessionID string, semesterID string) (jwxt.CourseTable, error)
+	RefreshCourseTable(ctx context.Context, sessionID string, semesterID string) (jwxt.CourseTable, error)
 	GetClassroomOptions(ctx context.Context, sessionID string, semesterID string, campusID string) (jwxt.ClassroomOptions, error)
 	GetAvailableClassrooms(ctx context.Context, sessionID string, query jwxt.AvailableClassroomQuery) ([]jwxt.Classroom, error)
 	GetClassroomSchedule(ctx context.Context, sessionID string, semesterID string, campusID string) (jwxt.ClassroomSchedule, error)
@@ -53,11 +54,19 @@ func (h *Handler) getCourseTable(ctx context.Context, c *app.RequestContext) {
 		writeError(c, http.StatusBadRequest, 40000, "请选择学期")
 		return
 	}
-	requestCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	// LABMS 真实整学期查询可能超过一分钟；该上限覆盖登录续期和一次查询，
+	// 仍由 context 在两分半后硬取消，避免无限占用请求。
+	requestCtx, cancel := context.WithTimeout(ctx, 150*time.Second)
 	defer cancel()
 
 	// campus_session 只标识本应用会话；真实 EAMS Cookie 始终保留在后端的独立 JWXT Client 中。
-	table, err := h.courseTableService.GetCourseTable(requestCtx, string(c.Cookie(sessionCookieName)), semesterID)
+	var table jwxt.CourseTable
+	var err error
+	if c.Query("refresh") == "1" {
+		table, err = h.courseTableService.RefreshCourseTable(requestCtx, string(c.Cookie(sessionCookieName)), semesterID)
+	} else {
+		table, err = h.courseTableService.GetCourseTable(requestCtx, string(c.Cookie(sessionCookieName)), semesterID)
+	}
 	if err != nil {
 		log.Printf("查询课表失败: semester_id=%s: %v", semesterID, err)
 		writeServiceError(c, err)
