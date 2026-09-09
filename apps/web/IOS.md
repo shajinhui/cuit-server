@@ -5,7 +5,7 @@
 ## 已完成的迁移
 
 - Bundle ID：`org.dpdns.fanxiaogao05.chengxinyouyou`
-- iOS 工程版本：`0.2.0`，Build `2`
+- iOS 工程版本：`0.2.2`，Build `3`
 - 默认内置从 APK 提取的 `0.1.0` Web 资源快照（68 个文件），不需要重新下载业务页面
 - 可切换为公开源码当前的 `0.2.0` Web 构建
 - iOS 原生 HTTP/Cookie 接管 API 请求，支持后端 `HttpOnly` 登录会话
