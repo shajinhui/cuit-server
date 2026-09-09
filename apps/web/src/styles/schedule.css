@@ -609,7 +609,7 @@
   min-width: 0;
   margin: 3px 1px;
   padding: 4px 2px;
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -649,6 +649,19 @@
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   white-space: nowrap;
+}
+
+.course-block.has-experiment-time {
+  grid-template-rows: minmax(0, 1fr) auto auto;
+}
+
+.course-block.has-experiment-time .course-block__name {
+  -webkit-line-clamp: 2;
+}
+
+.course-block.has-experiment-time .course-block__room {
+  font-size: clamp(10px, 2.7vw, 12px);
+  line-height: 1.15;
 }
 
 .course-block__time i {
@@ -1728,6 +1741,7 @@
     flex-direction: column;
     gap: 0;
     line-height: 1;
+    font-size: 9px;
   }
 
   .course-block__time i {
