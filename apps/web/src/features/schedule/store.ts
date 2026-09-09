@@ -123,7 +123,7 @@ export const useScheduleStore = defineStore('schedule', {
         this.usingCachedData = false
         useSessionStore().markAuthenticated()
         await writeScheduleCache({
-          version: 2,
+          version: 3,
           semesters,
           selectedSemesterID,
           table: tableResult.value,
