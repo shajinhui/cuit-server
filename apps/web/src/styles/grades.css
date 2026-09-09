@@ -195,22 +195,7 @@
   min-height: 260px;
 }
 
-.loading-spinner {
-  width: 30px;
-  height: 30px;
-  border: 2px solid #dcdedb;
-  border-top-color: #66727d;
-  border-radius: 50%;
-  animation: spin 700ms linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.grade-loading p {
+.grade-loading > p {
   margin: 13px 0 0;
   font-size: 13px;
 }

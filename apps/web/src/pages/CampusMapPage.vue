@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import airportMapURL from '@/assets/maps/campus-map-airport.jpg'
 import longquanMapURL from '@/assets/maps/campus-map-longquan.jpg'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'CampusMapPage' })
 
@@ -186,9 +187,8 @@ async function saveMapImage() {
       :aria-busy="loading"
       :aria-label="currentMap.title"
     >
-      <div v-if="loading" class="campus-map-state" aria-live="polite">
-        <span class="campus-map-spinner" aria-hidden="true" />
-        <p>正在打开地图…</p>
+      <div v-if="loading" class="campus-map-state">
+        <HamsterLoader label="正在打开地图…" />
       </div>
 
       <div v-if="loadFailed" class="campus-map-state campus-map-state--error" role="alert">

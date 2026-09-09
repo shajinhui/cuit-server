@@ -99,21 +99,12 @@ body:has(.exam-page) {
   line-height: 1.3;
 }
 
-.exam-page-state p,
+.exam-page-state > p,
 .exam-result-state > p {
   max-width: 290px;
   margin: 9px 0 0;
   font-size: 14px;
   line-height: 1.5;
-}
-
-.exam-spinner {
-  width: 28px;
-  height: 28px;
-  border: 2px solid #d1d1d6;
-  border-top-color: #636366;
-  border-radius: 50%;
-  animation: exam-spin 720ms linear infinite;
 }
 
 .exam-state-icon,

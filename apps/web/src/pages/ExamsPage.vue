@@ -15,6 +15,7 @@ import {
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'ExamsPage' })
 
@@ -124,9 +125,8 @@ function creditLabel(credits: string) {
     </header>
 
     <section class="exam-content">
-      <div v-if="store.initializing && !store.initialized" class="exam-page-state" aria-live="polite">
-        <span class="exam-spinner" aria-hidden="true" />
-        <p>正在读取考试安排…</p>
+      <div v-if="store.initializing && !store.initialized" class="exam-page-state">
+        <HamsterLoader label="正在读取考试安排…" />
       </div>
 
       <div

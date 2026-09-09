@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 
 import { academicCalendarURL, academicYearForDate } from '@/features/calendar'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'CalendarPage' })
 
@@ -64,9 +65,8 @@ function retry() {
       :aria-busy="loading"
       aria-label="学校校历"
     >
-      <div v-if="loading" class="calendar-state" aria-live="polite">
-        <span class="calendar-spinner" aria-hidden="true" />
-        <p>正在读取校历…</p>
+      <div v-if="loading" class="calendar-state">
+        <HamsterLoader label="正在读取校历…" />
       </div>
 
       <div v-if="loadFailed" class="calendar-state calendar-state--error" role="alert">

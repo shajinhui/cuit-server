@@ -11,6 +11,7 @@ import {
 } from '@/features/grades'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'GradesPage' })
 
@@ -58,10 +59,8 @@ function chooseSemester(value: string | number) {
     <section
       v-if="store.authState === 'checking' || store.authState === 'anonymous'"
       class="grade-loading page-padding"
-      aria-live="polite"
     >
-      <div class="loading-spinner" />
-      <p>正在加载成绩…</p>
+      <HamsterLoader label="正在加载成绩…" />
     </section>
 
     <section v-else-if="store.authState === 'unavailable'" class="grade-loading grade-unavailable page-padding" role="status">
@@ -119,9 +118,8 @@ function chooseSemester(value: string | number) {
         <span>{{ updateStatus }}</span>
       </div>
 
-      <div v-if="store.loading && store.grades.length === 0" class="grade-loading grade-loading--inline" aria-live="polite">
-        <div class="loading-spinner" />
-        <p>正在读取成绩…</p>
+      <div v-if="store.loading && store.grades.length === 0" class="grade-loading grade-loading--inline">
+        <HamsterLoader label="正在读取成绩…" />
       </div>
 
       <div v-else-if="store.grades.length" class="grade-list">

@@ -86,24 +86,18 @@ body:has(.classroom-page) {
   font-weight: 600;
 }
 
-.classroom-state p {
+.classroom-state > p {
   max-width: 290px;
   margin: 10px 0 0;
   font-size: 14px;
   line-height: 1.5;
 }
 
-.classroom-spinner,
 .classroom-button-spinner {
   border: 2px solid #d1d1d6;
   border-top-color: #636366;
   border-radius: 50%;
   animation: classroom-spin 720ms linear infinite;
-}
-
-.classroom-spinner {
-  width: 28px;
-  height: 28px;
 }
 
 .classroom-button-spinner {
@@ -898,7 +892,6 @@ body:has(.classroom-page) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .classroom-spinner,
   .classroom-button-spinner {
     animation-duration: 1.4s;
   }

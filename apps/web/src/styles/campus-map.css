@@ -226,7 +226,7 @@
   backdrop-filter: blur(12px);
 }
 
-.campus-map-state p {
+.campus-map-state > p {
   max-width: 270px;
   margin: 8px 0 0;
   font-size: 13px;
@@ -248,15 +248,6 @@
   border: 0;
   border-radius: 20px;
   box-shadow: 0 5px 16px rgba(35, 39, 45, 0.07);
-}
-
-.campus-map-spinner {
-  width: 26px;
-  height: 26px;
-  border: 2px solid rgba(60, 60, 67, 0.15);
-  border-top-color: rgba(60, 60, 67, 0.66);
-  border-radius: 50%;
-  animation: campus-map-spin 720ms linear infinite;
 }
 
 .campus-map-controls {
@@ -394,22 +385,12 @@
   text-align: center;
 }
 
-@keyframes campus-map-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .campus-map-icon-button,
   .campus-map-selector__selection,
   .campus-map-image-link,
   .campus-map-save-button {
     transition: none;
-  }
-
-  .campus-map-spinner {
-    animation-duration: 1.5s;
   }
 
   .campus-map-viewer {

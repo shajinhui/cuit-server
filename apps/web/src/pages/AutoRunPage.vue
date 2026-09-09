@@ -35,7 +35,7 @@ import {
   type AutoRunProgressCard,
 } from '@/features/autorun'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
-import HamsterWheel from '@/shared/ui/HamsterWheel.vue'
+import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'AutoRunPage' })
 
@@ -699,11 +699,8 @@ function formatCountdown(milliseconds: number) {
       <div v-for="toast in toasts" :key="toast.id" :class="toast.tone">{{ toast.message }}</div>
     </div>
 
-    <div v-if="manualLoadingCount > 0" class="autorun-loading" role="status" aria-label="请求处理中">
-      <div>
-        <HamsterWheel />
-        <p>请求处理中…</p>
-      </div>
+    <div v-if="manualLoadingCount > 0" class="autorun-loading">
+      <HamsterLoader label="请求处理中…" :size="120" />
     </div>
 
     <div v-if="showLogin" class="autorun-login-backdrop" role="dialog" aria-modal="true" aria-label="校园跑登录">
