@@ -262,6 +262,30 @@ describe('schedule calendar model', () => {
     })
   })
 
+  it('shows precise time on experiment cards only', () => {
+    const experiment = createCourse('实验 编译原理', [
+      createActivity({
+        StartTime: '18:30',
+        EndTime: '21:30',
+        ActivityType: '实验',
+      }),
+    ])
+    const theory = createCourse('编译原理', [
+      createActivity({
+        StartTime: '08:20',
+        EndTime: '10:00',
+        ActivityType: '理论',
+      }),
+    ])
+
+    expect(buildCourseBlocks([experiment], 1)[0]).toMatchObject({
+      experimentStartTime: '18:30',
+      experimentEndTime: '21:30',
+    })
+    expect(buildCourseBlocks([theory], 1)[0].experimentStartTime).toBeUndefined()
+    expect(buildCourseBlocks([theory], 1)[0].experimentEndTime).toBeUndefined()
+  })
+
   it('combines room and week variants that share the same course time', () => {
     const course = createCourse('C语言程序设计', [
       createActivity({

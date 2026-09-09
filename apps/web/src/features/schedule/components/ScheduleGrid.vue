@@ -51,10 +51,18 @@ const emit = defineEmits<{
         gridColumn: course.day + 1,
         gridRow: `${course.start} / span ${course.span}`,
       }"
-      :aria-label="`${course.name}，${course.room}${course.conflict ? '，课程冲突' : ''}，查看课程详情`"
+      :aria-label="`${course.name}，${course.experimentStartTime && course.experimentEndTime ? `${course.experimentStartTime} 至 ${course.experimentEndTime}，` : ''}${course.room}${course.conflict ? '，课程冲突' : ''}，查看课程详情`"
       @click="emit('select', course)"
     >
       <strong class="course-block__name">{{ course.name }}</strong>
+      <span
+        v-if="course.experimentStartTime && course.experimentEndTime"
+        class="course-block__time"
+      >
+        <time>{{ course.experimentStartTime }}</time>
+        <i aria-hidden="true">–</i>
+        <time>{{ course.experimentEndTime }}</time>
+      </span>
       <span class="course-block__room">@{{ course.room }}</span>
       <small
         v-if="course.conflict"

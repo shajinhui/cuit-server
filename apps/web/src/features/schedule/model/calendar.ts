@@ -23,6 +23,8 @@ export interface CourseSlotCourse {
   id: string
   name: string
   room: string
+  experimentStartTime?: string
+  experimentEndTime?: string
   code: string
   credits: string
   teachingClass: string
@@ -189,10 +191,13 @@ export function buildScheduleCourseEntries(
           : [nearestArrangement(arrangements, selectedWeek)]
       const activityWeeks = uniqueNumbers(arrangements.flatMap((arrangement) => arrangement.weeks))
       const muted = selectedWeek > 0 && activeArrangements.length === 0
+      const experimentTime = experimentTimeRange(visibleArrangements)
       courseBlocks.push({
         id: `${identity}-${firstActivity.Weekday}-${firstActivity.StartSection}-${firstActivity.EndSection}`,
         name: course.Name || '未命名课程',
         room: uniqueStrings(visibleArrangements.map((arrangement) => arrangement.room)).join(' / '),
+        experimentStartTime: experimentTime?.start,
+        experimentEndTime: experimentTime?.end,
         code: course.Code,
         credits: course.Credits,
         teachingClass: course.TeachingClass,
@@ -268,6 +273,8 @@ function applyCourseOverride(
     ...block,
     name: courseOverride.name,
     room,
+    experimentStartTime: undefined,
+    experimentEndTime: undefined,
     day: courseOverride.weekday,
     start: courseOverride.startSection,
     span: courseOverride.endSection - courseOverride.startSection + 1,
@@ -379,6 +386,15 @@ function isArrangementActive(arrangement: CourseArrangement, selectedWeek: numbe
   return selectedWeek <= 0 || arrangement.weeks.length === 0 || arrangement.weeks.includes(selectedWeek)
 }
 
+function experimentTimeRange(arrangements: CourseArrangement[]) {
+  const arrangement = arrangements.find(
+    (candidate) =>
+      candidate.activityType?.includes('实验') && candidate.startTime && candidate.endTime,
+  )
+  if (!arrangement?.startTime || !arrangement.endTime) return undefined
+  return { start: arrangement.startTime, end: arrangement.endTime }
+}
+
 function nearestArrangement(arrangements: CourseArrangement[], selectedWeek: number) {
   return arrangements.reduce((nearest, arrangement) => {
     const nearestDistance = distanceToWeeks(nearest.weeks, selectedWeek)
@@ -482,6 +498,8 @@ function toSlotCourse(block: CourseBlock): CourseSlotCourse {
     id: block.id,
     name: block.name,
     room: block.room,
+    experimentStartTime: block.experimentStartTime,
+    experimentEndTime: block.experimentEndTime,
     code: block.code,
     credits: block.credits,
     teachingClass: block.teachingClass,
