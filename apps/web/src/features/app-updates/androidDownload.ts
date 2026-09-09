@@ -4,6 +4,7 @@ export const ANDROID_APK_URL =
   'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v0.2.2/app-release-signed-5.apk'
 export const MIN_ANDROID_APP_VERSION = '0.2.2'
 const MIN_ANDROID_APP_BUILD = 4
+const ANDROID_WEB_PROMPT_STORAGE_KEY = 'android-app-download-shown-v0.2.2-signed-5'
 
 interface AndroidAppSupport {
   android: boolean
@@ -25,13 +26,30 @@ export function requiresAndroidAppDownload({
   return true
 }
 
+export function requiresAndroidFirstVisitDownload({
+  android,
+  native,
+  promptSeen,
+}: Pick<AndroidAppSupport, 'android' | 'native'> & { promptSeen: boolean }): boolean {
+  return android && !native && !promptSeen
+}
+
 export async function shouldPromptAndroidAppDownload(): Promise<boolean> {
   if (typeof window === 'undefined') return false
 
   const platform = Capacitor.getPlatform()
   const android = platform === 'android' || /Android/i.test(window.navigator.userAgent)
   const native = platform === 'android' && Capacitor.isNativePlatform()
-  if (!android || !native) return requiresAndroidAppDownload({ android, native })
+  if (!android) return false
+  if (!native) {
+    const shouldPrompt = requiresAndroidFirstVisitDownload({
+      android,
+      native,
+      promptSeen: readAndroidWebPromptSeen(),
+    })
+    if (shouldPrompt) writeAndroidWebPromptSeen()
+    return shouldPrompt
+  }
 
   try {
     const { App } = await import('@capacitor/app')
@@ -39,6 +57,22 @@ export async function shouldPromptAndroidAppDownload(): Promise<boolean> {
     return requiresAndroidAppDownload({ android, native, version, build })
   } catch {
     return true
+  }
+}
+
+function readAndroidWebPromptSeen(): boolean {
+  try {
+    return window.localStorage.getItem(ANDROID_WEB_PROMPT_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeAndroidWebPromptSeen() {
+  try {
+    window.localStorage.setItem(ANDROID_WEB_PROMPT_STORAGE_KEY, '1')
+  } catch {
+    // 存储受限时仅保证当前页面不重复展示。
   }
 }
 

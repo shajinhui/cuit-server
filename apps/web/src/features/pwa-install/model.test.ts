@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { isInstalledDisplay, resolveInstallGuide } from './model'
+import { isInstalledDisplay, resolveInstallGuide, shouldOpenInitialInstallGuide } from './model'
 
 describe('PWA install guidance', () => {
   it('sends embedded browsers to a system browser first', () => {
@@ -44,5 +44,24 @@ describe('PWA install guidance', () => {
     ).toBe(true)
     expect(isInstalledDisplay({ displayModes: [], referrer: '', standalone: true })).toBe(true)
     expect(isInstalledDisplay({ displayModes: [], referrer: '' })).toBe(false)
+  })
+
+  it('opens the install guide only for a first iOS browser visit', () => {
+    expect(
+      shouldOpenInitialInstallGuide({ installed: false, guideKind: 'ios', promptSeen: false }),
+    ).toBe(true)
+    expect(
+      shouldOpenInitialInstallGuide({ installed: false, guideKind: 'ios', promptSeen: true }),
+    ).toBe(false)
+    expect(
+      shouldOpenInitialInstallGuide({ installed: true, guideKind: 'ios', promptSeen: false }),
+    ).toBe(false)
+    expect(
+      shouldOpenInitialInstallGuide({
+        installed: false,
+        guideKind: 'chromium',
+        promptSeen: false,
+      }),
+    ).toBe(false)
   })
 })

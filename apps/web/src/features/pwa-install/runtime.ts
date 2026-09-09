@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { computed, readonly, ref, shallowRef } from 'vue'
 
-import { isInstalledDisplay, resolveInstallGuide } from './model'
+import { isInstalledDisplay, resolveInstallGuide, shouldOpenInitialInstallGuide } from './model'
 
 interface InstallChoice {
   outcome: 'accepted' | 'dismissed'
@@ -18,6 +18,7 @@ export type InstallRequestResult = 'accepted' | 'dismissed' | 'installed' | 'man
 
 const DISMISS_STORAGE_KEY = 'pwa-install-dismissed-until'
 const DISMISS_DURATION_MS = 14 * 24 * 60 * 60 * 1000
+const IOS_FIRST_VISIT_STORAGE_KEY = 'pwa-ios-install-guide-shown-v1'
 const DISPLAY_MODES = ['standalone', 'fullscreen', 'minimal-ui']
 
 const deferredPrompt = shallowRef<BeforeInstallPromptEvent | null>(null)
@@ -30,6 +31,7 @@ const canPromptInstall = computed(() => deferredPrompt.value !== null && !instal
 const shouldPromoteInstall = computed(
   () =>
     !installed.value &&
+    !isAndroidBrowser() &&
     dismissedUntil.value <= Date.now() &&
     (canPromptInstall.value || installGuide.value.kind === 'ios'),
 )
@@ -45,6 +47,18 @@ export function registerPwaInstall() {
   dismissedUntil.value = readDismissedUntil()
 
   if (installed.value) return
+
+  if (
+    shouldOpenInitialInstallGuide({
+      installed: installed.value,
+      guideKind: installGuide.value.kind,
+      promptSeen: readFirstVisitPromptSeen(IOS_FIRST_VISIT_STORAGE_KEY),
+    })
+  ) {
+    guideVisible.value = true
+    writeFirstVisitPromptSeen(IOS_FIRST_VISIT_STORAGE_KEY)
+    dismissInstallPromotion()
+  }
 
   window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
   window.addEventListener('appinstalled', handleAppInstalled)
@@ -160,6 +174,26 @@ function readDismissedUntil(): number {
   } catch {
     return 0
   }
+}
+
+function readFirstVisitPromptSeen(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeFirstVisitPromptSeen(key: string) {
+  try {
+    window.localStorage.setItem(key, '1')
+  } catch {
+    // 存储受限时仅保证当前页面不重复展示。
+  }
+}
+
+function isAndroidBrowser(): boolean {
+  return !Capacitor.isNativePlatform() && /Android/i.test(window.navigator.userAgent)
 }
 
 function clearDismissedUntil() {

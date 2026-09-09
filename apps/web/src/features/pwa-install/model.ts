@@ -19,6 +19,20 @@ export interface InstalledDisplayInput {
   standalone?: boolean
 }
 
+export interface InitialInstallGuideInput {
+  installed: boolean
+  guideKind: InstallGuideKind
+  promptSeen: boolean
+}
+
+export function shouldOpenInitialInstallGuide({
+  installed,
+  guideKind,
+  promptSeen,
+}: InitialInstallGuideInput): boolean {
+  return !installed && guideKind === 'ios' && !promptSeen
+}
+
 export function resolveInstallGuide(userAgent: string): InstallGuide {
   if (isIOSBrowser(userAgent)) {
     return {

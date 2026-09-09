@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { requiresAndroidAppDownload } from './androidDownload'
+import { requiresAndroidAppDownload, requiresAndroidFirstVisitDownload } from './androidDownload'
 
 describe('Android app download prompt', () => {
   it('prompts Android browsers and older native apps', () => {
@@ -32,6 +32,21 @@ describe('Android app download prompt', () => {
     expect(requiresAndroidAppDownload({ android: false, native: false })).toBe(false)
     expect(
       requiresAndroidAppDownload({ android: false, native: true, version: '0.1.0' }),
+    ).toBe(false)
+  })
+
+  it('prompts an Android browser only on its first website visit', () => {
+    expect(
+      requiresAndroidFirstVisitDownload({ android: true, native: false, promptSeen: false }),
+    ).toBe(true)
+    expect(
+      requiresAndroidFirstVisitDownload({ android: true, native: false, promptSeen: true }),
+    ).toBe(false)
+    expect(
+      requiresAndroidFirstVisitDownload({ android: true, native: true, promptSeen: false }),
+    ).toBe(false)
+    expect(
+      requiresAndroidFirstVisitDownload({ android: false, native: false, promptSeen: false }),
     ).toBe(false)
   })
 })
