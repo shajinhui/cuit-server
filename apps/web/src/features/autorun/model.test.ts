@@ -61,6 +61,29 @@ describe('俱乐部数据展示', () => {
       address: '东操场',
       isJoined: true,
       isFull: true,
+      isUnavailable: false,
+    })
+  })
+
+  it('不会把用户报名后的限制状态误报为活动满员', () => {
+    const activities = normalizeAutoRunClubActivities([
+      {
+        clubActivityId: 13,
+        activityName: '体能锻炼',
+        signInStudent: 198,
+        maxStudent: 10_000,
+        cancelSign: '0',
+        startTime: '18:00',
+        endTime: '18:30',
+        optionStatus: '3',
+        fullActivity: '1',
+      },
+    ])
+
+    expect(activities[0]).toMatchObject({
+      isJoined: false,
+      isFull: false,
+      isUnavailable: true,
     })
   })
 

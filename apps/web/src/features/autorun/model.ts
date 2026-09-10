@@ -25,6 +25,7 @@ export interface AutoRunClubActivityView {
   capacity: number
   isJoined: boolean
   isFull: boolean
+  isUnavailable: boolean
 }
 
 export interface AutoRunClubSignTaskView {
@@ -117,10 +118,12 @@ export function normalizeAutoRunClubActivities(
       const joined = firstNumber(activity, ['signInStudent', 'applyStudentCount']) ?? 0
       const capacity = firstNumber(activity, ['maxStudent']) ?? 0
       const optionStatus = String(activity.optionStatus ?? '').trim()
-      const isFull =
-        optionStatus === '3' ||
-        String(activity.fullActivity ?? '') === '1' ||
-        (capacity > 0 && joined >= capacity)
+      const isJoined = optionStatus === '1'
+      const isFull = capacity > 0 && joined >= capacity
+      const isUnavailable =
+        !isJoined &&
+        !isFull &&
+        (optionStatus === '3' || String(activity.fullActivity ?? '').trim() === '1')
 
       return {
         id: String(activity.clubActivityId || index),
@@ -131,8 +134,9 @@ export function normalizeAutoRunClubActivities(
         address: String(activity.addressDetail || activity.teacherName || '地点待公布'),
         joined,
         capacity,
-        isJoined: optionStatus === '1',
+        isJoined,
         isFull,
+        isUnavailable,
       }
     })
     .filter((activity) => activity.activityId > 0)

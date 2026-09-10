@@ -657,10 +657,23 @@ function formatCountdown(milliseconds: number) {
               <button
                 type="button"
                 :class="activity.isJoined ? 'is-cancel' : 'is-join'"
-                :disabled="clubActionLoading[activity.id] || (!activity.isJoined && activity.isFull)"
+                :disabled="
+                  clubActionLoading[activity.id] ||
+                  (!activity.isJoined && (activity.isFull || activity.isUnavailable))
+                "
                 @click="toggleClubJoin(activity)"
               >
-                {{ clubActionLoading[activity.id] ? '处理中' : activity.isJoined ? '取消报名' : activity.isFull ? '已满员' : '报名' }}
+                {{
+                  clubActionLoading[activity.id]
+                    ? '处理中'
+                    : activity.isJoined
+                      ? '取消报名'
+                      : activity.isFull
+                        ? '已满员'
+                        : activity.isUnavailable
+                          ? '不可报名'
+                          : '报名'
+                }}
               </button>
             </footer>
           </article>
