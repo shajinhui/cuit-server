@@ -141,11 +141,13 @@ async function initializeAutoRun() {
   }
 
   try {
-    const result = await restoreAutoRunSession(savedSession)
-    updateSessionKey(result.data.sessionKey)
+    // run_info 已经会访问当前上游会话，并在服务端完成必要的 token
+    // 校验；冷启动直接使用它，避免先 session_bootstrap 再重复读取一次。
+    const result = await getAutoRunInfo(savedSession)
+    adoptRotatedSession(result.data)
     authenticated.value = true
     showLogin.value = false
-    await loadRunData()
+    applyRunData(result.data)
   } catch (error) {
     if (isAutoRunAuthExpiredError(error)) {
       clearSession()
@@ -207,13 +209,17 @@ async function loadRunData(manual = false) {
   try {
     const result = await withManualLoading(manual, () => getAutoRunInfo(sessionKey.value))
     adoptRotatedSession(result.data)
-    runCards.value = buildAutoRunProgressCards(result.data)
-    runStatus.value = 'ready'
-    runMessage.value = '已同步校园跑进度'
+    applyRunData(result.data)
   } catch (error) {
     if (runCards.value.length === 0) runStatus.value = 'empty'
     runMessage.value = handleApiError(error, '加载校园跑进度失败')
   }
+}
+
+function applyRunData(data: Parameters<typeof buildAutoRunProgressCards>[0]) {
+  runCards.value = buildAutoRunProgressCards(data)
+  runStatus.value = 'ready'
+  runMessage.value = '已同步校园跑进度'
 }
 
 async function runOnce() {
