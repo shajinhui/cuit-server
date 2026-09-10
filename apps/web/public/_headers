@@ -1,3 +1,6 @@
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /app-updates/android/latest.json
   Access-Control-Allow-Origin: *
   Cache-Control: no-store, max-age=0
