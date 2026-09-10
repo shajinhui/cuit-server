@@ -24,6 +24,7 @@ public class MainActivity extends BridgeActivity {
             getWindow().setStatusBarContrastEnforced(false);
             getWindow().setNavigationBarContrastEnforced(false);
         }
+        normalizeWebViewTypography();
         applySystemBarBackgroundColor();
     }
 
@@ -42,9 +43,19 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    private void normalizeWebViewTypography() {
+        if (bridge == null || bridge.getWebView() == null) {
+            return;
+        }
+
+        // 保持网页按 CSS 中声明的字号渲染，避免系统字体缩放把整套界面纵向撑大。
+        bridge.getWebView().getSettings().setTextZoom(100);
+    }
+
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        normalizeWebViewTypography();
         applySystemBarBackgroundColor();
     }
 }
