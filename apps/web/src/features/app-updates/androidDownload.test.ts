@@ -6,14 +6,14 @@ describe('Android app download prompt', () => {
   it('prompts Android browsers and older native apps', () => {
     expect(requiresAndroidAppDownload({ android: true, native: false })).toBe(true)
     expect(
-      requiresAndroidAppDownload({ android: true, native: true, version: '0.2.1' }),
+      requiresAndroidAppDownload({ android: true, native: true, version: '0.2.2' }),
     ).toBe(true)
     expect(requiresAndroidAppDownload({ android: true, native: true })).toBe(true)
   })
 
   it('allows supported Android app versions to continue', () => {
     expect(
-      requiresAndroidAppDownload({ android: true, native: true, version: '0.2.2' }),
+      requiresAndroidAppDownload({ android: true, native: true, version: '0.2.3' }),
     ).toBe(false)
     expect(
       requiresAndroidAppDownload({ android: true, native: true, version: '0.3.0' }),
@@ -22,10 +22,21 @@ describe('Android app download prompt', () => {
       requiresAndroidAppDownload({
         android: true,
         native: true,
-        version: '0.2.0',
-        build: '4',
+        version: '0.2.2',
+        build: '6',
       }),
     ).toBe(false)
+  })
+
+  it('keeps build 5 on the update path', () => {
+    expect(
+      requiresAndroidAppDownload({
+        android: true,
+        native: true,
+        version: '0.2.2',
+        build: '5',
+      }),
+    ).toBe(true)
   })
 
   it('does not affect iOS or desktop users', () => {

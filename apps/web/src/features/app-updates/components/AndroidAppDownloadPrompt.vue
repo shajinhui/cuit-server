@@ -43,12 +43,12 @@ function handleKeydown(event: KeyboardEvent) {
           <header>
             <img src="/icons/app-icon-192.png" alt="" />
             <div>
-              <p>安卓新版 · v0.2.2</p>
+              <p>安卓新版 · v0.2.3</p>
               <h2 id="android-app-download-title">下载新版 App</h2>
             </div>
           </header>
           <p id="android-app-download-description" class="app-update-dialog__description">
-            新版支持将整学期课表导入系统日历，安装后即可直接使用。
+            新版优化了 Android 页面显示，并支持将整学期课表导入系统日历。
           </p>
           <p class="app-update-dialog__notice">下载完成后直接安装，再打开成信友友。</p>
           <div class="app-update-dialog__actions">

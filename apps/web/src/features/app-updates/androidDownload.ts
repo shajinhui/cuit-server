@@ -1,10 +1,10 @@
 import { Capacitor } from '@capacitor/core'
 
 export const ANDROID_APK_URL =
-  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v0.2.2/app-release-signed-5.apk'
-export const MIN_ANDROID_APP_VERSION = '0.2.2'
-const MIN_ANDROID_APP_BUILD = 4
-const ANDROID_WEB_PROMPT_STORAGE_KEY = 'android-app-download-shown-v0.2.2-signed-5'
+  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v0.2.3/app-release-signed-6.apk'
+export const MIN_ANDROID_APP_VERSION = '0.2.3'
+const MIN_ANDROID_APP_BUILD = 6
+const ANDROID_WEB_PROMPT_STORAGE_KEY = 'android-app-download-shown-v0.2.3-signed-6'
 
 interface AndroidAppSupport {
   android: boolean
