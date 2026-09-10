@@ -9,6 +9,7 @@ import BottomNavigation from '@/app/components/BottomNavigation.vue'
 import {
   autoRunProgressPercent,
   buildAutoRunProgressCards,
+  buildAutoRunRecordBody,
   cancelAutoRunClub,
   clearAutoRunSessionKey,
   createAutoRunWeekDates,
@@ -24,6 +25,7 @@ import {
   loginToAutoRun,
   normalizeAutoRunClubActivities,
   normalizeAutoRunClubSignTask,
+  prepareAutoRun,
   resolveAutoRunClubSignAction,
   restoreAutoRunSession,
   saveAutoRunSessionKey,
@@ -227,7 +229,14 @@ async function runOnce() {
   runActionStatus.value = 'loading'
   runActionMessage.value = '处理中…'
   try {
-    const result = await withManualLoading(true, () => submitAutoRun(sessionKey.value))
+    const preparation = await withManualLoading(true, () => prepareAutoRun(sessionKey.value))
+    adoptRotatedSession(preparation.data)
+    const record = buildAutoRunRecordBody({
+      identity: { userId: preparation.data.userId, schoolId: preparation.data.schoolId },
+      standard: preparation.data.runStandard,
+      bounds: preparation.data.bounds,
+    })
+    const result = await withManualLoading(true, () => submitAutoRun(sessionKey.value, record))
     adoptRotatedSession(result.data)
     const message = result.message || '提交成功'
     runActionStatus.value = 'success'
@@ -296,7 +305,12 @@ async function handleClubSign() {
   clubSignLoading.value = true
   try {
     const result = await withManualLoading(true, () =>
-      signAutoRunClub(sessionKey.value, action.signType),
+      signAutoRunClub(sessionKey.value, {
+        activityId: clubSignTask.value?.activityId ?? 0,
+        latitude: clubSignTask.value?.latitude ?? '',
+        longitude: clubSignTask.value?.longitude ?? '',
+        signType: action.signType,
+      }),
     )
     adoptRotatedSession(result.data)
     if (result.data.success !== true) throw new Error(result.message || '当前暂不可操作')

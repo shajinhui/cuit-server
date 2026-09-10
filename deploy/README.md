@@ -64,6 +64,64 @@ openssl rand -hex 32
 
 把结果写入 `ADMIN_STATS_TOKEN`。没有配置该变量时，统计接口不会注册。
 
+### 配置 AutoRun
+
+AutoRun 需要三个仅服务端可见的值：
+
+```text
+AUTORUN_APP_KEY=<上游应用标识>
+AUTORUN_APP_SECRET=<上游签名密钥>
+AUTORUN_SESSION_ENCRYPTION_KEY=<至少 16 字符的随机密钥>
+AUTORUN_SCHEDULER_ENABLED=false
+```
+
+若要迁移现有 Cloudflare D1 会话，`AUTORUN_SESSION_ENCRYPTION_KEY` 必须与原
+Worker 的 `SESSION_ENCRYPTION_KEY` 完全一致，否则旧 token 密文无法解开，用户
+需要重新登录。首次部署必须保持本地定时器为 `false`。
+
+切换定时任务时严格按以下顺序执行：
+
+1. 先部署并验证 Go API，保持 `AUTORUN_SCHEDULER_ENABLED=false`。
+2. 停止原 Worker 的 Cron 分发并等待已投递队列处理完毕。
+3. 导出现有 D1 的 `sessions`、`club_schedules`、`club_schedule_events` 和
+   `club_action_claims`，导入服务器 SQLite；导入前备份数据库。
+4. 将 `AUTORUN_SCHEDULER_ENABLED=true`，重启 Go 服务并检查日志。
+
+两套定时器不能同时启用，否则各自数据库中的 claim 无法互相去重。默认
+`AUTORUN_SCHEDULER_WORKERS=10`、`AUTORUN_SCHEDULER_JOBS_PER_SECOND=5`；1000 个
+同一时间窗口任务约需数分钟展开。提高速率前先观察上游失败率和服务器连接数。
+
+在原 `AutoRun-ts` 目录导出数据（文件含加密 token 和会话标识，不得提交 Git）：
+
+```bash
+npx wrangler d1 export autorun-ts --remote \
+  --output /path/to/cuit-server/build/autorun-d1-data.sql \
+  --table sessions \
+  --table club_schedules \
+  --table club_schedule_events \
+  --table club_action_claims \
+  --no-schema \
+  --skip-confirmation
+```
+
+若原 `SESSION_ENCRYPTION_KEY` 已遗失，导出时不要包含 `sessions`。旧会话会收到
+`401/40100` 并要求用户重新登录；定时配置仍可保留，新登录后调度器会按学生编号
+关联新会话。
+
+把 SQL 文件上传到服务器后，先停服务并备份 SQLite，再导入：
+
+```bash
+sudo systemctl stop cuit-server
+sudo cp -a /var/lib/cuit-server/cuit-server.db \
+  /var/lib/cuit-server/cuit-server.db.before-autorun
+sudo sqlite3 /var/lib/cuit-server/cuit-server.db < /tmp/autorun-d1-data.sql
+sudo chown cuit-server:cuit-server /var/lib/cuit-server/cuit-server.db
+sudo systemctl start cuit-server
+```
+
+导入前需先用新二进制启动过一次，让 `005_create_autorun.sql` 建好表。SQL 导入
+失败时立即停止切换并从 `.before-autorun` 恢复，不要继续开启本地定时器。
+
 `LOGIN_MAX_CONCURRENCY` 控制同时访问学校认证系统的登录请求数量，默认值为
 `200`。达到上限的请求会立即收到 `503`，不会在服务器中排队。
 
@@ -168,6 +226,7 @@ curl --fail https://api.fanxiaogao05.dpdns.org/api/v1/health
 | `NODE_VERSION` | `22.20.0` |
 | `PNPM_VERSION` | `10.26.1` |
 | `VITE_API_BASE_URL` | `https://api.fanxiaogao05.dpdns.org` |
+| `VITE_AUTORUN_API_BASE_URL` | `https://api.fanxiaogao05.dpdns.org` |
 
 部署成功后，将 Pages Custom domain 设置为：
 

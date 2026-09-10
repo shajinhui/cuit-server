@@ -55,6 +55,156 @@ Cache-Control: no-store
 Redis 只保存上述可重建数据，不保存密码、Cookie、Ticket、应用 Session Token
 或 JWXT Client。Redis 不可用时按缓存未命中处理，接口继续访问学校系统。
 
+## 校园跑 API
+
+校园跑接口保留旧 Worker 的响应协议，便于 Web/Android 平滑迁移：
+
+```json
+{
+  "code": 10000,
+  "msg": "ok",
+  "response": {}
+}
+```
+
+除登录外，客户端必须携带服务端登录后返回的随机会话密钥：
+
+```http
+Authorization: Bearer <sessionKey>
+```
+
+服务端 SQLite 只保存上游 token 的 AES-GCM 密文和手机号摘要，不保存校园跑密码。
+`APP_SECRET` 仅存在于 Go 服务端，绝不能写入前端代码或构建环境变量。
+
+### 登录与恢复会话
+
+```http
+POST /api/login
+Content-Type: application/json
+
+{"phone":"<手机号>","password":"<密码>"}
+```
+
+成功响应的 `response` 包含 `userId`、`studentId`、`schoolId`、`sessionKey` 和
+`tokenSrc`。同一学生再次登录会生成新 `sessionKey`，旧设备随后收到 `401/40100`。
+
+```http
+POST /api/session_bootstrap
+Authorization: Bearer <sessionKey>
+
+{}
+```
+
+该接口只检查本地加密会话，不访问上游，适合应用从后台恢复时快速确认登录态。
+
+### 校园跑进度与提交
+
+```http
+POST /api/run_info
+Authorization: Bearer <sessionKey>
+
+{}
+```
+
+返回 `runStandard` 和 `runInfo`。
+
+一次校园跑提交必须分两步：
+
+```http
+POST /api/run_prepare
+Authorization: Bearer <sessionKey>
+
+{}
+```
+
+返回只读的 `userId`、`schoolId`、`runStandard` 和 `bounds`。前端使用这些数据
+生成轨迹、距离、时长、业务日期和完整记录体，再提交：
+
+```http
+POST /api/run
+Authorization: Bearer <sessionKey>
+Content-Type: application/json
+
+{
+  "record": {
+    "againRunStatus": "0",
+    "againRunTime": 0,
+    "appVersions": "1.8.5",
+    "brand": "Xiaomi",
+    "mobileType": "Mi 11",
+    "sysVersions": "Android 11",
+    "trackPoints": "<前端生成的轨迹>",
+    "distanceTimeStatus": "1",
+    "innerSchool": "1",
+    "runDistance": 5000,
+    "runTime": 33,
+    "userId": 123,
+    "vocalStatus": "1",
+    "yearSemester": "<runStandard.semesterYear>",
+    "recordDate": "2026-09-10",
+    "realityTrackPoints": "<围栏轨迹>"
+  }
+}
+```
+
+后端会以当前会话的 `userId` 覆盖前端值，再签名并单次转发。
+
+### 俱乐部
+
+```http
+POST /api/club_data
+Authorization: Bearer <sessionKey>
+
+{"queryDate":"2026-09-10"}
+```
+
+返回 `signTask`、`activities`、`joinProgress`、`topThree` 和 `schedule`。日期可省略，
+省略时按 Asia/Shanghai 当天处理。
+
+```http
+POST /api/club_sign
+Authorization: Bearer <sessionKey>
+
+{"activityId":123,"latitude":"30.1","longitude":"103.9","signType":"1"}
+```
+
+`signType` 为 `1`（签到）或 `2`（签退）。前端应直接使用最新 `club_data.signTask`
+中的活动编号和坐标；后端会以会话中的 `studentId` 组装并签名请求。
+
+```http
+POST /api/club_join
+Authorization: Bearer <sessionKey>
+
+{"activityId":123}
+```
+
+取消报名使用相同请求体调用 `POST /api/club_cancel`。
+
+查询和修改定时开关：
+
+```http
+POST /api/club_schedule_get
+Authorization: Bearer <sessionKey>
+
+{}
+```
+
+```http
+POST /api/club_schedule_set
+Authorization: Bearer <sessionKey>
+
+{"enabled":true}
+```
+
+### 前端接入注意事项
+
+- 正式 API 地址为 `https://api.fanxiaogao05.dpdns.org`；自定义域名只解决访问入口，CORS 仍由 Go 服务端的 `APP_CORS_ORIGIN` 控制。
+- 登录密码只在本次 HTTPS 登录请求中使用，不写入 LocalStorage、日志或错误上报；前端只持久化随机 `sessionKey`。
+- 页面回到前台时调用 `session_bootstrap`；收到 HTTP `401` 或业务码 `40100` 后清除本地会话并弹出登录框。普通断网或 `502` 不应误判为登录失效。
+- `run`、`club_sign`、`club_join` 和 `club_cancel` 都是写操作。请求超时代表结果未知，客户端不得自动重试，必须先重新读取状态并由用户决定。
+- 轨迹生成和距离计算位于前端；签名和 token 解密只能位于后端。定时签到/签退完全由本地 Go 服务执行，关闭页面不影响任务。
+- Service Worker 不能缓存任何 `/api` 响应。若以后把 Web 和 API 放到同一域名，也仍应保持这些响应 `Cache-Control: no-store`。
+
 ## 管理员统计
 
 仅在服务端配置 `ADMIN_STATS_TOKEN` 后注册以下接口。它用于查看接口调用量、

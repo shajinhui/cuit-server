@@ -34,6 +34,8 @@ export interface AutoRunClubSignTaskView {
   startTime: string
   endTime: string
   address: string
+  latitude: string
+  longitude: string
   signStatus: string
   signInStatus: string
   signBackStatus: string
@@ -155,6 +157,8 @@ export function normalizeAutoRunClubSignTask(
     startTime: readString(task.startTime) || '--:--',
     endTime: readString(task.endTime) || '--:--',
     address: readString(task.address) || readString(task.addressDetail) || '地点待公布',
+    latitude: readString(task.latitude),
+    longitude: readString(task.longitude),
     signStatus: readString(task.signStatus),
     signInStatus: readString(task.signInStatus),
     signBackStatus: readString(task.signBackStatus),

@@ -6,6 +6,7 @@ export {
   isAutoRunAuthExpiredError,
   joinAutoRunClub,
   loginToAutoRun,
+  prepareAutoRun,
   restoreAutoRunSession,
   setAutoRunClubSchedule,
   signAutoRunClub,
@@ -16,6 +17,7 @@ export type {
   AutoRunApiResult,
   AutoRunClubData,
   AutoRunClubSchedule,
+  AutoRunRunPreparation,
   AutoRunSession,
 } from './api'
 export {
@@ -40,3 +42,4 @@ export {
   loadAutoRunSessionKey,
   saveAutoRunSessionKey,
 } from './session-storage'
+export { buildAutoRunRecordBody } from './run'

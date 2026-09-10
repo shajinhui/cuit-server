@@ -1,4 +1,6 @@
-export const DEFAULT_AUTORUN_API_BASE_URL = 'https://autorun-api.fanxiaogao05.dpdns.org'
+import type { AutoRunRecordBody } from './run'
+
+export const DEFAULT_AUTORUN_API_BASE_URL = 'https://api.fanxiaogao05.dpdns.org'
 
 interface AutoRunApiEnvelope<T> {
   code: number
@@ -30,6 +32,15 @@ export interface AutoRunRunInfo {
 export interface AutoRunRunData {
   runStandard: Record<string, unknown>
   runInfo: AutoRunRunInfo
+  tokenSrc?: string
+  sessionKey?: string
+}
+
+export interface AutoRunRunPreparation {
+  userId: number
+  schoolId: number
+  runStandard: Record<string, unknown>
+  bounds: Array<{ siteBound?: string }>
   tokenSrc?: string
   sessionKey?: string
 }
@@ -190,16 +201,28 @@ export function getAutoRunInfo(sessionKey: string) {
   return callAutoRunApi<AutoRunRunData>('run_info', {}, sessionKey)
 }
 
-export function submitAutoRun(sessionKey: string) {
-  return callAutoRunApi<AutoRunActionResult>('run', {}, sessionKey)
+export function prepareAutoRun(sessionKey: string) {
+  return callAutoRunApi<AutoRunRunPreparation>('run_prepare', {}, sessionKey)
+}
+
+export function submitAutoRun(sessionKey: string, record: AutoRunRecordBody) {
+  return callAutoRunApi<AutoRunActionResult>('run', { record }, sessionKey)
 }
 
 export function getAutoRunClubData(sessionKey: string, queryDate: string) {
   return callAutoRunApi<AutoRunClubData>('club_data', { queryDate }, sessionKey)
 }
 
-export function signAutoRunClub(sessionKey: string, signType: '1' | '2') {
-  return callAutoRunApi<AutoRunActionResult>('club_sign', { signType }, sessionKey)
+export function signAutoRunClub(
+  sessionKey: string,
+  request: {
+    activityId: number
+    latitude: string
+    longitude: string
+    signType: '1' | '2'
+  },
+) {
+  return callAutoRunApi<AutoRunActionResult>('club_sign', request, sessionKey)
 }
 
 export function joinAutoRunClub(sessionKey: string, activityId: number) {

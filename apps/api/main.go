@@ -12,6 +12,9 @@ import (
 
 	"cuit-server/internal/academic"
 	"cuit-server/internal/analytics"
+	"cuit-server/internal/autorun"
+	autorunstore "cuit-server/internal/autorun/store"
+	autorunupstream "cuit-server/internal/autorun/upstream"
 	"cuit-server/internal/feedback"
 	"cuit-server/internal/platform/admission"
 	platformcache "cuit-server/internal/platform/cache"
@@ -157,6 +160,45 @@ func main() {
 	academicHandler.Register(h, loginGate.Middleware())
 	scheduleHandler.Register(h)
 	feedbackHandler.Register(h)
+	if autorunSecret := strings.TrimSpace(os.Getenv("AUTORUN_APP_SECRET")); autorunSecret != "" {
+		autorunAppKey := strings.TrimSpace(os.Getenv("AUTORUN_APP_KEY"))
+		autorunEncryptionKey := os.Getenv("AUTORUN_SESSION_ENCRYPTION_KEY")
+		if autorunAppKey == "" || len(strings.TrimSpace(autorunEncryptionKey)) < 16 {
+			log.Fatal("autorun: AUTORUN_APP_KEY and AUTORUN_SESSION_ENCRYPTION_KEY are required when AUTORUN_APP_SECRET is configured")
+		}
+		autorunRepository := autorunstore.NewRepository(db, autorunEncryptionKey)
+		autorunClient := autorunupstream.NewClient(autorunupstream.Options{
+			AppKey: autorunAppKey, AppSecret: autorunSecret,
+		})
+		autorun.NewHandler(autorun.NewService(autorunRepository, autorunClient)).Register(h, loginGate.Middleware())
+		log.Print("AutoRun 转发接口已启用")
+		if strings.EqualFold(strings.TrimSpace(os.Getenv("AUTORUN_SCHEDULER_ENABLED")), "true") {
+			workers, err := positiveEnvironmentInt("AUTORUN_SCHEDULER_WORKERS", 10)
+			if err != nil {
+				log.Fatal(err)
+			}
+			rate, err := positiveEnvironmentInt("AUTORUN_SCHEDULER_JOBS_PER_SECOND", 5)
+			if err != nil {
+				log.Fatal(err)
+			}
+			autorunScheduler := autorun.NewScheduler(autorunRepository, autorunClient, autorun.SchedulerConfig{
+				Workers: workers, JobsPerSecond: rate,
+			})
+			autorunScheduler.Start()
+			defer func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				if err := autorunScheduler.Stop(ctx); err != nil {
+					log.Printf("停止 AutoRun 定时器失败: %v", err)
+				}
+			}()
+			log.Printf("AutoRun 本地定时器已启用: workers=%d jobs_per_second=%d", workers, rate)
+		} else {
+			log.Print("AutoRun 本地定时器未启用")
+		}
+	} else {
+		log.Print("AutoRun 接口未启用：未配置 AUTORUN_APP_SECRET")
+	}
 	if adminToken := strings.TrimSpace(os.Getenv("ADMIN_STATS_TOKEN")); adminToken != "" {
 		analytics.NewHandler(
 			analyticsCollector,

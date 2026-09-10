@@ -7,6 +7,9 @@ import {
   getAutoRunInfo,
   isAutoRunAuthExpiredError,
   loginToAutoRun,
+  prepareAutoRun,
+  signAutoRunClub,
+  submitAutoRun,
 } from './api'
 
 afterEach(() => {
@@ -59,6 +62,56 @@ describe('校园跑 API 客户端', () => {
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit
     expect(request.headers).toMatchObject({ Authorization: 'Bearer session-example' })
     expect(request.body).toBe('{}')
+  })
+
+  it('跑步轨迹由前端生成后作为 record 交给服务端签名转发', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(Response.json({ code: 10000, msg: 'ok', response: { success: true } })),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await prepareAutoRun('session-example')
+    const record = {
+      againRunStatus: '0',
+      againRunTime: 0,
+      appVersions: '1.8.5',
+      brand: 'Xiaomi',
+      mobileType: 'Mi 11',
+      sysVersions: 'Android 11',
+      trackPoints: '30,103,1',
+      distanceTimeStatus: '1',
+      innerSchool: '1',
+      runDistance: 5000,
+      runTime: 33,
+      userId: 1,
+      vocalStatus: '1',
+      yearSemester: '2026-2027-1',
+      recordDate: '2026-09-10',
+      realityTrackPoints: '30,103--',
+    }
+    await submitAutoRun('session-example', record)
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`${DEFAULT_AUTORUN_API_BASE_URL}/api/run_prepare`)
+    const submit = fetchMock.mock.calls[1]?.[1] as RequestInit
+    expect(submit.body).toBe(JSON.stringify({ record }))
+  })
+
+  it('俱乐部手动签到把当前活动和坐标直接交给服务端', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({ code: 10000, msg: 'ok', response: { success: true } }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await signAutoRunClub('session-example', {
+      activityId: 12,
+      latitude: '30.1',
+      longitude: '103.9',
+      signType: '1',
+    })
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(request.body).toBe(
+      JSON.stringify({ activityId: 12, latitude: '30.1', longitude: '103.9', signType: '1' }),
+    )
   })
 
   it('能识别被 502 包装的上游登录失效错误', () => {
