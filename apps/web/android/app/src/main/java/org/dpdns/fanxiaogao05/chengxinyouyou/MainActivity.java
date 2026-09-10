@@ -19,7 +19,12 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SystemBarBackgroundPlugin.class);
         super.onCreate(savedInstanceState);
 
-        WindowCompat.enableEdgeToEdge(getWindow());
+        // Android 15+ 会强制 edge-to-edge，交给 Capacitor SystemBars 根据真实窗口
+        // inset 注入安全区。旧系统继续使用系统默认的非全屏布局，避免旧版 WebView
+        // 取不到 CSS safe-area 时把页面顶到状态栏下面。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            WindowCompat.enableEdgeToEdge(getWindow());
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             getWindow().setStatusBarContrastEnforced(false);
             getWindow().setNavigationBarContrastEnforced(false);
