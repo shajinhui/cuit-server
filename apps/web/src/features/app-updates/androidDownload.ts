@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 
 export const ANDROID_APK_URL =
-  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v0.2.3/app-release-signed-6.apk'
+  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v0.2.4/chengxin-youyou-v0.2.3-d1e8c13-release.apk'
 export const MIN_ANDROID_APP_VERSION = '0.2.3'
 const MIN_ANDROID_APP_BUILD = 6
 const ANDROID_WEB_PROMPT_STORAGE_KEY = 'android-app-download-shown-v0.2.3-signed-6'
