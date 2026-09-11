@@ -32,5 +32,11 @@ export async function loadPastExamsIndex(signal?: AbortSignal) {
 export function pastExamFileURL(commit: string, file: Pick<PastExamFile, 'path'>) {
   const configuredOrigin = (import.meta.env.VITE_PAST_EXAMS_PROXY_BASE_URL || '').replace(/\/$/, '')
   const origin = configuredOrigin || (Capacitor.isNativePlatform() ? DEFAULT_NATIVE_PAST_EXAMS_ORIGIN : '')
-  return `${origin}${pastExamFileProxyPath(commit, file.path)}`
+  return `${origin}${pastExamFileProxyPath(commit, file.path)}?view=1`
+}
+
+export function pastExamFileDownloadURL(commit: string, file: Pick<PastExamFile, 'path'>) {
+  const configuredOrigin = (import.meta.env.VITE_PAST_EXAMS_PROXY_BASE_URL || '').replace(/\/$/, '')
+  const origin = configuredOrigin || (Capacitor.isNativePlatform() ? DEFAULT_NATIVE_PAST_EXAMS_ORIGIN : '')
+  return `${origin}${pastExamFileProxyPath(commit, file.path)}?download=1`
 }

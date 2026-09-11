@@ -9,6 +9,7 @@ import {
   loadPastExamsIndex,
   parentPastExamDirectory,
   pastExamBreadcrumbs,
+  pastExamFileDownloadURL,
   pastExamFileKind,
   pastExamFileURL,
   searchPastExamFiles,
@@ -96,6 +97,10 @@ function openBreadcrumb(path: string) {
 
 function fileURL(file: PastExamFile) {
   return index.value ? pastExamFileURL(index.value.commit, file) : '#'
+}
+
+function fileDownloadURL(file: PastExamFile) {
+  return index.value ? pastExamFileDownloadURL(index.value.commit, file) : '#'
 }
 
 function fileLocation(file: PastExamFile) {
@@ -210,25 +215,34 @@ function scrollToListTop() {
 
         <div v-else class="past-exams-list">
           <template v-if="searching">
-            <a
+            <div
               v-for="file in searchResults"
               :key="file.path"
-              class="past-exams-row"
-              :href="fileURL(file)"
-              target="_blank"
-              rel="noopener noreferrer"
+              class="past-exams-row past-exams-row--file"
             >
-              <span class="past-exams-file-icon" :data-kind="pastExamFileKind(file.extension)">
-                {{ fileExtension(file) }}
-              </span>
-              <span class="past-exams-row__copy">
-                <strong>{{ file.name }}</strong>
-                <small>{{ fileLocation(file) }} · {{ formatPastExamSize(file.size) }}</small>
-              </span>
-              <svg class="past-exams-row__action" aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M14 5h5v5M19 5l-8 8M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-              </svg>
-            </a>
+              <a
+                class="past-exams-row__open"
+                :href="fileURL(file)"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span class="past-exams-file-icon" :data-kind="pastExamFileKind(file.extension)">
+                  {{ fileExtension(file) }}
+                </span>
+                <span class="past-exams-row__copy">
+                  <strong>{{ file.name }}</strong>
+                  <small>{{ fileLocation(file) }} · {{ formatPastExamSize(file.size) }}</small>
+                </span>
+              </a>
+              <a
+                class="past-exams-download-button"
+                :href="fileDownloadURL(file)"
+                :download="file.name"
+                target="_blank"
+                rel="noopener noreferrer"
+                :aria-label="`下载 ${file.name}`"
+              >下载</a>
+            </div>
           </template>
 
           <template v-else>
@@ -251,24 +265,33 @@ function scrollToListTop() {
                 </svg>
               </button>
 
-              <a
+              <div
                 v-else
-                class="past-exams-row"
-                :href="fileURL(item)"
-                target="_blank"
-                rel="noopener noreferrer"
+                class="past-exams-row past-exams-row--file"
               >
-                <span class="past-exams-file-icon" :data-kind="pastExamFileKind(item.extension)">
-                  {{ fileExtension(item) }}
-                </span>
-                <span class="past-exams-row__copy">
-                  <strong>{{ item.name }}</strong>
-                  <small>{{ formatPastExamSize(item.size) }}</small>
-                </span>
-                <svg class="past-exams-row__action" aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M14 5h5v5M19 5l-8 8M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
-                </svg>
-              </a>
+                <a
+                  class="past-exams-row__open"
+                  :href="fileURL(item)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span class="past-exams-file-icon" :data-kind="pastExamFileKind(item.extension)">
+                    {{ fileExtension(item) }}
+                  </span>
+                  <span class="past-exams-row__copy">
+                    <strong>{{ item.name }}</strong>
+                    <small>{{ formatPastExamSize(item.size) }}</small>
+                  </span>
+                </a>
+                <a
+                  class="past-exams-download-button"
+                  :href="fileDownloadURL(item)"
+                  :download="item.name"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  :aria-label="`下载 ${item.name}`"
+                >下载</a>
+              </div>
             </template>
           </template>
         </div>

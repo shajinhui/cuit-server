@@ -59,7 +59,7 @@ export async function onRequest(context: PagesContext): Promise<Response> {
     return errorResponse('资料源暂时无法访问', 502)
   }
 
-  const headers = responseHeaders(upstream.headers, source.filename)
+  const headers = responseHeaders(upstream.headers, source.filename, source.download)
   return new Response(request.method === 'HEAD' ? null : upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
@@ -68,7 +68,8 @@ export async function onRequest(context: PagesContext): Promise<Response> {
 }
 
 function parseSourcePath(url: URL) {
-  if (!url.pathname.startsWith(ROUTE_PREFIX) || url.search) return undefined
+  if (!url.pathname.startsWith(ROUTE_PREFIX)) return undefined
+  if (url.search && url.search !== '?view=1' && url.search !== '?download=1') return undefined
 
   const rawSegments = url.pathname.slice(ROUTE_PREFIX.length).split('/')
   if (rawSegments.length < 2 || rawSegments.some((segment) => segment.length === 0)) {
@@ -89,6 +90,7 @@ function parseSourcePath(url: URL) {
 
   return {
     commit,
+    download: url.search === '?download=1',
     encodedPath: pathSegments.map(encodeURIComponent).join('/'),
     filename: pathSegments.at(-1) ?? 'download',
   }
@@ -107,12 +109,12 @@ function isUnsafeSegment(segment: string) {
   )
 }
 
-function responseHeaders(upstream: Headers, filename: string) {
+function responseHeaders(upstream: Headers, filename: string, forceDownload: boolean) {
   const inferredContentType = contentTypeFor(filename)
   const headers = new Headers({
     'Access-Control-Allow-Origin': '*',
     'Cache-Control': `public, max-age=86400, s-maxage=${IMMUTABLE_CACHE_SECONDS}, immutable`,
-    'Content-Disposition': contentDisposition(filename),
+    'Content-Disposition': contentDisposition(filename, forceDownload),
     'Content-Type':
       inferredContentType === 'application/octet-stream'
         ? upstream.get('Content-Type') || inferredContentType
@@ -128,13 +130,13 @@ function responseHeaders(upstream: Headers, filename: string) {
   return headers
 }
 
-function contentDisposition(filename: string) {
+function contentDisposition(filename: string, forceDownload: boolean) {
   const fallback = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_') || 'download'
   const encoded = encodeURIComponent(filename).replace(/[!'()*]/g, (value) =>
     `%${value.charCodeAt(0).toString(16).toUpperCase()}`,
   )
   const extension = filename.slice(filename.lastIndexOf('.') + 1).toLowerCase()
-  const behavior = ['7z', 'rar', 'zip'].includes(extension) ? 'attachment' : 'inline'
+  const behavior = forceDownload || ['7z', 'rar', 'zip'].includes(extension) ? 'attachment' : 'inline'
   return `${behavior}; filename="${fallback}"; filename*=UTF-8''${encoded}`
 }
 

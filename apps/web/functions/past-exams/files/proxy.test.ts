@@ -16,10 +16,12 @@ describe('历年试卷文件代理', () => {
     const malformedCommit = await request('/past-exams/files/main/数据结构/试卷.pdf')
     const traversal = await request(`/past-exams/files/${commit}/%2e%2e/secret.pdf`)
     const arbitraryURL = await request(`/past-exams/files/${commit}/https%3A%2F%2Fexample.com/file.pdf`)
+    const unsupportedQuery = await request(`/past-exams/files/${commit}/数据结构/试卷.pdf?url=x`)
 
     expect(malformedCommit.status).toBe(400)
     expect(traversal.status).toBe(400)
     expect(arbitraryURL.status).toBe(400)
+    expect(unsupportedQuery.status).toBe(400)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -36,7 +38,7 @@ describe('历年试卷文件代理', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const response = await request(
-      `/past-exams/files/${commit}/数据结构/一堆卷子/数据结构历年题.pdf`,
+      `/past-exams/files/${commit}/数据结构/一堆卷子/数据结构历年题.pdf?view=1`,
     )
 
     expect(response.status).toBe(200)
@@ -99,6 +101,21 @@ describe('历年试卷文件代理', () => {
     expect(office.headers.get('Content-Disposition')).toMatch(/^inline;/)
     expect(archive.headers.get('Content-Type')).toBe('application/vnd.rar')
     expect(archive.headers.get('Content-Disposition')).toMatch(/^attachment;/)
+  })
+
+  it('通过 download 参数强制下载可预览文件', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('pdf-content', { headers: { 'Content-Type': 'application/octet-stream' } }),
+      ),
+    )
+
+    const response = await request(`/past-exams/files/${commit}/数据结构/试卷.pdf?download=1`)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('application/pdf')
+    expect(response.headers.get('Content-Disposition')).toMatch(/^attachment;/)
   })
 })
 

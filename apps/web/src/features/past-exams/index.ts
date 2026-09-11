@@ -1,4 +1,4 @@
-export { loadPastExamsIndex, pastExamFileURL } from './api'
+export { loadPastExamsIndex, pastExamFileDownloadURL, pastExamFileURL } from './api'
 export {
   browsePastExamDirectory,
   formatPastExamSize,
