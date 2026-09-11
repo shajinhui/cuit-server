@@ -92,6 +92,12 @@ const router = createRouter({
       component: () => import('@/pages/AutoRunPage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/past-exams',
+      name: 'past-exams',
+      component: () => import('@/pages/PastExamsPage.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })

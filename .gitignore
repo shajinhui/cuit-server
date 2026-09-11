@@ -15,6 +15,7 @@ bin/
 dist/
 dev-dist/
 .ota/
+.wrangler/
 coverage.out
 
 # Local generated files

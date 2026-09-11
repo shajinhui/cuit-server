@@ -233,6 +233,7 @@ curl --fail https://api.fanxiaogao05.dpdns.org/api/v1/health
 | `PNPM_VERSION` | `10.26.1` |
 | `VITE_API_BASE_URL` | `https://api.fanxiaogao05.dpdns.org` |
 | `VITE_AUTORUN_API_BASE_URL` | `https://api.fanxiaogao05.dpdns.org` |
+| `VITE_PAST_EXAMS_PROXY_BASE_URL` | 留空；原生 App 默认使用 `https://cuit-server.pages.dev` |
 
 部署成功后，将 Pages Custom domain 设置为：
 
@@ -241,6 +242,8 @@ fanxiaogao05.dpdns.org
 ```
 
 根域当前已有 DNS 记录。绑定 Pages 前先确认该记录不再承载其他服务，然后按 Pages 提示替换冲突记录。
+
+`apps/web/functions/past-exams/files/[[path]].ts` 会随 Pages 一并部署，为历年试卷提供固定仓库、固定 commit 的流式文件代理。文件正文不写入 Pages 构建产物或 Worker 内存；响应使用长期边缘缓存，目录索引仍由 App 本地静态资源提供。
 
 `pnpm run build` 还会生成 Android Web 热更新清单和 ZIP。Android 使用原生
 HTTP 从 `https://fanxiaogao05.dpdns.org/app-updates/android/latest.json`

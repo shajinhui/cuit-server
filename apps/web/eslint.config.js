@@ -9,6 +9,7 @@ export default tseslint.config(
       'dist/**',
       'dev-dist/**',
       '.ota/**',
+      '.wrangler/**',
       'coverage/**',
       'android/**',
       'ios/**',
