@@ -57,7 +57,9 @@ Redis 只保存上述可重建数据，不保存密码、Cookie、Ticket、应�
 
 ## 校园跑 API
 
-校园跑接口保留旧 Worker 的响应协议，便于 Web/Android 平滑迁移：
+校园跑正式入口是 `https://autorun-api.fanxiaogao05.dpdns.org`。Cloudflare Worker
+负责登录、查询、签名和单次转发；Go API 不再向浏览器提供校园跑接口，只保存定时
+开关、事件和执行状态。响应继续使用兼容协议：
 
 ```json
 {
@@ -73,8 +75,8 @@ Redis 只保存上述可重建数据，不保存密码、Cookie、Ticket、应�
 Authorization: Bearer <sessionKey>
 ```
 
-服务端 SQLite 只保存上游 token 的 AES-GCM 密文和手机号摘要，不保存校园跑密码。
-`APP_SECRET` 仅存在于 Go 服务端，绝不能写入前端代码或构建环境变量。
+Worker D1 和 Go SQLite 都只保存上游 token 的加密密文，不保存校园跑密码。
+`APP_SECRET` 仅存在于 Worker Secret，绝不能写入前端代码、Go 环境或构建变量。
 
 ### 登录与恢复会话
 
@@ -95,7 +97,9 @@ Authorization: Bearer <sessionKey>
 {}
 ```
 
-该接口只检查本地加密会话，不访问上游，适合应用从后台恢复时快速确认登录态。
+该接口先读取 D1 会话并用只读请求校验上游 token；临时网络错误不会删除本地登录态。
+切流前保存在 Go SQLite 的旧会话会通过签名内部接口按需迁入 D1，并保留原
+`sessionKey`，因此用户不需要统一重新登录。
 
 ### 校园跑进度与提交
 
@@ -147,7 +151,7 @@ Content-Type: application/json
 }
 ```
 
-后端会以当前会话的 `userId` 覆盖前端值，再签名并单次转发。
+Worker 会校验 `record.userId` 必须与当前会话一致，再签名并单次转发。
 
 ### 俱乐部
 
@@ -198,11 +202,11 @@ Authorization: Bearer <sessionKey>
 
 ### 前端接入注意事项
 
-- 正式 API 地址为 `https://api.fanxiaogao05.dpdns.org`；自定义域名只解决访问入口，CORS 仍由 Go 服务端的 `APP_CORS_ORIGIN` 控制。
+- 正式 API 地址为 `https://autorun-api.fanxiaogao05.dpdns.org`；CORS 由 Worker 的 `ALLOWED_ORIGINS` 精确控制。
 - 登录密码只在本次 HTTPS 登录请求中使用，不写入 LocalStorage、日志或错误上报；前端只持久化随机 `sessionKey`。
 - 页面回到前台时调用 `session_bootstrap`；收到 HTTP `401` 或业务码 `40100` 后清除本地会话并弹出登录框。普通断网或 `502` 不应误判为登录失效。
 - `run`、`club_sign`、`club_join` 和 `club_cancel` 都是写操作。请求超时代表结果未知，客户端不得自动重试，必须先重新读取状态并由用户决定。
-- 轨迹生成和距离计算位于前端；签名和 token 解密只能位于后端。定时签到/签退完全由本地 Go 服务执行，关闭页面不影响任务。
+- 轨迹生成和距离计算位于前端；上游签名与手动请求位于 Worker。Go 只负责任务编排和持久化，并通过 HMAC 内部接口让 Worker 执行定时查询及签到/签退，关闭页面不影响任务。
 - Service Worker 不能缓存任何 `/api` 响应。若以后把 Web 和 API 放到同一域名，也仍应保持这些响应 `Cache-Control: no-store`。
 
 ## 管理员统计

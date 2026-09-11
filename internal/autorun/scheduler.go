@@ -38,6 +38,16 @@ type schedulerRepository interface {
 	CompleteScheduledAction(context.Context, int64, string, store.SignType, time.Time, string) error
 }
 
+type scheduledMutationClient interface {
+	SignInOrSignBackWithKey(context.Context, string, string, upstream.SignRequestBody) (string, error)
+}
+
+type schedulerUpstreamClient interface {
+	GetSignInTf(context.Context, string, int64) (*upstream.SignInTf, error)
+	SignInOrSignBack(context.Context, string, upstream.SignRequestBody) (string, error)
+	GetClubActivityList(context.Context, string, int64, string, int64) ([]upstream.ClubInfo, error)
+}
+
 type SchedulerConfig struct {
 	Workers       int
 	JobsPerSecond int
@@ -55,7 +65,7 @@ type schedulerJob struct {
 // claim；内存 channel 只负责当前进程分发，进程退出后未完成任务会由 stale claim 恢复。
 type Scheduler struct {
 	repository schedulerRepository
-	upstream   upstreamClient
+	upstream   schedulerUpstreamClient
 	config     SchedulerConfig
 	probes     *activityProbeCoordinator
 
@@ -64,7 +74,7 @@ type Scheduler struct {
 	done   chan struct{}
 }
 
-func NewScheduler(repository schedulerRepository, client upstreamClient, config SchedulerConfig) *Scheduler {
+func NewScheduler(repository schedulerRepository, client schedulerUpstreamClient, config SchedulerConfig) *Scheduler {
 	if config.Workers <= 0 {
 		config.Workers = 10
 	}
@@ -321,10 +331,16 @@ func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string
 	if !claimed {
 		return s.deferProbe(ctx, event, now, "自动"+signTypeName(event.SignType)+"已提交，等待去重确认")
 	}
-	_, err = s.upstream.SignInOrSignBack(ctx, session.Token, upstream.SignRequestBody{
+	request := upstream.SignRequestBody{
 		ActivityID: probeResult.ActivityID, Latitude: probeResult.Latitude, Longitude: probeResult.Longitude,
 		SignType: string(event.SignType), StudentID: session.StudentID,
-	})
+	}
+	if keyed, ok := s.upstream.(scheduledMutationClient); ok {
+		_, err = keyed.SignInOrSignBackWithKey(ctx, session.Token, actionKey, request)
+	} else {
+		// 仅供旧版直接上游客户端回滚；生产 relay 始终实现带 actionKey 的接口。
+		_, err = s.upstream.SignInOrSignBack(ctx, session.Token, request)
+	}
 	if err != nil {
 		_ = s.repository.DeferScheduleEvent(context.WithoutCancel(ctx), studentID, actionKey, event.WindowEnd.Add(eventWindowGrace))
 		_ = s.updateMessage(context.WithoutCancel(ctx), studentID, now, "自动"+signTypeName(event.SignType)+"结果未知，为避免重复提交已停止重试")

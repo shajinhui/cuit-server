@@ -1,6 +1,6 @@
 import type { AutoRunRecordBody } from './run'
 
-export const DEFAULT_AUTORUN_API_BASE_URL = 'https://api.fanxiaogao05.dpdns.org'
+export const DEFAULT_AUTORUN_API_BASE_URL = 'https://autorun-api.fanxiaogao05.dpdns.org'
 
 interface AutoRunApiEnvelope<T> {
   code: number

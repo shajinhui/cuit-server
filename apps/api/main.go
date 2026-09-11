@@ -13,6 +13,7 @@ import (
 	"cuit-server/internal/academic"
 	"cuit-server/internal/analytics"
 	"cuit-server/internal/autorun"
+	autorunrelay "cuit-server/internal/autorun/relay"
 	autorunstore "cuit-server/internal/autorun/store"
 	autorunupstream "cuit-server/internal/autorun/upstream"
 	"cuit-server/internal/feedback"
@@ -160,7 +161,23 @@ func main() {
 	academicHandler.Register(h, loginGate.Middleware())
 	scheduleHandler.Register(h)
 	feedbackHandler.Register(h)
-	if autorunSecret := strings.TrimSpace(os.Getenv("AUTORUN_APP_SECRET")); autorunSecret != "" {
+	autorunWorkerURL := strings.TrimSpace(os.Getenv("AUTORUN_WORKER_URL"))
+	autorunInternalSecret := strings.TrimSpace(os.Getenv("AUTORUN_INTERNAL_SECRET"))
+	autorunSecret := strings.TrimSpace(os.Getenv("AUTORUN_APP_SECRET"))
+	if autorunWorkerURL != "" || autorunInternalSecret != "" {
+		autorunEncryptionKey := os.Getenv("AUTORUN_SESSION_ENCRYPTION_KEY")
+		if autorunWorkerURL == "" || len(autorunInternalSecret) < 32 || len(strings.TrimSpace(autorunEncryptionKey)) < 16 {
+			log.Fatal("autorun: AUTORUN_WORKER_URL, AUTORUN_INTERNAL_SECRET (32+ chars) and AUTORUN_SESSION_ENCRYPTION_KEY are required together")
+		}
+		autorunRepository := autorunstore.NewRepository(db, autorunEncryptionKey)
+		autorunRelay, err := autorunrelay.NewClient(autorunWorkerURL, autorunInternalSecret)
+		if err != nil {
+			log.Fatal(err)
+		}
+		autorunrelay.NewHandler(autorunRepository, autorunInternalSecret).Register(h)
+		log.Print("AutoRun 定时状态内部接口已启用")
+		defer startAutoRunScheduler(autorunRepository, autorunRelay)()
+	} else if autorunSecret != "" {
 		autorunAppKey := strings.TrimSpace(os.Getenv("AUTORUN_APP_KEY"))
 		autorunEncryptionKey := os.Getenv("AUTORUN_SESSION_ENCRYPTION_KEY")
 		if autorunAppKey == "" || len(strings.TrimSpace(autorunEncryptionKey)) < 16 {
@@ -171,33 +188,10 @@ func main() {
 			AppKey: autorunAppKey, AppSecret: autorunSecret,
 		})
 		autorun.NewHandler(autorun.NewService(autorunRepository, autorunClient)).Register(h, loginGate.Middleware())
-		log.Print("AutoRun 转发接口已启用")
-		if strings.EqualFold(strings.TrimSpace(os.Getenv("AUTORUN_SCHEDULER_ENABLED")), "true") {
-			workers, err := positiveEnvironmentInt("AUTORUN_SCHEDULER_WORKERS", 10)
-			if err != nil {
-				log.Fatal(err)
-			}
-			rate, err := positiveEnvironmentInt("AUTORUN_SCHEDULER_JOBS_PER_SECOND", 5)
-			if err != nil {
-				log.Fatal(err)
-			}
-			autorunScheduler := autorun.NewScheduler(autorunRepository, autorunClient, autorun.SchedulerConfig{
-				Workers: workers, JobsPerSecond: rate,
-			})
-			autorunScheduler.Start()
-			defer func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				defer cancel()
-				if err := autorunScheduler.Stop(ctx); err != nil {
-					log.Printf("停止 AutoRun 定时器失败: %v", err)
-				}
-			}()
-			log.Printf("AutoRun 本地定时器已启用: workers=%d jobs_per_second=%d", workers, rate)
-		} else {
-			log.Print("AutoRun 本地定时器未启用")
-		}
+		log.Print("AutoRun 旧版直连接口已启用（回滚模式）")
+		defer startAutoRunScheduler(autorunRepository, autorunClient)()
 	} else {
-		log.Print("AutoRun 接口未启用：未配置 AUTORUN_APP_SECRET")
+		log.Print("AutoRun 定时服务未启用：未配置 Worker relay")
 	}
 	if adminToken := strings.TrimSpace(os.Getenv("ADMIN_STATS_TOKEN")); adminToken != "" {
 		analytics.NewHandler(
@@ -213,6 +207,39 @@ func main() {
 		c.JSON(http.StatusOK, map[string]any{"code": 0, "message": "success", "data": map[string]string{"status": "ok"}})
 	})
 	h.Spin()
+}
+
+type autoRunSchedulerClient interface {
+	GetSignInTf(context.Context, string, int64) (*autorunupstream.SignInTf, error)
+	SignInOrSignBack(context.Context, string, autorunupstream.SignRequestBody) (string, error)
+	GetClubActivityList(context.Context, string, int64, string, int64) ([]autorunupstream.ClubInfo, error)
+}
+
+func startAutoRunScheduler(repository *autorunstore.Repository, client autoRunSchedulerClient) func() {
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("AUTORUN_SCHEDULER_ENABLED")), "true") {
+		log.Print("AutoRun 本地定时器未启用")
+		return func() {}
+	}
+	workers, err := positiveEnvironmentInt("AUTORUN_SCHEDULER_WORKERS", 10)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rate, err := positiveEnvironmentInt("AUTORUN_SCHEDULER_JOBS_PER_SECOND", 5)
+	if err != nil {
+		log.Fatal(err)
+	}
+	autorunScheduler := autorun.NewScheduler(repository, client, autorun.SchedulerConfig{
+		Workers: workers, JobsPerSecond: rate,
+	})
+	autorunScheduler.Start()
+	log.Printf("AutoRun 本地定时器已启用: workers=%d jobs_per_second=%d transport=worker", workers, rate)
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := autorunScheduler.Stop(ctx); err != nil {
+			log.Printf("停止 AutoRun 定时器失败: %v", err)
+		}
+	}
 }
 
 func positiveEnvironmentInt(name string, fallback int) (int, error) {
