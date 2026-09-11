@@ -1,7 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import { checkSession, restoreOfflineAccess } from '@/app/sessionLifecycle'
+import {
+  checkSession,
+  restoreOfflineAccess,
+  restoreScheduleOfflineAccess,
+} from '@/app/sessionLifecycle'
 import { useSessionStore } from '@/features/session'
+import SchedulePage from '@/pages/SchedulePage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,7 +16,7 @@ const router = createRouter({
     {
       path: '/schedule',
       name: 'schedule',
-      component: () => import('@/pages/SchedulePage.vue'),
+      component: SchedulePage,
       meta: { requiresAuth: true },
     },
     {
@@ -99,7 +104,8 @@ router.beforeEach(async (to) => {
   if (!needsSession) return true
 
   if (session.status === 'unknown') {
-    const canStartOffline = await restoreOfflineAccess()
+    const canStartOffline =
+      to.name === 'schedule' ? await restoreScheduleOfflineAccess() : await restoreOfflineAccess()
     if (canStartOffline) {
       verifySessionInBackground()
     } else {

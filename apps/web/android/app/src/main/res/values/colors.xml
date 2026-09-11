@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="system_bar_fallback">#FBFCF9</color>
+    <color name="schedule_launch_background">#C9D5E7</color>
 </resources>
