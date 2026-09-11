@@ -18,8 +18,10 @@ type fakeUpstream struct {
 	loginCalls  int
 	recordCalls int
 	recordBody  upstream.NewRecordBody
+	probeCalls  int
 	signCalls   int
 	signBody    upstream.SignRequestBody
+	signBodies  []upstream.SignRequestBody
 	signTask    *upstream.SignInTf
 	signErr     error
 }
@@ -40,11 +42,13 @@ func (f *fakeUpstream) RecordNew(_ context.Context, _ string, body upstream.NewR
 	return `{"code":10000}`, nil
 }
 func (f *fakeUpstream) GetSignInTf(context.Context, string, int64) (*upstream.SignInTf, error) {
+	f.probeCalls++
 	return f.signTask, nil
 }
 func (f *fakeUpstream) SignInOrSignBack(_ context.Context, _ string, body upstream.SignRequestBody) (string, error) {
 	f.signCalls++
 	f.signBody = body
+	f.signBodies = append(f.signBodies, body)
 	return `{"code":10000}`, f.signErr
 }
 func (f *fakeUpstream) GetClubActivityList(context.Context, string, int64, string, int64) ([]upstream.ClubInfo, error) {
@@ -137,6 +141,60 @@ func TestSchedulerDoesNotRetryUnknownMutationOutcome(t *testing.T) {
 	}
 	if client.signCalls != 1 {
 		t.Fatalf("sign mutation calls = %d, want exactly 1", client.signCalls)
+	}
+}
+
+func TestSchedulerSharesActivityProbeButClaimsEachStudentMutation(t *testing.T) {
+	repository := openTestRepository(t)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 10, 10, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))
+	phones := []string{"13800000000", "13800000001"}
+	for index, studentID := range []int64{22, 23} {
+		session, err := repository.SaveSession(ctx, phones[index], store.Session{
+			Token: "upstream-token", UserID: 11 + int64(index), StudentID: studentID, SchoolID: 33,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := repository.SaveSchedule(ctx, studentID, 33, session.SessionKey, true, now); err != nil {
+			t.Fatal(err)
+		}
+		event := store.Event{
+			StudentID: studentID, ActionKey: "2026-09-10:44:1", ActivityID: 44, SignType: store.SignInType,
+			EventAt: now, WindowStart: now.Add(-10 * time.Minute), WindowEnd: now.Add(10 * time.Minute), AvailableAt: now.Add(-10 * time.Minute),
+		}
+		if err := repository.ReplaceScheduleEvents(ctx, studentID, "2026-09-10", []store.Event{event}, now, now.Add(4*time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	client := &fakeUpstream{
+		signTask: &upstream.SignInTf{ActivityID: 44, Latitude: "30.1", Longitude: "103.9", SignStatus: "1"},
+	}
+	scheduler := NewScheduler(repository, client, SchedulerConfig{})
+	for _, studentID := range []int64{22, 23} {
+		if err := scheduler.probe(ctx, studentID, "2026-09-10:44:1", now); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if client.probeCalls != 1 {
+		t.Fatalf("shared probe calls = %d, want 1", client.probeCalls)
+	}
+	if client.signCalls != 2 {
+		t.Fatalf("student mutation calls = %d, want 2", client.signCalls)
+	}
+	if len(client.signBodies) != 2 || client.signBodies[0].StudentID == client.signBodies[1].StudentID {
+		t.Fatalf("student mutation bodies = %+v", client.signBodies)
+	}
+	for _, studentID := range []int64{22, 23} {
+		complete, err := repository.IsActionComplete(ctx, studentID, "2026-09-10:44:1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !complete {
+			t.Fatalf("student %d action was not completed", studentID)
+		}
 	}
 }
 

@@ -91,6 +91,12 @@ Worker 的 `SESSION_ENCRYPTION_KEY` 完全一致，否则旧 token 密文无法�
 `AUTORUN_SCHEDULER_WORKERS=10`、`AUTORUN_SCHEDULER_JOBS_PER_SECOND=5`；1000 个
 同一时间窗口任务约需数分钟展开。提高速率前先观察上游失败率和服务器连接数。
 
+调度器会按 `schoolId + activityId + signType` 合并同一活动的状态探测：开放结果
+缓存 30 秒，未开放结果缓存 5 秒，同一时刻只允许一个上游探测。缓存只保存活动
+编号和坐标，不保存或共享学生 token、studentId、个人签到状态；实际签到/签退仍
+为每位学生单独落盘 claim 并单独发送。候选学生的探测请求失败时不会缓存错误，
+下一位学生会用自己的会话重新探测。
+
 在原 `AutoRun-ts` 目录导出数据（文件含加密 token 和会话标识，不得提交 Git）：
 
 ```bash

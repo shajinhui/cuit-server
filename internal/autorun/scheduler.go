@@ -57,6 +57,7 @@ type Scheduler struct {
 	repository schedulerRepository
 	upstream   upstreamClient
 	config     SchedulerConfig
+	probes     *activityProbeCoordinator
 
 	mu     sync.Mutex
 	cancel context.CancelFunc
@@ -76,7 +77,12 @@ func NewScheduler(repository schedulerRepository, client upstreamClient, config 
 	if config.TickInterval <= 0 {
 		config.TickInterval = time.Second
 	}
-	return &Scheduler{repository: repository, upstream: client, config: config}
+	return &Scheduler{
+		repository: repository,
+		upstream:   client,
+		config:     config,
+		probes:     newActivityProbeCoordinator(),
+	}
 }
 
 func (s *Scheduler) Start() {
@@ -280,7 +286,21 @@ func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string
 	if session == nil || session.Token == "" {
 		return s.deferProbe(ctx, event, now, "定时任务缺少可用登录态，请重新登录")
 	}
-	task, err := s.upstream.GetSignInTf(ctx, session.Token, session.StudentID)
+	schoolID := session.SchoolID
+	if schoolID <= 0 {
+		schoolID = schedule.SchoolID
+	}
+	probeResult, err := s.probes.Do(ctx, activityProbeKey{
+		SchoolID:   schoolID,
+		ActivityID: event.ActivityID,
+		SignType:   event.SignType,
+	}, func(probeCtx context.Context) (activityProbeResult, error) {
+		task, probeErr := s.upstream.GetSignInTf(probeCtx, session.Token, session.StudentID)
+		if probeErr != nil {
+			return activityProbeResult{}, probeErr
+		}
+		return resolveActivityProbe(event, task), nil
+	})
 	if err != nil {
 		message := "试探签到/签退失败：上游请求失败"
 		if upstream.IsTokenExpired(err) {
@@ -288,12 +308,8 @@ func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string
 		}
 		return s.deferProbe(ctx, event, now, message)
 	}
-	if isEmptySignTask(task) || resolveSignType(task) != event.SignType {
-		return s.deferProbe(ctx, event, now, "已试探：服务器暂未开放对应签到/签退")
-	}
-	if task == nil || (event.ActivityID > 0 && task.ActivityID > 0 && event.ActivityID != task.ActivityID) ||
-		task.ActivityID <= 0 || !validCoordinate(task.Latitude, -90, 90) || !validCoordinate(task.Longitude, -180, 180) {
-		return s.deferProbe(ctx, event, now, "已试探：活动编号或签到坐标缺失/不匹配")
+	if !probeResult.Open {
+		return s.deferProbe(ctx, event, now, probeResult.Message)
 	}
 
 	// mutation claim 在请求前落盘。请求超时可能代表上游已经成功，因此无论错误
@@ -306,7 +322,7 @@ func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string
 		return s.deferProbe(ctx, event, now, "自动"+signTypeName(event.SignType)+"已提交，等待去重确认")
 	}
 	_, err = s.upstream.SignInOrSignBack(ctx, session.Token, upstream.SignRequestBody{
-		ActivityID: task.ActivityID, Latitude: task.Latitude, Longitude: task.Longitude,
+		ActivityID: probeResult.ActivityID, Latitude: probeResult.Latitude, Longitude: probeResult.Longitude,
 		SignType: string(event.SignType), StudentID: session.StudentID,
 	})
 	if err != nil {
@@ -315,6 +331,22 @@ func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string
 		return fmt.Errorf("submit scheduled mutation once: %w", err)
 	}
 	return s.repository.CompleteScheduledAction(ctx, studentID, actionKey, event.SignType, now, "自动"+signTypeName(event.SignType)+"成功")
+}
+
+func resolveActivityProbe(event *store.Event, task *upstream.SignInTf) activityProbeResult {
+	if isEmptySignTask(task) || resolveSignType(task) != event.SignType {
+		return activityProbeResult{Message: "已试探：服务器暂未开放对应签到/签退"}
+	}
+	if task == nil || (event.ActivityID > 0 && task.ActivityID > 0 && event.ActivityID != task.ActivityID) ||
+		task.ActivityID <= 0 || !validCoordinate(task.Latitude, -90, 90) || !validCoordinate(task.Longitude, -180, 180) {
+		return activityProbeResult{Message: "已试探：活动编号或签到坐标缺失/不匹配"}
+	}
+	return activityProbeResult{
+		Open:       true,
+		ActivityID: task.ActivityID,
+		Latitude:   task.Latitude,
+		Longitude:  task.Longitude,
+	}
 }
 
 func (s *Scheduler) scheduledSession(ctx context.Context, schedule *store.Schedule) (*store.Session, error) {
