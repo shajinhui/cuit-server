@@ -5,7 +5,9 @@ import { useRouter } from 'vue-router'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
 import {
   browsePastExamDirectory,
+  downloadPastExamFile,
   formatPastExamSize,
+  isIOSWebDevice,
   loadPastExamsIndex,
   parentPastExamDirectory,
   pastExamBreadcrumbs,
@@ -28,7 +30,11 @@ const loading = ref(true)
 const errorMessage = ref('')
 const currentPath = ref('')
 const query = ref('')
+const downloadingPath = ref('')
+const notice = ref('')
 const abortController = new AbortController()
+let downloadAbortController: AbortController | undefined
+let noticeTimer: number | undefined
 
 const searching = computed(() => query.value.trim().length > 0)
 const directoryItems = computed(() =>
@@ -54,7 +60,11 @@ const currentTitle = computed(() => {
 usePageTheme('#f2f2f7')
 
 onMounted(() => void loadIndex())
-onBeforeUnmount(() => abortController.abort())
+onBeforeUnmount(() => {
+  abortController.abort()
+  downloadAbortController?.abort()
+  window.clearTimeout(noticeTimer)
+})
 
 async function loadIndex() {
   loading.value = true
@@ -101,6 +111,39 @@ function fileURL(file: PastExamFile) {
 
 function fileDownloadURL(file: PastExamFile) {
   return index.value ? pastExamFileDownloadURL(index.value.commit, file) : '#'
+}
+
+async function downloadFile(file: PastExamFile) {
+  if (downloadingPath.value) return
+
+  downloadingPath.value = file.path
+  downloadAbortController = new AbortController()
+  try {
+    const result = await downloadPastExamFile(
+      fileDownloadURL(file),
+      file.name,
+      downloadAbortController.signal,
+    )
+    showNotice(result === 'shared' ? '已打开系统存储菜单' : '已开始下载')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    showNotice(error instanceof Error ? error.message : '下载失败，请稍后重试')
+  } finally {
+    downloadingPath.value = ''
+    downloadAbortController = undefined
+  }
+}
+
+function openFile(event: MouseEvent, file: PastExamFile) {
+  if (!isIOSWebDevice()) return
+  event.preventDefault()
+  void downloadFile(file)
+}
+
+function showNotice(message: string) {
+  notice.value = message
+  window.clearTimeout(noticeTimer)
+  noticeTimer = window.setTimeout(() => (notice.value = ''), 2400)
 }
 
 function fileLocation(file: PastExamFile) {
@@ -225,6 +268,7 @@ function scrollToListTop() {
                 :href="fileURL(file)"
                 target="_blank"
                 rel="noopener noreferrer"
+                @click="openFile($event, file)"
               >
                 <span class="past-exams-file-icon" :data-kind="pastExamFileKind(file.extension)">
                   {{ fileExtension(file) }}
@@ -234,14 +278,14 @@ function scrollToListTop() {
                   <small>{{ fileLocation(file) }} · {{ formatPastExamSize(file.size) }}</small>
                 </span>
               </a>
-              <a
+              <button
+                type="button"
                 class="past-exams-download-button"
-                :href="fileDownloadURL(file)"
-                :download="file.name"
-                target="_blank"
-                rel="noopener noreferrer"
+                :disabled="Boolean(downloadingPath)"
+                :aria-busy="downloadingPath === file.path"
                 :aria-label="`下载 ${file.name}`"
-              >下载</a>
+                @click="downloadFile(file)"
+              >{{ downloadingPath === file.path ? '准备中' : '下载' }}</button>
             </div>
           </template>
 
@@ -274,6 +318,7 @@ function scrollToListTop() {
                   :href="fileURL(item)"
                   target="_blank"
                   rel="noopener noreferrer"
+                  @click="openFile($event, item)"
                 >
                   <span class="past-exams-file-icon" :data-kind="pastExamFileKind(item.extension)">
                     {{ fileExtension(item) }}
@@ -283,14 +328,14 @@ function scrollToListTop() {
                     <small>{{ formatPastExamSize(item.size) }}</small>
                   </span>
                 </a>
-                <a
+                <button
+                  type="button"
                   class="past-exams-download-button"
-                  :href="fileDownloadURL(item)"
-                  :download="item.name"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  :disabled="Boolean(downloadingPath)"
+                  :aria-busy="downloadingPath === item.path"
                   :aria-label="`下载 ${item.name}`"
-                >下载</a>
+                  @click="downloadFile(item)"
+                >{{ downloadingPath === item.path ? '准备中' : '下载' }}</button>
               </div>
             </template>
           </template>
@@ -301,5 +346,9 @@ function scrollToListTop() {
         目录更新于 {{ formatUpdatedAt(index.updatedAt) }}，文件由 Cloudflare 边缘读取 GitHub 源仓库。
       </footer>
     </template>
+
+    <Transition name="toast">
+      <div v-if="notice" class="toast-message" role="status">{{ notice }}</div>
+    </Transition>
   </main>
 </template>

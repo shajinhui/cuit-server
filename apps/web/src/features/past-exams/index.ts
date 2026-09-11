@@ -1,4 +1,5 @@
 export { loadPastExamsIndex, pastExamFileDownloadURL, pastExamFileURL } from './api'
+export { downloadPastExamFile, isIOSWebDevice } from './download'
 export {
   browsePastExamDirectory,
   formatPastExamSize,
@@ -16,3 +17,4 @@ export type {
   PastExamFileKind,
   PastExamsIndex,
 } from './model'
+export type { PastExamDownloadResult } from './download'

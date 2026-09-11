@@ -324,7 +324,7 @@
 }
 
 .past-exams-row--file {
-  grid-template-columns: minmax(0, 1fr) 52px;
+  grid-template-columns: minmax(0, 1fr) 58px;
   gap: 6px;
 }
 
@@ -350,22 +350,29 @@
 
 .past-exams-download-button {
   display: grid;
-  width: 52px;
+  width: 58px;
   min-height: 34px;
+  padding: 0;
   place-items: center;
   justify-self: end;
   color: #007aff;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  text-decoration: none;
   background: rgba(0, 122, 255, 0.1);
+  border: 0;
   border-radius: 17px;
 }
 
 .past-exams-download-button:active {
   color: #fff;
   background: #007aff;
+}
+
+.past-exams-download-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .past-exams-folder-icon,
