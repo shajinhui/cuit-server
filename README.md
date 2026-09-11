@@ -38,7 +38,7 @@
   <img src="docs/architecture/cuit-server-architecture.png" width="100%" alt="成信友友当前项目架构图">
 </p>
 
-浏览器不直接访问学校认证系统。后端为每位用户创建独立的 `jwxt.Client` 和 `CookieJar`，避免不同学生的学校会话相互混用。校园跑轨迹和请求体由浏览器计算，Go 后端只保存加密上游 token、使用私有 `APP_SECRET` 签名转发，并执行无人值守定时任务。
+浏览器不直接访问学校教务认证系统。后端为每位用户创建独立的 `jwxt.Client` 和 `CookieJar`，避免不同学生的学校会话相互混用。校园跑轨迹和请求体由浏览器计算，Cloudflare Worker 持有 `APP_SECRET` 并完成全部上游请求；Go 后端只保存加密 token、编排无人值守定时任务，并通过 HMAC 内部接口调用 Worker。
 
 ## 技术栈
 
