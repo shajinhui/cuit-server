@@ -239,10 +239,11 @@ async function runOnce() {
     const result = await withManualLoading(true, () => submitAutoRun(sessionKey.value, record))
     adoptRotatedSession(result.data)
     const message = result.message || '提交成功'
+    runActionMessage.value = '提交成功，正在刷新跑步数据…'
+    await loadRunData()
     runActionStatus.value = 'success'
     runActionMessage.value = message
     pushToast(message, 'success')
-    await loadRunData()
   } catch (error) {
     const message = handleApiError(error, '提交失败')
     runActionStatus.value = 'error'
