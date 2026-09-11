@@ -36,6 +36,12 @@ export async function restoreOfflineAccess() {
   return useSessionStore().restoreOfflineAccess(hasOfflineUserData)
 }
 
+export async function restoreScheduleOfflineAccess() {
+  const schedule = useScheduleStore()
+  await schedule.restoreCachedSchedule()
+  return useSessionStore().restoreOfflineAccess(async () => Boolean(schedule.table))
+}
+
 export async function checkSession(force = false) {
   const session = useSessionStore()
   const authenticated = await session.check(hasOfflineUserData, force)

@@ -19,13 +19,13 @@ const route = useRoute()
 const navigationRoutes = new Set(['schedule', 'tools', 'profile'])
 const resolvingInitialRoute = computed(() => !route.name)
 const showBottomNavigation = computed(() => navigationRoutes.has(String(route.name)))
-const { readyUpdate } = useAndroidLiveUpdate()
+const { updateDialogVisible } = useAndroidLiveUpdate()
 const { guideVisible } = usePwaInstall()
 const androidAppDownloadOpen = ref(false)
 const allowAnnouncement = computed(
   () =>
     showBottomNavigation.value &&
-    !readyUpdate.value &&
+    !updateDialogVisible.value &&
     !androidAppDownloadOpen.value &&
     !guideVisible.value,
 )
