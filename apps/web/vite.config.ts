@@ -47,8 +47,11 @@ export default defineConfig(({ mode }) => {
           enabled: true,
         },
         workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,webp,jpg,jpeg,woff,woff2}', 'assets/**/*.png'],
-          navigateFallbackDenylist: [/^\/api\//],
+          globPatterns: [
+            '**/*.{js,css,html,json,svg,webp,jpg,jpeg,woff,woff2}',
+            'assets/**/*.png',
+          ],
+          navigateFallbackDenylist: [/^\/api\//, /^\/past-exams\/files\//],
         },
       }),
     ],

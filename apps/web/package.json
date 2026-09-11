@@ -18,6 +18,7 @@
     "test": "vitest run",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
+    "past-exams:index": "node scripts/build-past-exams-index.mjs",
     "android:sync": "pnpm run build:android && cap sync android",
     "ios:sync": "pnpm run ios:sync:source",
     "ios:sync:source": "pnpm run build:ios && cap sync ios && node scripts/fix-ios-spm-paths.mjs",

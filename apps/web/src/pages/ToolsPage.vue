@@ -42,7 +42,7 @@ const tools: ToolItem[] = [
   { label: '考场查询', icon: examRoomIcon, route: 'exams' },
   { label: '校园地图', icon: mapIcon, route: 'campus-map' },
   { label: '校园跑与俱乐部', icon: autoRunIcon, route: 'autorun' },
-  { label: '历年试卷', icon: pastExamsIcon, comingSoon: true },
+  { label: '历年试卷', icon: pastExamsIcon, route: 'past-exams' },
   { label: '新生指引', icon: newStudentIcon, comingSoon: true },
   { label: '图书馆', icon: libraryIcon, comingSoon: true },
 ]
