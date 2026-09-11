@@ -28,7 +28,7 @@ describe('历年试卷文件代理', () => {
       new Response('pdf-content', {
         headers: {
           'Accept-Ranges': 'bytes',
-          'Content-Type': 'application/pdf',
+          'Content-Type': 'application/octet-stream',
           ETag: 'example-etag',
         },
       }),
@@ -42,6 +42,7 @@ describe('历年试卷文件代理', () => {
     expect(response.status).toBe(200)
     expect(await response.text()).toBe('pdf-content')
     expect(response.headers.get('Cache-Control')).toContain('immutable')
+    expect(response.headers.get('Content-Type')).toBe('application/pdf')
     expect(response.headers.get('Content-Disposition')).toContain(
       encodeURIComponent('数据结构历年题.pdf'),
     )
@@ -81,6 +82,23 @@ describe('历年试卷文件代理', () => {
     expect(new Headers(upstreamRequest.headers).get('Range')).toBe('bytes=10-13')
     expect(response.status).toBe(206)
     expect(response.headers.get('Content-Range')).toBe('bytes 10-13/100')
+  })
+
+  it('为 Office 和压缩包设置可打开或下载的准确响应类型', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response('content', { headers: { 'Content-Type': 'application/octet-stream' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const office = await request(`/past-exams/files/${commit}/数据结构/试卷.docx`)
+    const archive = await request(`/past-exams/files/${commit}/数据结构/试题.rar`)
+
+    expect(office.headers.get('Content-Type')).toBe(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    )
+    expect(office.headers.get('Content-Disposition')).toMatch(/^inline;/)
+    expect(archive.headers.get('Content-Type')).toBe('application/vnd.rar')
+    expect(archive.headers.get('Content-Disposition')).toMatch(/^attachment;/)
   })
 })
 
