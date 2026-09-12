@@ -152,7 +152,7 @@ function fileLocation(file: PastExamFile) {
 }
 
 function fileExtension(file: PastExamFile) {
-  return file.extension.slice(0, 4).toUpperCase()
+  return file.extension.slice(0, 4).toUpperCase() || 'FILE'
 }
 
 function formatUpdatedAt(value: string) {
@@ -173,7 +173,7 @@ function scrollToListTop() {
       </button>
       <div>
         <h1>历年试卷</h1>
-        <p>课程资料文件夹</p>
+        <p>GitHub 课程资料</p>
       </div>
       <a
         v-if="index"
@@ -208,7 +208,7 @@ function scrollToListTop() {
         <img :src="pastExamsIcon" alt="" />
         <div>
           <small>CUIT SHARING</small>
-          <h2>考试资料库</h2>
+          <h2>课程共享库</h2>
           <p>{{ rootDirectoryCount }} 个课程目录 · {{ index.totalFiles }} 份资料</p>
         </div>
         <span>{{ formatPastExamSize(index.totalBytes) }}</span>
@@ -219,7 +219,7 @@ function scrollToListTop() {
           <circle cx="10.5" cy="10.5" r="6.5" />
           <path d="m15.5 15.5 4 4" />
         </svg>
-        <input v-model="query" type="search" placeholder="搜索课程、年份或文件名" aria-label="搜索试卷" />
+        <input v-model="query" type="search" placeholder="搜索课程、文件夹或文件名" aria-label="搜索资料" />
         <button v-if="query" type="button" aria-label="清空搜索" @click="query = ''">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 8 8 8m0-8-8 8" /></svg>
         </button>
@@ -253,7 +253,7 @@ function scrollToListTop() {
             <path d="M6.5 4.5h4l1.5 2" />
           </svg>
           <strong>{{ searching ? '没有找到相关资料' : '这个文件夹是空的' }}</strong>
-          <p v-if="searching">试试课程简称、年份或“答案”等关键词。</p>
+          <p v-if="searching">试试课程简称、文件夹或“答案”等关键词。</p>
         </div>
 
         <div v-else class="past-exams-list">

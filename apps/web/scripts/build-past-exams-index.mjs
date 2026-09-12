@@ -5,28 +5,6 @@ import { fileURLToPath } from 'node:url'
 const REPOSITORY = 'andream7/cuit_sharing'
 const BRANCH = 'main'
 const SCHEMA_VERSION = 1
-const RELEVANT_PATH =
-  /试卷|真题|历年|期末(?:考试|考|试卷|练习|复习)|考试(?:试卷|题|资料|复习)|题库|复习题|模拟试卷|模拟题|考题|试题|中期测验/
-const SUPPORTED_EXTENSIONS = new Set([
-  '7z',
-  'doc',
-  'docx',
-  'gif',
-  'heic',
-  'jpeg',
-  'jpg',
-  'md',
-  'pdf',
-  'png',
-  'ppt',
-  'pptx',
-  'rar',
-  'txt',
-  'webp',
-  'xls',
-  'xlsx',
-  'zip',
-])
 
 const projectDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const outputPath = resolve(projectDirectory, 'public/past-exams/index.json')
@@ -122,7 +100,7 @@ function isIncludedBlob(entry) {
 
   const segments = entry.path.split('/')
   if (segments.some((segment) => segment.startsWith('.') || segment.startsWith('~$'))) return false
-  return RELEVANT_PATH.test(entry.path) && SUPPORTED_EXTENSIONS.has(extensionOf(entry.path))
+  return true
 }
 
 function extensionOf(path) {
