@@ -135,8 +135,16 @@ function contentDisposition(filename: string, forceDownload: boolean) {
   const encoded = encodeURIComponent(filename).replace(/[!'()*]/g, (value) =>
     `%${value.charCodeAt(0).toString(16).toUpperCase()}`,
   )
-  const extension = filename.slice(filename.lastIndexOf('.') + 1).toLowerCase()
-  const behavior = forceDownload || ['7z', 'rar', 'zip'].includes(extension) ? 'attachment' : 'inline'
+  const contentType = contentTypeFor(filename)
+  const previewable =
+    contentType === 'application/pdf' ||
+    contentType.startsWith('text/') ||
+    contentType.startsWith('image/') ||
+    contentType.startsWith('audio/') ||
+    contentType.startsWith('video/') ||
+    contentType.startsWith('application/json') ||
+    contentType.startsWith('application/xml')
+  const behavior = forceDownload || !previewable ? 'attachment' : 'inline'
   return `${behavior}; filename="${fallback}"; filename*=UTF-8''${encoded}`
 }
 
@@ -144,20 +152,44 @@ function contentTypeFor(filename: string) {
   const extension = filename.slice(filename.lastIndexOf('.') + 1).toLowerCase()
   const types: Record<string, string> = {
     '7z': 'application/x-7z-compressed',
+    c: 'text/plain; charset=utf-8',
+    circ: 'application/xml; charset=utf-8',
+    cpp: 'text/plain; charset=utf-8',
+    css: 'text/css; charset=utf-8',
+    csv: 'text/csv; charset=utf-8',
+    db: 'application/vnd.sqlite3',
     doc: 'application/msword',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    exe: 'application/vnd.microsoft.portable-executable',
     gif: 'image/gif',
     heic: 'image/heic',
+    html: 'text/html; charset=utf-8',
+    jar: 'application/java-archive',
+    java: 'text/plain; charset=utf-8',
     jpeg: 'image/jpeg',
     jpg: 'image/jpeg',
+    js: 'text/javascript; charset=utf-8',
+    json: 'application/json; charset=utf-8',
+    jsp: 'text/plain; charset=utf-8',
+    m4a: 'audio/mp4',
+    map: 'application/json; charset=utf-8',
     md: 'text/markdown; charset=utf-8',
+    mp4: 'video/mp4',
     pdf: 'application/pdf',
+    php: 'text/plain; charset=utf-8',
     png: 'image/png',
     ppt: 'application/vnd.ms-powerpoint',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    py: 'text/x-python; charset=utf-8',
+    r: 'text/plain; charset=utf-8',
     rar: 'application/vnd.rar',
+    sql: 'application/sql; charset=utf-8',
+    svg: 'image/svg+xml',
+    tld: 'application/xml; charset=utf-8',
     txt: 'text/plain; charset=utf-8',
+    wma: 'audio/x-ms-wma',
     webp: 'image/webp',
+    xml: 'application/xml; charset=utf-8',
     xls: 'application/vnd.ms-excel',
     xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     zip: 'application/zip',

@@ -98,9 +98,29 @@ describe('历年试卷文件代理', () => {
     expect(office.headers.get('Content-Type')).toBe(
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     )
-    expect(office.headers.get('Content-Disposition')).toMatch(/^inline;/)
+    expect(office.headers.get('Content-Disposition')).toMatch(/^attachment;/)
     expect(archive.headers.get('Content-Type')).toBe('application/vnd.rar')
     expect(archive.headers.get('Content-Disposition')).toMatch(/^attachment;/)
+  })
+
+  it('按文件类型预览源代码与媒体，并下载未知二进制文件', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('content', { headers: { 'Content-Type': 'application/octet-stream' } }),
+      ),
+    )
+
+    const source = await request(`/past-exams/files/${commit}/C++/main.cpp?view=1`)
+    const audio = await request(`/past-exams/files/${commit}/英语/听力.m4a?view=1`)
+    const binary = await request(`/past-exams/files/${commit}/程序/工具.exe?view=1`)
+
+    expect(source.headers.get('Content-Type')).toBe('text/plain; charset=utf-8')
+    expect(source.headers.get('Content-Disposition')).toMatch(/^inline;/)
+    expect(audio.headers.get('Content-Type')).toBe('audio/mp4')
+    expect(audio.headers.get('Content-Disposition')).toMatch(/^inline;/)
+    expect(binary.headers.get('Content-Type')).toBe('application/vnd.microsoft.portable-executable')
+    expect(binary.headers.get('Content-Disposition')).toMatch(/^attachment;/)
   })
 
   it('通过 download 参数强制下载可预览文件', async () => {
