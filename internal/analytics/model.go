@@ -3,7 +3,7 @@ package analytics
 import "time"
 
 type RequestMetric struct {
-	Hour            string
+	Bucket          string
 	Method          string
 	Route           string
 	StatusClass     int
@@ -30,10 +30,13 @@ type UserDevice struct {
 
 type Stats struct {
 	PeriodDays  int            `json:"period_days"`
+	Period      string         `json:"period"`
+	Granularity string         `json:"granularity"`
 	GeneratedAt time.Time      `json:"generated_at"`
 	Summary     StatsSummary   `json:"summary"`
 	Cache       CacheStats     `json:"cache"`
 	Daily       []DailyStats   `json:"daily"`
+	Timeline    []RequestStats `json:"timeline"`
 	TopRoutes   []RouteStats   `json:"top_routes"`
 	Devices     DeviceStats    `json:"devices"`
 	Feedback    []FeedbackItem `json:"feedback"`
@@ -60,7 +63,10 @@ type StatsSummary struct {
 	MAU              int64   `json:"mau"`
 	RequestsPeriod   int64   `json:"requests_period"`
 	ErrorsPeriod     int64   `json:"errors_period"`
+	ClientErrors     int64   `json:"client_errors_period"`
+	ServerErrors     int64   `json:"server_errors_period"`
 	AverageLatencyMS float64 `json:"average_latency_ms"`
+	MaxLatencyMS     int64   `json:"max_latency_ms"`
 }
 
 type DailyStats struct {
@@ -72,11 +78,22 @@ type DailyStats struct {
 	AverageLatencyMS float64 `json:"average_latency_ms"`
 }
 
+type RequestStats struct {
+	Time             string  `json:"time"`
+	RequestCount     int64   `json:"request_count"`
+	ClientErrorCount int64   `json:"client_error_count"`
+	ServerErrorCount int64   `json:"server_error_count"`
+	AverageLatencyMS float64 `json:"average_latency_ms"`
+	MaxLatencyMS     int64   `json:"max_latency_ms"`
+}
+
 type RouteStats struct {
 	Method           string  `json:"method"`
 	Route            string  `json:"route"`
 	RequestCount     int64   `json:"request_count"`
 	ErrorCount       int64   `json:"error_count"`
+	ClientErrorCount int64   `json:"client_error_count"`
+	ServerErrorCount int64   `json:"server_error_count"`
 	AverageLatencyMS float64 `json:"average_latency_ms"`
 	MaxLatencyMS     int64   `json:"max_latency_ms"`
 }

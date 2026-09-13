@@ -18,7 +18,7 @@ type UserResolver interface {
 }
 
 type requestKey struct {
-	hour        string
+	bucket      string
 	method      string
 	route       string
 	statusClass int
@@ -140,17 +140,17 @@ func (c *Collector) Record(
 	duration time.Duration,
 	userID int64,
 ) {
-	hour := at.UTC().Truncate(time.Hour).Format(time.RFC3339)
+	bucket := at.UTC().Truncate(5 * time.Minute).Format(time.RFC3339)
 	durationMS := duration.Milliseconds()
 	key := requestKey{
-		hour:        hour,
+		bucket:      bucket,
 		method:      method,
 		route:       route,
 		statusClass: status / 100,
 	}
 	c.mu.Lock()
 	metric := c.requests[key]
-	metric.Hour = hour
+	metric.Bucket = bucket
 	metric.Method = method
 	metric.Route = route
 	metric.StatusClass = status / 100
@@ -253,6 +253,13 @@ func (c *Collector) Stats(ctx context.Context, days int) (Stats, error) {
 		return Stats{}, err
 	}
 	return c.repository.Stats(ctx, days, c.now())
+}
+
+func (c *Collector) StatsForPeriod(ctx context.Context, period StatsPeriod) (Stats, error) {
+	if err := c.Flush(ctx); err != nil {
+		return Stats{}, err
+	}
+	return c.repository.StatsForPeriod(ctx, period, c.now())
 }
 
 func (c *Collector) flushLoop() {

@@ -91,6 +91,37 @@ func TestCollectorAggregatesRequestsAndActiveUsers(t *testing.T) {
 	}
 }
 
+func TestCollectorReturnsFineGrainedStatusAndLatencyBreakdown(t *testing.T) {
+	db := openTestDatabase(t)
+	collector := NewCollector(NewRepository(db), nil, "campus_session", time.Hour)
+	now := time.Date(2026, 7, 26, 4, 30, 0, 0, time.UTC)
+	collector.now = func() time.Time { return now }
+	collector.Record(now.Add(-20*time.Minute), http.MethodGet, "/api/v1/client-error", http.StatusUnauthorized, 20*time.Millisecond, 0)
+	collector.Record(now, http.MethodGet, "/api/v1/server-error", http.StatusBadGateway, 80*time.Millisecond, 0)
+	collector.Record(now.Add(-2*time.Hour), http.MethodGet, "/api/v1/old-error", http.StatusBadGateway, 150*time.Millisecond, 0)
+	period, ok := ParseStatsPeriod("1h")
+	if !ok {
+		t.Fatal("1h period is not registered")
+	}
+
+	stats, err := collector.StatsForPeriod(context.Background(), period)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Period != "1h" || stats.Granularity != "5_minutes" || len(stats.Timeline) != 12 {
+		t.Fatalf("unexpected period details: %+v", stats)
+	}
+	if stats.Summary.RequestsPeriod != 2 ||
+		stats.Summary.ClientErrors != 1 ||
+		stats.Summary.ServerErrors != 1 ||
+		stats.Summary.MaxLatencyMS != 80 {
+		t.Fatalf("unexpected request breakdown: %+v", stats.Summary)
+	}
+	if stats.Timeline[7].ClientErrorCount != 1 || stats.Timeline[11].ServerErrorCount != 1 {
+		t.Fatalf("unexpected hourly timeline: %+v", stats.Timeline)
+	}
+}
+
 func TestAdminStatsRequiresBearerToken(t *testing.T) {
 	db := openTestDatabase(t)
 	repository := NewRepository(db)
@@ -154,6 +185,23 @@ func TestAdminStatsRequiresBearerToken(t *testing.T) {
 			response.Data.Cache,
 			response.Data.Feedback,
 		)
+	}
+
+	hourly := ut.PerformRequest(
+		h.Engine,
+		http.MethodGet,
+		"/api/v1/admin/stats?range=24h",
+		nil,
+		ut.Header{Key: "Authorization", Value: "Bearer test-admin-token"},
+	).Result()
+	if hourly.StatusCode() != http.StatusOK {
+		t.Fatalf("unexpected hourly status: %d body=%s", hourly.StatusCode(), hourly.Body())
+	}
+	if err := json.Unmarshal(hourly.Body(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Data.Period != "24h" || response.Data.Granularity != "hour" || len(response.Data.Timeline) != 24 {
+		t.Fatalf("unexpected hourly response: %+v", response.Data)
 	}
 }
 

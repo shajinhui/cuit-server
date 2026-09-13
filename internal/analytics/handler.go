@@ -55,18 +55,25 @@ func (h *Handler) stats(ctx context.Context, c *app.RequestContext) {
 		apiresponse.Error(c, http.StatusUnauthorized, 40100, "未授权")
 		return
 	}
-	days := 30
-	if rawDays := strings.TrimSpace(c.Query("days")); rawDays != "" {
+	period, _ := ParseStatsPeriod("30d")
+	if rawPeriod := strings.TrimSpace(c.Query("range")); rawPeriod != "" {
+		var ok bool
+		period, ok = ParseStatsPeriod(rawPeriod)
+		if !ok {
+			apiresponse.Error(c, http.StatusBadRequest, 40000, "range 仅支持 1h、6h、24h、7d、30d、90d")
+			return
+		}
+	} else if rawDays := strings.TrimSpace(c.Query("days")); rawDays != "" {
 		value, err := strconv.Atoi(rawDays)
 		if err != nil || value < 1 || value > 365 {
 			apiresponse.Error(c, http.StatusBadRequest, 40000, "days 必须在 1 到 365 之间")
 			return
 		}
-		days = value
+		period = statsPeriodForDays(value)
 	}
 	requestCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	stats, err := h.collector.Stats(requestCtx, days)
+	stats, err := h.collector.StatsForPeriod(requestCtx, period)
 	if err != nil {
 		log.Printf("读取服务统计失败: %v", err)
 		apiresponse.Error(c, http.StatusInternalServerError, 50000, "服务暂时不可用")

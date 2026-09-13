@@ -13,6 +13,38 @@ type Repository struct {
 	db *sql.DB
 }
 
+type StatsPeriod struct {
+	Key         string
+	Granularity string
+	BucketMins  int
+	BucketCount int
+	Days        int
+}
+
+var statsPeriods = map[string]StatsPeriod{
+	"1h":  {Key: "1h", Granularity: "5_minutes", BucketMins: 5, BucketCount: 12, Days: 1},
+	"6h":  {Key: "6h", Granularity: "30_minutes", BucketMins: 30, BucketCount: 12, Days: 1},
+	"24h": {Key: "24h", Granularity: "hour", BucketMins: 60, BucketCount: 24, Days: 1},
+	"7d":  {Key: "7d", Granularity: "6_hours", BucketMins: 360, BucketCount: 28, Days: 7},
+	"30d": {Key: "30d", Granularity: "day", BucketMins: 1440, BucketCount: 30, Days: 30},
+	"90d": {Key: "90d", Granularity: "day", BucketMins: 1440, BucketCount: 90, Days: 90},
+}
+
+func ParseStatsPeriod(value string) (StatsPeriod, bool) {
+	period, ok := statsPeriods[value]
+	return period, ok
+}
+
+func statsPeriodForDays(days int) StatsPeriod {
+	return StatsPeriod{
+		Key:         fmt.Sprintf("%dd", days),
+		Granularity: "day",
+		BucketMins:  1440,
+		BucketCount: days,
+		Days:        days,
+	}
+}
+
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
@@ -34,16 +66,16 @@ func (r *Repository) Flush(
 
 	for _, metric := range requests {
 		if _, err := tx.ExecContext(ctx, `
-INSERT INTO api_metrics_hourly (
-    hour, method, route, status_class,
+INSERT INTO api_metrics_five_minute (
+    bucket, method, route, status_class,
     request_count, duration_ms_total, duration_ms_max
 )
 VALUES (?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(hour, method, route, status_class) DO UPDATE SET
+ON CONFLICT(bucket, method, route, status_class) DO UPDATE SET
     request_count = request_count + excluded.request_count,
     duration_ms_total = duration_ms_total + excluded.duration_ms_total,
     duration_ms_max = MAX(duration_ms_max, excluded.duration_ms_max)`,
-			metric.Hour,
+			metric.Bucket,
 			metric.Method,
 			metric.Route,
 			metric.StatusClass,
@@ -103,31 +135,35 @@ ON CONFLICT(user_id) DO UPDATE SET
 }
 
 func (r *Repository) Stats(ctx context.Context, days int, now time.Time) (Stats, error) {
+	return r.StatsForPeriod(ctx, statsPeriodForDays(days), now)
+}
+
+func (r *Repository) StatsForPeriod(ctx context.Context, period StatsPeriod, now time.Time) (Stats, error) {
 	today := now.In(chinaLocation)
-	startDay := today.AddDate(0, 0, -(days - 1)).Format(time.DateOnly)
-	startHour := time.Date(
-		today.Year(),
-		today.Month(),
-		today.Day(),
-		0,
-		0,
-		0,
-		0,
-		chinaLocation,
-	).AddDate(0, 0, -(days - 1)).UTC().Format(time.RFC3339)
+	start := periodStart(period, today)
+	startDay := today.AddDate(0, 0, -(period.Days - 1)).Format(time.DateOnly)
+	startHour := start.UTC().Format(time.RFC3339)
+	endHour := today.Truncate(5 * time.Minute).UTC().Format(time.RFC3339)
 	result := Stats{
-		PeriodDays:  days,
+		PeriodDays:  period.Days,
+		Period:      period.Key,
+		Granularity: period.Granularity,
 		GeneratedAt: now.UTC(),
-		Daily:       make([]DailyStats, 0, days),
+		Daily:       make([]DailyStats, 0, period.Days),
+		Timeline:    make([]RequestStats, period.BucketCount),
 	}
-	dailyByDate := make(map[string]*DailyStats, days)
-	for offset := days - 1; offset >= 0; offset-- {
+	for index := range result.Timeline {
+		bucketTime := start.Add(time.Duration(index*period.BucketMins) * time.Minute)
+		result.Timeline[index].Time = bucketTime.Format(time.RFC3339)
+	}
+	dailyByDate := make(map[string]*DailyStats, period.Days)
+	for offset := period.Days - 1; offset >= 0; offset-- {
 		date := today.AddDate(0, 0, -offset).Format(time.DateOnly)
 		result.Daily = append(result.Daily, DailyStats{Date: date})
 		dailyByDate[date] = &result.Daily[len(result.Daily)-1]
 	}
 
-	if err := r.readUsers(ctx, startDay, dailyByDate, &result); err != nil {
+	if err := r.readUsers(ctx, start, startDay, dailyByDate, &result); err != nil {
 		return Stats{}, err
 	}
 	if err := r.readDevices(ctx, &result); err != nil {
@@ -136,15 +172,38 @@ func (r *Repository) Stats(ctx context.Context, days int, now time.Time) (Stats,
 	if err := r.readActivity(ctx, startDay, today, dailyByDate, &result); err != nil {
 		return Stats{}, err
 	}
-	if err := r.readRequests(ctx, startHour, dailyByDate, &result); err != nil {
+	if err := r.readRequests(ctx, startHour, endHour, start, period, dailyByDate, &result); err != nil {
 		return Stats{}, err
 	}
-	topRoutes, err := r.readTopRoutes(ctx, startHour)
+	topRoutes, err := r.readTopRoutes(ctx, startHour, endHour)
 	if err != nil {
 		return Stats{}, err
 	}
 	result.TopRoutes = topRoutes
 	return result, nil
+}
+
+func periodStart(period StatsPeriod, now time.Time) time.Time {
+	if period.BucketMins >= 1440 {
+		current := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, chinaLocation)
+		return current.Add(-time.Duration(period.BucketCount-1) * 24 * time.Hour)
+	}
+	current := now.Truncate(time.Minute)
+	if period.BucketMins >= 60 {
+		bucketHours := period.BucketMins / 60
+		current = time.Date(
+			current.Year(), current.Month(), current.Day(),
+			(current.Hour()/bucketHours)*bucketHours,
+			0, 0, 0, chinaLocation,
+		)
+	} else {
+		current = time.Date(
+			current.Year(), current.Month(), current.Day(), current.Hour(),
+			(current.Minute()/period.BucketMins)*period.BucketMins,
+			0, 0, chinaLocation,
+		)
+	}
+	return current.Add(-time.Duration(period.BucketCount-1) * time.Duration(period.BucketMins) * time.Minute)
 }
 
 func (r *Repository) readDevices(ctx context.Context, result *Stats) error {
@@ -198,6 +257,7 @@ ORDER BY users DESC, %s`, column, column, column))
 
 func (r *Repository) readUsers(
 	ctx context.Context,
+	start time.Time,
 	startDay string,
 	dailyByDate map[string]*DailyStats,
 	result *Stats,
@@ -220,10 +280,12 @@ func (r *Repository) readUsers(
 			return fmt.Errorf("analytics: parse user creation time: %w", err)
 		}
 		day := createdAt.In(chinaLocation).Format(time.DateOnly)
+		if !createdAt.Before(start) {
+			result.Summary.NewUsersPeriod++
+		}
 		if day >= startDay {
 			if daily := dailyByDate[day]; daily != nil {
 				daily.NewUsers++
-				result.Summary.NewUsersPeriod++
 			}
 		}
 	}
@@ -317,64 +379,114 @@ ORDER BY day`, startDay)
 func (r *Repository) readRequests(
 	ctx context.Context,
 	startHour string,
+	endHour string,
+	start time.Time,
+	period StatsPeriod,
 	dailyByDate map[string]*DailyStats,
 	result *Stats,
 ) error {
 	rows, err := r.db.QueryContext(ctx, `
+WITH request_metrics AS (
+	SELECT hour AS bucket, status_class, request_count, duration_ms_total, duration_ms_max
+	FROM api_metrics_hourly
+	WHERE hour >= ? AND hour <= ?
+	UNION ALL
+	SELECT bucket, status_class, request_count, duration_ms_total, duration_ms_max
+	FROM api_metrics_five_minute
+	WHERE bucket >= ? AND bucket <= ?
+)
 SELECT
-    date(hour, '+8 hours') AS day,
-    SUM(request_count),
-    SUM(CASE WHEN status_class >= 4 THEN request_count ELSE 0 END),
-    SUM(duration_ms_total)
-FROM api_metrics_hourly
-WHERE hour >= ?
-GROUP BY day
-ORDER BY day`, startHour)
+	bucket,
+	SUM(request_count),
+	SUM(CASE WHEN status_class = 4 THEN request_count ELSE 0 END),
+	SUM(CASE WHEN status_class >= 5 THEN request_count ELSE 0 END),
+	SUM(duration_ms_total),
+	MAX(duration_ms_max)
+FROM request_metrics
+GROUP BY bucket
+ORDER BY bucket`, startHour, endHour, startHour, endHour)
 	if err != nil {
 		return fmt.Errorf("analytics: list request metrics: %w", err)
 	}
 	defer rows.Close()
 	var totalDuration int64
+	dailyDuration := make(map[string]int64, len(dailyByDate))
+	timelineDuration := make([]int64, len(result.Timeline))
 	for rows.Next() {
-		var day string
+		var rawHour string
 		var requests int64
-		var errors int64
+		var clientErrors int64
+		var serverErrors int64
 		var duration int64
-		if err := rows.Scan(&day, &requests, &errors, &duration); err != nil {
+		var maxDuration int64
+		if err := rows.Scan(&rawHour, &requests, &clientErrors, &serverErrors, &duration, &maxDuration); err != nil {
 			return fmt.Errorf("analytics: scan request metrics: %w", err)
 		}
-		daily := dailyByDate[day]
-		if daily == nil {
-			continue
+		hour, err := time.Parse(time.RFC3339, rawHour)
+		if err != nil {
+			return fmt.Errorf("analytics: parse request metric hour: %w", err)
 		}
-		daily.RequestCount = requests
-		daily.ErrorCount = errors
-		daily.AverageLatencyMS = average(duration, requests)
+		localHour := hour.In(chinaLocation)
+		day := localHour.Format(time.DateOnly)
+		if daily := dailyByDate[day]; daily != nil {
+			daily.RequestCount += requests
+			daily.ErrorCount += clientErrors + serverErrors
+			dailyDuration[day] += duration
+		}
+		bucketIndex := int(localHour.Sub(start) / (time.Duration(period.BucketMins) * time.Minute))
+		if bucketIndex >= 0 && bucketIndex < len(result.Timeline) {
+			bucket := &result.Timeline[bucketIndex]
+			bucket.RequestCount += requests
+			bucket.ClientErrorCount += clientErrors
+			bucket.ServerErrorCount += serverErrors
+			bucket.MaxLatencyMS = max(bucket.MaxLatencyMS, maxDuration)
+			timelineDuration[bucketIndex] += duration
+		}
 		result.Summary.RequestsPeriod += requests
-		result.Summary.ErrorsPeriod += errors
+		result.Summary.ClientErrors += clientErrors
+		result.Summary.ServerErrors += serverErrors
+		result.Summary.ErrorsPeriod += clientErrors + serverErrors
+		result.Summary.MaxLatencyMS = max(result.Summary.MaxLatencyMS, maxDuration)
 		totalDuration += duration
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("analytics: iterate request metrics: %w", err)
 	}
+	for day, duration := range dailyDuration {
+		daily := dailyByDate[day]
+		daily.AverageLatencyMS = average(duration, daily.RequestCount)
+	}
+	for index, duration := range timelineDuration {
+		result.Timeline[index].AverageLatencyMS = average(duration, result.Timeline[index].RequestCount)
+	}
 	result.Summary.AverageLatencyMS = average(totalDuration, result.Summary.RequestsPeriod)
 	return nil
 }
 
-func (r *Repository) readTopRoutes(ctx context.Context, startHour string) ([]RouteStats, error) {
+func (r *Repository) readTopRoutes(ctx context.Context, startHour string, endHour string) ([]RouteStats, error) {
 	rows, err := r.db.QueryContext(ctx, `
+WITH request_metrics AS (
+	SELECT hour AS bucket, method, route, status_class, request_count, duration_ms_total, duration_ms_max
+	FROM api_metrics_hourly
+	WHERE hour >= ? AND hour <= ?
+	UNION ALL
+	SELECT bucket, method, route, status_class, request_count, duration_ms_total, duration_ms_max
+	FROM api_metrics_five_minute
+	WHERE bucket >= ? AND bucket <= ?
+)
 SELECT
     method,
     route,
-    SUM(request_count) AS requests,
-    SUM(CASE WHEN status_class >= 4 THEN request_count ELSE 0 END) AS errors,
-    SUM(duration_ms_total) AS duration,
+	SUM(request_count) AS requests,
+	SUM(CASE WHEN status_class >= 4 THEN request_count ELSE 0 END) AS errors,
+	SUM(CASE WHEN status_class = 4 THEN request_count ELSE 0 END) AS client_errors,
+	SUM(CASE WHEN status_class >= 5 THEN request_count ELSE 0 END) AS server_errors,
+	SUM(duration_ms_total) AS duration,
     MAX(duration_ms_max) AS max_duration
-FROM api_metrics_hourly
-WHERE hour >= ?
+FROM request_metrics
 GROUP BY method, route
 ORDER BY requests DESC, method, route
-LIMIT 20`, startHour)
+LIMIT 20`, startHour, endHour, startHour, endHour)
 	if err != nil {
 		return nil, fmt.Errorf("analytics: list top routes: %w", err)
 	}
@@ -388,6 +500,8 @@ LIMIT 20`, startHour)
 			&route.Route,
 			&route.RequestCount,
 			&route.ErrorCount,
+			&route.ClientErrorCount,
+			&route.ServerErrorCount,
 			&duration,
 			&route.MaxLatencyMS,
 		); err != nil {

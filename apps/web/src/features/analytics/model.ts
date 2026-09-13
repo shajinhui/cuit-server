@@ -7,7 +7,10 @@ export interface StatsSummary {
   mau: number
   requests_period: number
   errors_period: number
+  client_errors_period: number
+  server_errors_period: number
   average_latency_ms: number
+  max_latency_ms: number
 }
 
 export interface DailyStats {
@@ -24,6 +27,17 @@ export interface RouteStats {
   route: string
   request_count: number
   error_count: number
+  client_error_count: number
+  server_error_count: number
+  average_latency_ms: number
+  max_latency_ms: number
+}
+
+export interface RequestStats {
+  time: string
+  request_count: number
+  client_error_count: number
+  server_error_count: number
   average_latency_ms: number
   max_latency_ms: number
 }
@@ -66,19 +80,31 @@ export interface DeviceStats {
 
 export interface ServiceStats {
   period_days: number
+  period: StatsPeriod
+  granularity: StatsGranularity
   generated_at: string
   summary: StatsSummary
   cache: CacheStats
   daily: DailyStats[]
+  timeline: RequestStats[]
   top_routes: RouteStats[]
   devices: DeviceStats
   feedback: FeedbackItem[]
 }
 
+export type StatsPeriod = '1h' | '6h' | '24h' | '7d' | '30d' | '90d'
+export type StatsGranularity = '5_minutes' | '30_minutes' | 'hour' | '6_hours' | 'day'
+
 export interface ChartSeries {
   label: string
   color: string
   values: number[]
+}
+
+export interface ChartPoint {
+  x: number
+  y: number
+  value: number
 }
 
 export interface DeviceDistributionItem {
@@ -119,22 +145,64 @@ export function chartPoints(
   horizontalPadding = 12,
   verticalPadding = 12,
 ): string {
-  if (values.length === 0) return ''
+  return chartCoordinates(
+    values,
+    maximum,
+    width,
+    height,
+    horizontalPadding,
+    verticalPadding,
+  )
+    .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+    .join(' ')
+}
+
+export function chartCoordinates(
+  values: number[],
+  maximum: number,
+  width: number,
+  height: number,
+  horizontalPadding = 12,
+  verticalPadding = 12,
+): ChartPoint[] {
+  if (values.length === 0) return []
 
   const plotWidth = width - horizontalPadding * 2
   const plotHeight = height - verticalPadding * 2
   const safeMaximum = Math.max(maximum, 1)
-  return values
-    .map((value, index) => {
-      const progress = values.length === 1 ? 0.5 : index / (values.length - 1)
-      const x = horizontalPadding + plotWidth * progress
-      const y = verticalPadding + plotHeight * (1 - value / safeMaximum)
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
+  return values.map((value, index) => {
+    const progress = values.length === 1 ? 0.5 : index / (values.length - 1)
+    return {
+      x: horizontalPadding + plotWidth * progress,
+      y: verticalPadding + plotHeight * (1 - value / safeMaximum),
+      value,
+    }
+  })
 }
 
 export function compactDate(value: string): string {
   const parts = value.split('-')
   return parts.length === 3 ? `${Number(parts[1])}/${Number(parts[2])}` : value
+}
+
+export function timelineLabel(value: string, granularity: StatsGranularity): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((item) => item.type === type)?.value ?? ''
+  const month = Number(part('month'))
+  const day = Number(part('day'))
+  if (granularity === 'day') return `${month}/${day}`
+  const hour = part('hour').padStart(2, '0')
+  const minute = part('minute').padStart(2, '0')
+  if (granularity === '5_minutes' || granularity === '30_minutes') return `${hour}:${minute}`
+  return granularity === 'hour' ? `${hour}:00` : `${month}/${day} ${hour}:00`
 }
