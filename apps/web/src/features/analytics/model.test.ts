@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { chartPoints, compactDate, percentage, platformDeviceDistribution } from './model'
+import {
+  chartCoordinates,
+  chartPoints,
+  compactDate,
+  percentage,
+  platformDeviceDistribution,
+  timelineLabel,
+} from './model'
 
 describe('analytics model', () => {
   it('calculates safe percentages', () => {
@@ -10,10 +17,17 @@ describe('analytics model', () => {
 
   it('builds chart points across the available width', () => {
     expect(chartPoints([0, 10], 10, 100, 50, 10, 5)).toBe('10.0,45.0 90.0,5.0')
+    expect(chartCoordinates([0, 10], 10, 100, 50, 10, 5)).toEqual([
+      { x: 10, y: 45, value: 0 },
+      { x: 90, y: 5, value: 10 },
+    ])
   })
 
   it('formats compact chart dates', () => {
     expect(compactDate('2026-07-26')).toBe('7/26')
+    expect(timelineLabel('2026-07-26T04:00:00Z', 'hour')).toBe('12:00')
+    expect(timelineLabel('2026-07-26T04:00:00Z', '6_hours')).toBe('7/26 12:00')
+    expect(timelineLabel('2026-07-26T04:05:00Z', '5_minutes')).toBe('12:05')
   })
 
   it('fills both platforms in the all-user device distribution', () => {

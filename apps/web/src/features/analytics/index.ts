@@ -1,6 +1,6 @@
 export { fetchServiceStats } from './api'
 export { default as StatsTrendChart } from './components/StatsTrendChart.vue'
-export { percentage, platformDeviceDistribution } from './model'
+export { percentage, platformDeviceDistribution, timelineLabel } from './model'
 export type {
   CacheStats,
   ChartSeries,
@@ -12,4 +12,5 @@ export type {
   RouteStats,
   ServiceStats,
   StatsSummary,
+  StatsPeriod,
 } from './model'

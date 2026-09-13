@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { chartPoints, compactDate, type ChartSeries } from '../model'
+import { chartCoordinates, type ChartSeries } from '../model'
 
 defineOptions({ name: 'StatsTrendChart' })
 
 const props = defineProps<{
   title: string
   description: string
-  dates: string[]
+  labels: string[]
   series: ChartSeries[]
+  unit?: 'count' | 'latency'
 }>()
 
 const viewWidth = 680
@@ -19,13 +20,25 @@ const maximum = computed(() => Math.max(1, ...allValues.value))
 const chartSeries = computed(() =>
   props.series.map((item) => ({
     ...item,
-    points: chartPoints(item.values, maximum.value, viewWidth, viewHeight),
+    points: chartCoordinates(item.values, maximum.value, viewWidth, viewHeight, 44, 12),
   })),
 )
 const labelIndexes = computed(() => {
-  const last = Math.max(0, props.dates.length - 1)
-  return [...new Set([0, Math.floor(last / 2), last])]
+  const last = Math.max(0, props.labels.length - 1)
+  return [...new Set([0, Math.floor(last / 4), Math.floor(last / 2), Math.floor((last * 3) / 4), last])]
 })
+const gridTicks = computed(() => [maximum.value, maximum.value / 2, 0])
+const showPoints = computed(() => props.labels.length <= 30)
+
+function formatValue(value: number): string {
+  if (props.unit === 'latency') {
+    return value >= 1000 ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}s` : `${Math.round(value)}ms`
+  }
+  return new Intl.NumberFormat('zh-CN', {
+    notation: value >= 10000 ? 'compact' : 'standard',
+    maximumFractionDigits: 1,
+  }).format(Math.round(value))
+}
 </script>
 
 <template>
@@ -45,16 +58,28 @@ const labelIndexes = computed(() => {
 
     <div class="admin-chart" role="img" :aria-label="`${title}趋势图`">
       <svg :viewBox="`0 0 ${viewWidth} ${viewHeight}`" preserveAspectRatio="none" aria-hidden="true">
-        <line v-for="offset in [0.25, 0.5, 0.75]" :key="offset" x1="12" :y1="viewHeight * offset" x2="668" :y2="viewHeight * offset" />
-        <polyline
-          v-for="item in chartSeries"
-          :key="item.label"
-          :points="item.points"
-          :style="{ stroke: item.color }"
-        />
+        <g v-for="(tick, index) in gridTicks" :key="index" class="admin-chart__grid">
+          <line x1="44" :y1="12 + index * 93" x2="668" :y2="12 + index * 93" />
+          <text x="37" :y="16 + index * 93" text-anchor="end">{{ formatValue(tick) }}</text>
+        </g>
+        <g v-for="item in chartSeries" :key="item.label" :style="{ color: item.color }">
+          <polyline
+            :points="item.points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')"
+            :style="{ stroke: item.color }"
+          />
+          <circle
+            v-for="(point, index) in showPoints ? item.points : []"
+            :key="index"
+            :cx="point.x"
+            :cy="point.y"
+            r="3"
+          >
+            <title>{{ labels[index] }} · {{ item.label }} {{ formatValue(point.value) }}</title>
+          </circle>
+        </g>
       </svg>
       <div class="admin-chart__labels" aria-hidden="true">
-        <span v-for="index in labelIndexes" :key="index">{{ compactDate(dates[index] || '') }}</span>
+        <span v-for="index in labelIndexes" :key="index">{{ labels[index] || '' }}</span>
       </div>
     </div>
   </article>

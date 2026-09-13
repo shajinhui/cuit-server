@@ -9,8 +9,10 @@ import {
   percentage,
   platformDeviceDistribution,
   StatsTrendChart,
+  timelineLabel,
   type ChartSeries,
   type ServiceStats,
+  type StatsPeriod,
 } from '@/features/analytics'
 import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -21,12 +23,15 @@ defineOptions({ name: 'AdminStatsPage' })
 const tokenStorageKey = 'cuit-admin-stats-token'
 const numberFormatter = new Intl.NumberFormat('zh-CN')
 const periodOptions = [
-  { value: 7, label: '近 7 天' },
-  { value: 30, label: '近 30 天' },
-  { value: 90, label: '近 90 天' },
-]
+  { value: '1h', label: '近 1 小时' },
+  { value: '6h', label: '近 6 小时' },
+  { value: '24h', label: '近 24 小时' },
+  { value: '7d', label: '近 7 天' },
+  { value: '30d', label: '近 30 天' },
+  { value: '90d', label: '近 90 天' },
+] as const
 const tokenInput = ref('')
-const periodDays = ref(30)
+const selectedPeriod = ref<StatsPeriod>('24h')
 const stats = ref<ServiceStats>()
 const loading = ref(false)
 const error = ref('')
@@ -38,9 +43,22 @@ const adminNavigationItems = [
 
 usePageTheme('#f4f6fa')
 
-const errorRate = computed(() =>
-  percentage(stats.value?.summary.errors_period ?? 0, stats.value?.summary.requests_period ?? 0),
+const serverErrorRate = computed(() =>
+  percentage(stats.value?.summary.server_errors_period ?? 0, stats.value?.summary.requests_period ?? 0),
 )
+const periodLabel = computed(
+  () => periodOptions.find((option) => option.value === selectedPeriod.value)?.label ?? '当前周期',
+)
+const granularityLabel = computed(() => {
+  const labels = {
+    '5_minutes': '每 5 分钟',
+    '30_minutes': '每 30 分钟',
+    hour: '每小时',
+    '6_hours': '每 6 小时',
+    day: '每天',
+  } as const
+  return labels[stats.value?.granularity ?? 'hour']
+})
 const cacheHitRate = computed(() => {
   const cache = stats.value?.cache
   if (!cache) return 0
@@ -55,12 +73,29 @@ const requestSeries = computed<ChartSeries[]>(() => [
   {
     label: '请求量',
     color: '#1677ff',
-    values: stats.value?.daily.map((item) => item.request_count) ?? [],
+    values: stats.value?.timeline.map((item) => item.request_count) ?? [],
   },
   {
-    label: '错误量',
-    color: '#f04452',
-    values: stats.value?.daily.map((item) => item.error_count) ?? [],
+    label: '4xx',
+    color: '#f59e0b',
+    values: stats.value?.timeline.map((item) => item.client_error_count) ?? [],
+  },
+  {
+    label: '5xx',
+    color: '#e05260',
+    values: stats.value?.timeline.map((item) => item.server_error_count) ?? [],
+  },
+])
+const latencySeries = computed<ChartSeries[]>(() => [
+  {
+    label: '平均耗时',
+    color: '#64748b',
+    values: stats.value?.timeline.map((item) => item.average_latency_ms) ?? [],
+  },
+  {
+    label: '最大耗时',
+    color: '#8b5cf6',
+    values: stats.value?.timeline.map((item) => item.max_latency_ms) ?? [],
   },
 ])
 const userSeries = computed<ChartSeries[]>(() => [
@@ -75,7 +110,17 @@ const userSeries = computed<ChartSeries[]>(() => [
     values: stats.value?.daily.map((item) => item.new_users) ?? [],
   },
 ])
-const dates = computed(() => stats.value?.daily.map((item) => item.date) ?? [])
+const timelineLabels = computed(() =>
+  stats.value?.timeline.map((item) =>
+    timelineLabel(item.time, stats.value?.granularity ?? 'hour'),
+  ) ?? [],
+)
+const dailyLabels = computed(
+  () => stats.value?.daily.map((item) => {
+    const [, month = '', day = ''] = item.date.split('-')
+    return `${Number(month)}/${Number(day)}`
+  }) ?? [],
+)
 const updatedAt = computed(() => {
   if (!stats.value?.generated_at) return ''
   return new Intl.DateTimeFormat('zh-CN', {
@@ -130,9 +175,9 @@ async function loadStats(token: string) {
   loading.value = true
   error.value = ''
   try {
-    const result = await fetchServiceStats(token, periodDays.value)
+    const result = await fetchServiceStats(token, selectedPeriod.value)
     stats.value = result
-    periodDays.value = result.period_days
+    selectedPeriod.value = result.period
     window.sessionStorage.setItem(tokenStorageKey, token)
     tokenInput.value = ''
   } catch (cause) {
@@ -142,7 +187,7 @@ async function loadStats(token: string) {
       error.value = '管理员令牌无效，请重新输入'
     } else {
       if (stats.value) {
-        periodDays.value = stats.value.period_days
+        selectedPeriod.value = stats.value.period
       }
       error.value = cause instanceof Error ? cause.message : '统计数据暂时无法读取'
     }
@@ -165,6 +210,10 @@ function formatNumber(value: number): string {
 function formatLatency(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(1)} 秒`
   return `${Math.round(value)} ms`
+}
+
+function routeErrorRate(requests: number, errors: number): string {
+  return `${percentage(errors, requests).toFixed(1)}%`
 }
 
 function formatBytes(value: number): string {
@@ -272,7 +321,7 @@ function selectAdminSection(name: string) {
           <label>
             <span class="visually-hidden">统计周期</span>
             <AppSelect
-              v-model="periodDays"
+              v-model="selectedPeriod"
               class="admin-period-select"
               :options="periodOptions"
               title="选择统计周期"
@@ -314,15 +363,18 @@ function selectAdminSection(name: string) {
           </span>
           <p>接口请求</p>
           <strong>{{ formatNumber(stats.summary.requests_period) }}</strong>
-          <small>{{ stats.period_days }} 天累计</small>
+          <small>{{ periodLabel }}累计</small>
         </article>
         <article class="admin-metric-card admin-metric-card--orange">
           <span class="admin-metric-card__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 8v5M12 16.5v.5" /></svg>
           </span>
-          <p>错误率</p>
-          <strong>{{ errorRate.toFixed(1) }}%</strong>
-          <small>{{ formatNumber(stats.summary.errors_period) }} 次错误</small>
+          <p>服务错误率</p>
+          <strong>{{ serverErrorRate.toFixed(1) }}%</strong>
+          <small>
+            5xx {{ formatNumber(stats.summary.server_errors_period) }} · 4xx
+            {{ formatNumber(stats.summary.client_errors_period) }}
+          </small>
         </article>
         <article class="admin-metric-card admin-metric-card--slate">
           <span class="admin-metric-card__icon" aria-hidden="true">
@@ -330,15 +382,15 @@ function selectAdminSection(name: string) {
           </span>
           <p>平均耗时</p>
           <strong>{{ formatLatency(stats.summary.average_latency_ms) }}</strong>
-          <small>所有接口请求</small>
+          <small>{{ periodLabel }}全部请求</small>
         </article>
         <article class="admin-metric-card admin-metric-card--cyan">
           <span class="admin-metric-card__icon" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19V8" /></svg>
           </span>
-          <p>周期新增</p>
-          <strong>{{ formatNumber(stats.summary.new_users_period) }}</strong>
-          <small>最近 {{ stats.period_days }} 天</small>
+          <p>最大耗时</p>
+          <strong>{{ formatLatency(stats.summary.max_latency_ms) }}</strong>
+          <small>{{ periodLabel }}最慢请求</small>
         </article>
       </section>
 
@@ -394,14 +446,22 @@ function selectAdminSection(name: string) {
       <section class="admin-chart-grid">
         <StatsTrendChart
           title="接口调用趋势"
-          :description="`最近 ${stats.period_days} 天请求与错误数量`"
-          :dates="dates"
+          :description="`${periodLabel}，${granularityLabel}汇总`"
+          :labels="timelineLabels"
           :series="requestSeries"
         />
         <StatsTrendChart
+          title="响应耗时趋势"
+          :description="`${periodLabel}接口响应速度`"
+          :labels="timelineLabels"
+          :series="latencySeries"
+          unit="latency"
+        />
+        <StatsTrendChart
+          v-if="stats.period_days > 1"
           title="用户增长趋势"
           :description="`最近 ${stats.period_days} 天活跃与新增用户`"
-          :dates="dates"
+          :labels="dailyLabels"
           :series="userSeries"
         />
       </section>
@@ -420,7 +480,9 @@ function selectAdminSection(name: string) {
               <tr>
                 <th>接口</th>
                 <th>请求量</th>
-                <th>错误</th>
+                <th>4xx</th>
+                <th>5xx</th>
+                <th>错误率</th>
                 <th>平均耗时</th>
                 <th>最大耗时</th>
               </tr>
@@ -432,8 +494,14 @@ function selectAdminSection(name: string) {
                   <code>{{ route.route }}</code>
                 </td>
                 <td data-label="请求量">{{ formatNumber(route.request_count) }}</td>
-                <td data-label="错误" :class="{ 'has-errors': route.error_count > 0 }">
-                  {{ formatNumber(route.error_count) }}
+                <td data-label="4xx" :class="{ 'has-warnings': route.client_error_count > 0 }">
+                  {{ formatNumber(route.client_error_count) }}
+                </td>
+                <td data-label="5xx" :class="{ 'has-errors': route.server_error_count > 0 }">
+                  {{ formatNumber(route.server_error_count) }}
+                </td>
+                <td data-label="错误率" :class="{ 'has-errors': route.server_error_count > 0 }">
+                  {{ routeErrorRate(route.request_count, route.error_count) }}
                 </td>
                 <td data-label="平均耗时">{{ formatLatency(route.average_latency_ms) }}</td>
                 <td data-label="最大耗时">{{ formatLatency(route.max_latency_ms) }}</td>
