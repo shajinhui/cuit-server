@@ -6,6 +6,8 @@ import { AppAnnouncement } from '@/features/announcements'
 import {
   AndroidAppDownloadPrompt,
   AppUpdatePrompt,
+  ScheduleSourceUpdatePrompt,
+  readScheduleSourceUpdatePrompt,
   shouldPromptAndroidAppDownload,
   useAndroidLiveUpdate,
 } from '@/features/app-updates'
@@ -22,12 +24,22 @@ const showBottomNavigation = computed(() => navigationRoutes.has(String(route.na
 const { updateDialogVisible } = useAndroidLiveUpdate()
 const { guideVisible } = usePwaInstall()
 const androidAppDownloadOpen = ref(false)
+const scheduleSourceUpdatePending = ref(readScheduleSourceUpdatePrompt())
+const scheduleSourceUpdateOpen = computed(
+  () =>
+    scheduleSourceUpdatePending.value &&
+    showBottomNavigation.value &&
+    !updateDialogVisible.value &&
+    !androidAppDownloadOpen.value &&
+    !guideVisible.value,
+)
 const allowAnnouncement = computed(
   () =>
     showBottomNavigation.value &&
     !updateDialogVisible.value &&
     !androidAppDownloadOpen.value &&
-    !guideVisible.value,
+    !guideVisible.value &&
+    !scheduleSourceUpdatePending.value,
 )
 
 onMounted(async () => {
@@ -58,6 +70,10 @@ onMounted(async () => {
     :with-bottom-navigation="showBottomNavigation"
   />
   <AppUpdatePrompt />
+  <ScheduleSourceUpdatePrompt
+    :open="scheduleSourceUpdateOpen"
+    @close="scheduleSourceUpdatePending = false"
+  />
   <AndroidAppDownloadPrompt
     :open="androidAppDownloadOpen"
     @close="androidAppDownloadOpen = false"
