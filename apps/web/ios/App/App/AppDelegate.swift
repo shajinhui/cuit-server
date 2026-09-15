@@ -1,6 +1,20 @@
 import UIKit
 import Capacitor
 
+@objc(AppViewController)
+class AppViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+
+        // iOS 26+ adds an automatic fade/blur at the leading edge of scroll
+        // views. The web app already owns its safe-area treatment, so the
+        // effect obscures the schedule header instead of separating content.
+        if #available(iOS 26.0, *) {
+            webView?.scrollView.topEdgeEffect.isHidden = true
+        }
+    }
+}
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
