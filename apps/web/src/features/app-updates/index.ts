@@ -1,4 +1,6 @@
 export { default as AndroidAppDownloadPrompt } from './components/AndroidAppDownloadPrompt.vue'
 export { default as AppUpdatePrompt } from './components/AppUpdatePrompt.vue'
+export { default as ScheduleSourceUpdatePrompt } from './components/ScheduleSourceUpdatePrompt.vue'
 export { shouldPromptAndroidAppDownload } from './androidDownload'
 export { registerAndroidLiveUpdates, useAndroidLiveUpdate } from './runtime'
+export { readScheduleSourceUpdatePrompt } from './scheduleSourceUpdate'
