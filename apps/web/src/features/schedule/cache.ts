@@ -13,6 +13,7 @@ import { isCourseOverride, type CourseOverride } from './model/courseOverride'
 import { isManualCourse, type ManualCourse } from './model/manualCourse'
 
 const scheduleRecordKey = 'latest-schedule'
+const scheduleLaunchSnapshotKey = 'schedule-launch-snapshot-v3'
 const manualCoursesRecordKey = 'manual-courses'
 const courseOverridesRecordKey = 'course-overrides'
 const courseColorPreferencesRecordKey = 'course-color-preferences'
@@ -32,6 +33,9 @@ interface ScheduleRecord {
 }
 
 export async function readScheduleCache(): Promise<CachedSchedule | null> {
+  const launchSnapshot = readScheduleLaunchSnapshot()
+  if (launchSnapshot) return launchSnapshot
+
   const database = await openDatabase()
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readonly')
@@ -39,7 +43,9 @@ export async function readScheduleCache(): Promise<CachedSchedule | null> {
 
     request.onsuccess = () => {
       const record = request.result as ScheduleRecord | undefined
-      resolve(isCachedSchedule(record?.value) ? record.value : null)
+      const cachedSchedule = isCachedSchedule(record?.value) ? record.value : null
+      if (cachedSchedule) writeScheduleLaunchSnapshot(cachedSchedule)
+      resolve(cachedSchedule)
     }
     request.onerror = () => reject(request.error ?? new Error('读取离线课表失败'))
     transaction.oncomplete = () => database.close()
@@ -51,11 +57,13 @@ export async function readScheduleCache(): Promise<CachedSchedule | null> {
 }
 
 export async function writeScheduleCache(value: CachedSchedule): Promise<void> {
+  const plainValue = JSON.parse(JSON.stringify(value)) as CachedSchedule
+  writeScheduleLaunchSnapshot(plainValue)
+
   const database = await openDatabase()
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readwrite')
     // Pinia state 是响应式代理，IndexedDB 无法直接结构化克隆；课表模型只含 JSON 字段，先转为普通对象再持久化。
-    const plainValue = JSON.parse(JSON.stringify(value)) as CachedSchedule
     transaction.objectStore(storeName).put({ key: scheduleRecordKey, value: plainValue } satisfies ScheduleRecord)
 
     transaction.oncomplete = () => {
@@ -217,6 +225,8 @@ export async function writeCourseColorPreferences(
 }
 
 export async function clearScheduleCache(): Promise<void> {
+  removeScheduleLaunchSnapshot()
+
   const database = await openDatabase()
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(storeName, 'readwrite')
@@ -239,6 +249,36 @@ export async function clearScheduleCache(): Promise<void> {
       reject(transaction.error ?? new Error('清除离线课表事务失败'))
     }
   })
+}
+
+function readScheduleLaunchSnapshot(): CachedSchedule | null {
+  try {
+    const value = window.localStorage.getItem(scheduleLaunchSnapshotKey)
+    if (!value) return null
+
+    const parsed: unknown = JSON.parse(value)
+    if (isCachedSchedule(parsed)) return parsed
+  } catch {
+    // localStorage 不可用或快照损坏时继续读取 IndexedDB。
+  }
+  removeScheduleLaunchSnapshot()
+  return null
+}
+
+function writeScheduleLaunchSnapshot(value: CachedSchedule) {
+  try {
+    window.localStorage.setItem(scheduleLaunchSnapshotKey, JSON.stringify(value))
+  } catch {
+    // 快照只是冷启动加速层，存储失败不影响 IndexedDB 主缓存。
+  }
+}
+
+function removeScheduleLaunchSnapshot() {
+  try {
+    window.localStorage.removeItem(scheduleLaunchSnapshotKey)
+  } catch {
+    // localStorage 不可用时无需额外处理。
+  }
 }
 
 export async function hasScheduleCache(): Promise<boolean> {
