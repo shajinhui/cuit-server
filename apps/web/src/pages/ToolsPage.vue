@@ -44,7 +44,7 @@ const tools: ToolItem[] = [
   { label: '校园跑与俱乐部', icon: autoRunIcon, route: 'autorun' },
   { label: '历年试卷', icon: pastExamsIcon, route: 'past-exams' },
   { label: '新生指引', icon: newStudentIcon, comingSoon: true },
-  { label: '图书馆', icon: libraryIcon, comingSoon: true },
+  { label: '图书馆', icon: libraryIcon, route: 'library' },
 ]
 
 const filteredTools = computed(() => {

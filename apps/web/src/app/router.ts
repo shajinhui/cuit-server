@@ -98,6 +98,12 @@ const router = createRouter({
       component: () => import('@/pages/PastExamsPage.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/library',
+      name: 'library',
+      component: () => import('@/pages/LibraryPage.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
   scrollBehavior: () => ({ top: 0 }),
 })

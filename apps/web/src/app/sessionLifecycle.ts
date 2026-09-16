@@ -6,6 +6,7 @@ import {
   useClassroomsStore,
 } from '@/features/classrooms'
 import { useExamsStore } from '@/features/exams'
+import { useLibraryStore } from '@/features/library'
 import { usePlanCompletionStore } from '@/features/plan-completion'
 import {
   clearAvatarCache,
@@ -66,6 +67,7 @@ export async function logoutSession() {
 async function clearUserData() {
   useClassroomsStore().clearData()
   useExamsStore().clearData()
+  useLibraryStore().clearData()
   usePlanCompletionStore().clearData()
   useProfileStore().clearData()
   useScheduleStore().clearData()
