@@ -213,11 +213,6 @@
   transform: scale(0.985);
 }
 
-.tools-grid button:disabled {
-  cursor: default;
-  opacity: 1;
-}
-
 .tools-grid img {
   width: clamp(54px, 15.5vw, 66px);
   height: clamp(54px, 15.5vw, 66px);
@@ -237,16 +232,6 @@
   font-size: clamp(15px, 4vw, 17px);
   font-weight: 600;
   line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.tools-grid small {
-  max-width: 100%;
-  color: #8e8e93;
-  font-size: clamp(10px, 2.6vw, 11px);
-  font-weight: 500;
-  line-height: 1.25;
-  letter-spacing: 0.04em;
   overflow-wrap: anywhere;
 }
 
