@@ -36,6 +36,7 @@ func (c *Client) LoginLibrary(ctx context.Context, username string, password str
 	if err != nil {
 		return err
 	}
+	loginCfg.TraceLogin = true
 	baseURL, err := c.libraryBaseURL()
 	if err != nil {
 		return err
@@ -45,11 +46,17 @@ func (c *Client) LoginLibrary(ctx context.Context, username string, password str
 		c.clearLibrarySession()
 		return err
 	}
-	if err := loginflow.LoginTarget(ctx, c.libraryResty, loginCfg, startURL, username, password); err != nil {
-		c.clearLibrarySession()
-		return err
-	}
-	session, err := libraryflow.BootstrapSession(ctx, c.libraryResty, baseURL)
+	// 图书馆的票据可能落在 Portal 登录响应、校内账号切换或起始跳转中的任意一条上，
+	// 因此由 auth/userInfo 自己确认会话是否真的建立。
+	var session libraryflow.UserSession
+	err = loginflow.LoginTargetWithVerifier(ctx, c.libraryResty, loginCfg, startURL, username, password, func(ctx context.Context) error {
+		candidate, verifyErr := libraryflow.BootstrapSession(ctx, c.libraryResty, baseURL)
+		if verifyErr != nil {
+			return verifyErr
+		}
+		session = candidate
+		return nil
+	})
 	if err != nil {
 		c.clearLibrarySession()
 		return err

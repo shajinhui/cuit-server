@@ -186,7 +186,15 @@ func loginViaPortal(ctx context.Context, client *resty.Client, cfg Config, route
 	return followPortalRedirect(ctx, client, cfg, redirectURL)
 }
 
-func loginTargetViaPortal(ctx context.Context, client *resty.Client, cfg Config, route *PortalRoute, username string, password string) error {
+func loginTargetViaPortal(
+	ctx context.Context,
+	client *resty.Client,
+	cfg Config,
+	route *PortalRoute,
+	username string,
+	password string,
+	verify TargetVerifier,
+) error {
 	if strings.TrimSpace(username) == "" || password == "" {
 		return jwxterr.WithMessage(jwxterr.ErrInvalidCredentials, "empty username or password")
 	}
@@ -195,20 +203,78 @@ func loginTargetViaPortal(ctx context.Context, client *resty.Client, cfg Config,
 	if err != nil {
 		return err
 	}
+	tracef(cfg, "portal-login status=%d code=%d message=%q redirect=%s", status, result.Code, result.Message, sanitizedURL(result.RedirectURI))
 	// 切换到学校账号只建立身份上下文；返回的 redirect 可能仍指向上一次登录的 EAMS service。
-	// 目标系统登录必须继续使用本次 route，不能被旧 redirect 覆盖。
-	if _, err := switchSchoolAccount(ctx, client, cfg); err != nil {
+	switchRedirect, err := switchSchoolAccount(ctx, client, cfg)
+	if err != nil {
 		return err
 	}
+	tracef(cfg, "portal-switch redirect=%s", sanitizedURL(switchRedirect))
+
+	candidates := []string{targetRedirect(route, result)}
+	if verify != nil {
+		// 带票据的重定向可能来自登录响应、账号切换或起始跳转，按浏览器的先后顺序逐个尝试，
+		// 由目标系统接口确认哪一条真正建立了会话。
+		candidates = redirectCandidates(route, result, switchRedirect)
+	}
+
+	var lastErr error
+	for index, raw := range candidates {
+		redirectURL, err := url.Parse(raw)
+		if err != nil || redirectURL.Host == "" {
+			lastErr = jwxterr.WithURL(jwxterr.ErrLoginVerificationFailed, "portal-target-login", loginURL, status, "invalid portal redirect")
+			continue
+		}
+		if err := followPortalRedirect(ctx, client, cfg, redirectURL); err != nil {
+			tracef(cfg, "candidate %d %s failed: %v", index, sanitizedURL(raw), err)
+			lastErr = err
+			continue
+		}
+		if verify == nil {
+			return nil
+		}
+		if err := verify(ctx); err != nil {
+			tracef(cfg, "candidate %d %s verify failed: %v", index, sanitizedURL(raw), err)
+			lastErr = err
+			continue
+		}
+		tracef(cfg, "candidate %d %s verified", index, sanitizedURL(raw))
+		return nil
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return jwxterr.WithURL(jwxterr.ErrLoginVerificationFailed, "portal-target-login", loginURL, status, "no usable portal redirect")
+}
+
+// targetRedirect 保持原有行为：优先使用登录响应里的 302 跳转，否则使用起始页里的 redirectUrl。
+func targetRedirect(route *PortalRoute, result portalLoginResponse) string {
 	redirect := route.RedirectURL
 	if result.Code == http.StatusFound {
 		redirect = firstNonEmpty(result.RedirectURI, result.RedirectURL, redirect)
 	}
-	redirectURL, err := url.Parse(redirect)
-	if err != nil || redirectURL.Host == "" {
-		return jwxterr.WithURL(jwxterr.ErrLoginVerificationFailed, "portal-target-login", loginURL, status, "invalid portal redirect")
+	return redirect
+}
+
+// redirectCandidates 按浏览器实际执行顺序排列候选跳转，并去掉重复地址。
+func redirectCandidates(route *PortalRoute, result portalLoginResponse, switchRedirect string) []string {
+	candidates := make([]string, 0, 3)
+	seen := make(map[string]struct{}, 3)
+	for _, raw := range []string{switchRedirect, result.RedirectURI, result.RedirectURL, route.RedirectURL} {
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		candidates = append(candidates, trimmed)
 	}
-	return followPortalRedirect(ctx, client, cfg, redirectURL)
+	if len(candidates) == 0 {
+		candidates = append(candidates, route.RedirectURL)
+	}
+	return candidates
 }
 
 func submitPortalLogin(ctx context.Context, client *resty.Client, loginURL *url.URL, route *PortalRoute, username string, password string) (portalLoginResponse, int, error) {
@@ -323,11 +389,15 @@ func followPortalRedirect(ctx context.Context, client *resty.Client, cfg Config,
 	if err != nil {
 		return err
 	}
-	if resultPage.URL.Path == "/cas/login" {
-		nextURL, err := parsePortalBridgeRedirect(resultPage.URL, resultPage.Body)
-		if err != nil {
-			return err
+	// 学校 CAS 用 200 + HTML 代替 302：登录入口返回带 <a id="jump"> 的桥接页，票据
+	// 消费页返回带 window.location.href 的页面。必须逐跳跟随到真正的业务地址，
+	// 否则会停在中间页，会话 Cookie 不会下发。
+	for step := 0; step < autoRedirectLimit; step++ {
+		nextURL, ok := parseAutoRedirect(resultPage.URL, resultPage.Body)
+		if !ok || sameURL(nextURL, resultPage.URL) {
+			break
 		}
+		tracef(cfg, "auto-redirect %s -> %s", sanitizedURL(resultPage.URL.String()), sanitizedURL(nextURL.String()))
 		resultPage, err = follow(ctx, client, nextURL, cfg.MaxRedirects)
 		if err != nil {
 			return err
