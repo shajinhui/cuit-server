@@ -9,7 +9,6 @@ import gradesIcon from '@/assets/icons/tool-grades.png'
 import libraryIcon from '@/assets/icons/tool-library.png'
 import mapIcon from '@/assets/icons/tool-campus-map.png'
 import autoRunIcon from '@/assets/icons/tool-campus-run.svg'
-import newStudentIcon from '@/assets/icons/tool-new-student.png'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
 import {
   ACTIVE_ANNOUNCEMENT,
@@ -32,7 +31,6 @@ interface ToolItem {
   label: string
   icon: string
   route?: string
-  comingSoon?: boolean
 }
 
 const tools: ToolItem[] = [
@@ -43,7 +41,6 @@ const tools: ToolItem[] = [
   { label: '校园地图', icon: mapIcon, route: 'campus-map' },
   { label: '校园跑与俱乐部', icon: autoRunIcon, route: 'autorun' },
   { label: '历年试卷', icon: pastExamsIcon, route: 'past-exams' },
-  { label: '新生指引', icon: newStudentIcon, comingSoon: true },
   { label: '图书馆', icon: libraryIcon, route: 'library' },
 ]
 
@@ -71,7 +68,6 @@ function syncAnnouncementViewState(event?: Event) {
 }
 
 function openTool(tool: ToolItem) {
-  if (tool.comingSoon) return
   if (tool.route) {
     void router.push({ name: tool.route })
     return
@@ -116,14 +112,11 @@ function openTool(tool: ToolItem) {
           v-for="tool in filteredTools"
           :key="tool.label"
           type="button"
-          :disabled="tool.comingSoon"
-          :class="{ 'is-coming-soon': tool.comingSoon }"
           @click="openTool(tool)"
         >
           <img :src="tool.icon" alt="" />
           <span class="tool-copy">
             <span class="tool-label">{{ tool.label }}</span>
-            <small v-if="tool.comingSoon">敬请期待</small>
           </span>
         </button>
       </div>
