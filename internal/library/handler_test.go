@@ -117,6 +117,20 @@ func TestOperationRejectionPreservesSafeUpstreamMessage(t *testing.T) {
 	}
 }
 
+func TestSingleSignOnFailureIsReportedAsUpstreamError(t *testing.T) {
+	service := &fakeLibraryService{err: jwxt.ErrUnsupportedLoginPage}
+	h := server.Default()
+	NewHandler(service).Register(h)
+
+	response := ut.PerformRequest(h.Engine, "GET", "/api/v1/library/capabilities", nil).Result()
+	if response.StatusCode() != 502 || !strings.Contains(string(response.Body()), `"code":50210`) {
+		t.Fatalf("unexpected response: status=%d body=%s", response.StatusCode(), response.Body())
+	}
+	if strings.Contains(string(response.Body()), "unsupported login page") {
+		t.Fatalf("upstream detail leaked to client: %s", response.Body())
+	}
+}
+
 func TestCaptchaEndpointReturnsImageWithoutCaching(t *testing.T) {
 	h := server.Default()
 	NewHandler(&fakeLibraryService{}).Register(h)

@@ -10,7 +10,13 @@ func isCASLoginURL(u *url.URL) bool {
 	if u == nil {
 		return false
 	}
-	return isCASHost(u) && strings.Contains(u.Path, "/authserver/login")
+	// 学校同时部署了 sso.cuit.edu.cn 与一网通办自带的 ywtb.cuit.edu.cn/authserver，
+	// 两者的登录页都是同一套 CAS 跳转结构（loginType=cas + redirectUrl），
+	// 因此这里按 CAS 登录页处理，后续仍由 Portal 完成账号登录。
+	if !strings.Contains(u.Path, "/authserver/login") {
+		return false
+	}
+	return isCASHost(u) || isPortalHost(u)
 }
 
 func isLoginPage(page *Page) bool {

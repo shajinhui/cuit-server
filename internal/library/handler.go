@@ -209,9 +209,15 @@ func writeServiceError(c *app.RequestContext, err error) {
 		apiresponse.Error(c, http.StatusUnauthorized, 40101, "教务登录已失效，请重新登录")
 	case errors.Is(err, jwxt.ErrLibraryOperationRejected):
 		apiresponse.Error(c, http.StatusConflict, 40901, fallback(publicMessage, "图书馆系统未接受本次操作"))
+	case errors.Is(err, jwxt.ErrUnsupportedLoginPage), errors.Is(err, jwxt.ErrLoginVerificationFailed):
+		// 图书馆走一网通办单点登录，登录链路异常时不能把上游细节返回给客户端。
+		log.Printf("图书馆单点登录失败: %v", err)
+		apiresponse.Error(c, http.StatusBadGateway, 50210, fallback(publicMessage, "图书馆单点登录失败，请稍后重试"))
 	case errors.Is(err, jwxt.ErrLibraryQueryFailed), errors.Is(err, jwxt.ErrRemoteUnavailable):
+		log.Printf("图书馆上游请求失败: %v", err)
 		apiresponse.Error(c, http.StatusBadGateway, 50210, fallback(publicMessage, "图书馆系统暂时无法访问"))
 	default:
+		log.Printf("图书馆服务未预期错误: %v", err)
 		apiresponse.Error(c, http.StatusInternalServerError, 50000, "服务暂时不可用")
 	}
 }
