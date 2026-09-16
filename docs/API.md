@@ -54,6 +54,7 @@ Cache-Control: no-store
 
 Redis 只保存上述可重建数据，不保存密码、Cookie、Ticket、应用 Session Token
 或 JWXT Client。Redis 不可用时按缓存未命中处理，接口继续访问学校系统。
+图书馆预约接口不写入缓存，座位状态与预约规则始终读取图书馆实时数据。
 
 ## 校园跑 API
 
@@ -860,7 +861,247 @@ GET /api/v1/schedule/current-week
 }
 ```
 
-## 7. 健康检查
+## 7. 图书馆预约
+
+图书馆预约读取学校一网通办（`yypt`）的座位与自修室业务。用户不需要单独登录图书馆：
+首次调用时，后端用应用 Session 对应的加密教务凭据自动完成一次 CAS 换票，并把
+图书馆 Cookie 与 `token` 保存在该用户独立的 JWXT Client 中。图书馆会话失效时，
+后端只重建图书馆会话，不会退出应用会话，也不会影响教务和实验教学系统。
+
+所有接口都需要 `campus_session`。`kind` 取值：`seat`（普通座位）、`study`（自修室）。
+普通座位的可选日期范围与可用时段由图书馆实时规则决定；App 只允许查询当天与次日，
+提交前会重新读取座位状态，避免使用过期数据。
+
+### 7.1 查询预约能力
+
+```http
+GET /api/v1/library/capabilities
+```
+
+返回图书馆公开配置中与预约表单相关的开关，用于决定前端是否展示验证码和用途输入框。
+
+成功响应：
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "CaptchaMode": "none",
+    "MemoMaximumLength": 0,
+    "MemoRequired": false,
+    "TemporaryLeave": true,
+    "FinishEarly": true,
+    "OfficialURL": "https://ywtb.cuit.edu.cn/file/apps/yypt/index.html"
+  }
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `CaptchaMode` | `none` 无验证码；`image` 图形验证码，由本 API 代理；`interactive` 交互验证，App 引导用户在官方页面完成预约 |
+| `MemoMaximumLength` | 预约用途最大字数，`0` 表示未限制 |
+| `MemoRequired` | 预约用途是否必填 |
+| `TemporaryLeave` | 是否支持暂离登记 |
+| `FinishEarly` | 是否支持提前结束 |
+
+### 7.2 查询预约区域
+
+```http
+GET /api/v1/library/areas?kind=seat
+```
+
+返回菜单树。只有 `Leaf` 为 `true` 的节点可以用于查询座位，前端按 `Path` 展示完整层级。
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": [
+    {
+      "ID": "7",
+      "Name": "二楼阅览室",
+      "Path": "图书馆 / 二楼阅览室",
+      "Available": 8,
+      "Total": 40,
+      "Leaf": true
+    }
+  ]
+}
+```
+
+### 7.3 查询座位
+
+```http
+GET /api/v1/library/seats?kind=seat&room_id=7&start_date=2026-09-16&end_date=2026-09-16&start_time=09:00&end_time=11:00
+```
+
+| 参数 | 说明 |
+|---|---|
+| `kind` | `seat` 或 `study` |
+| `room_id` | 7.2 返回的叶子区域 ID |
+| `start_date` | 普通座位为预约日期；自修室为开始日期 |
+| `end_date` | 自修室结束日期，普通座位忽略 |
+| `start_time` / `end_time` | 普通座位的起止时间，`HH:mm`；自修室忽略 |
+
+`Status` 取值：
+
+| 值 | 含义 |
+|---|---|
+| `available` | 该时段可预约 |
+| `reserved` | 该时段已被占用 |
+| `unavailable` | 设备停用或仅可查看 |
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": [
+    {
+      "ID": "18",
+      "Number": "A-18",
+      "Name": "18号座位",
+      "Building": "图书馆",
+      "Room": "二楼阅览室",
+      "Coordinate": "120,340",
+      "Status": "available",
+      "OnlyView": false,
+      "OpenStart": "08:00",
+      "OpenEnd": "22:00",
+      "OpenTimes": [{ "Start": "08:00", "End": "22:00", "Limit": 0 }],
+      "Reservations": [],
+      "Rule": {
+        "ID": "3",
+        "EarliestMinutes": 0,
+        "LatestMinutes": 1440,
+        "MinimumMinutes": 30,
+        "MaximumMinutes": 360,
+        "CancelMinutes": 30,
+        "Deadline": "",
+        "LaterLineTime": ""
+      }
+    }
+  ]
+}
+```
+
+### 7.4 查询预约记录
+
+```http
+GET /api/v1/library/reservations?start_date=2026-06-16&end_date=2026-12-16
+```
+
+不传日期时默认返回前后各三个月。普通座位与自修室记录会合并返回，按开始时间倒序排列。
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": [
+    {
+      "UUID": "9f1c…",
+      "ReservationID": "1024",
+      "Kind": "seat",
+      "Name": "A-18",
+      "Building": "图书馆",
+      "Room": "二楼阅览室",
+      "Seat": "18号座位",
+      "Start": "2026-09-16 09:00:00",
+      "End": "2026-09-16 11:00:00",
+      "ActualEnd": "",
+      "Status": 2,
+      "StatusLabel": "待生效",
+      "CanCancel": true,
+      "CanTemporaryLeave": false,
+      "CanFinish": false,
+      "TemporaryLeaveUntil": "",
+      "ViolationReason": ""
+    }
+  ]
+}
+```
+
+`CanCancel`、`CanTemporaryLeave`、`CanFinish` 由后端按上游状态位换算，前端只展示对应按钮。
+
+### 7.5 查询图形验证码
+
+```http
+GET /api/v1/library/captcha
+```
+
+直接返回图片字节（`Content-Type: image/*`，`Cache-Control: no-store`）。
+只有 `CaptchaMode` 为 `image` 时才需要调用。验证码与当前图书馆会话绑定，
+提交失败后必须重新读取。
+
+### 7.6 创建预约
+
+```http
+POST /api/v1/library/reservations
+```
+
+```json
+{
+  "Kind": "seat",
+  "RoomID": "7",
+  "SeatID": "18",
+  "StartDate": "2026-09-16",
+  "EndDate": "2026-09-16",
+  "StartTime": "09:00",
+  "EndTime": "11:00",
+  "Title": "座位预约",
+  "Memo": "",
+  "Captcha": ""
+}
+```
+
+普通座位会先按当前条件重新查询座位状态，再调用图书馆的设备提示接口校验规则，
+最后用图书馆下发的 RSA 公钥加密座位 ID 提交，避免明文设备号进入业务链路。
+自修室的 `StartTime`、`EndTime` 可为空，`EndDate` 必填。
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "Message": "预约成功"
+  }
+}
+```
+
+成功与失败信息均来自图书馆系统，前端直接展示。网络错误不会自动重试提交，
+避免生成重复预约；只有上游明确返回会话过期时，后端才重新登录并重试一次。
+
+### 7.7 取消预约
+
+```http
+DELETE /api/v1/library/reservations/{uuid}
+```
+
+`uuid` 为 7.4 返回的 `UUID`。
+
+### 7.8 提前结束预约
+
+```http
+POST /api/v1/library/reservations/{uuid}/finish
+```
+
+仅在 `CanFinish` 为 `true` 时可用。
+
+### 7.9 登记暂离
+
+```http
+POST /api/v1/library/reservations/{uuid}/temporary-leave
+```
+
+```json
+{
+  "ReservationID": "1024"
+}
+```
+
+仅在 `CanTemporaryLeave` 为 `true` 时可用。
+
+## 8. 健康检查
 
 ```http
 GET /api/v1/health
@@ -880,7 +1121,7 @@ GET /api/v1/health
 }
 ```
 
-## 8. 错误码
+## 9. 错误码
 
 | HTTP 状态码 | 业务码 | 当前含义 |
 |---:|---:|---|
@@ -895,6 +1136,9 @@ GET /api/v1/health
 | 502 | `50206` | 计划完成情况查询失败 |
 | 502 | `50207` | 教室筛选项、教室课表或空教室查询失败 |
 | 502 | `50208` | 考试批次或考场安排查询失败 |
+| 502 | `50210` | 图书馆系统暂时无法访问或返回异常格式 |
+| 409 | `40901` | 图书馆系统拒绝了本次预约、取消、暂离或提前结束 |
+| 422 | `42201` | 预约参数无效，或图书馆要求补充验证码、用途等信息 |
 | 500 | `50000` | 未分类的服务端错误 |
 
 失败响应示例：
@@ -907,7 +1151,7 @@ GET /api/v1/health
 }
 ```
 
-## 9. Session 恢复规则
+## 10. Session 恢复规则
 
 - 每个用户的 JWXT Client 和 CookieJar 相互独立。
 - API 只向客户端发放本应用的 `campus_session` Cookie。
@@ -918,3 +1162,5 @@ GET /api/v1/health
 - API 重启后，可根据 SQLite 中的应用 Session 和加密教务凭据恢复 JWXT Client。
 - 查询个人学籍信息、计划完成情况、学期、成绩、考试、课表、教室筛选项、教室课表或空教室时，如果 EAMS Session 失效，后端会重新登录并只重试原查询一次。
 - 客户端收到 HTTP 401 / `40101` 后，应回到登录页，不应自行保存密码重试。
+- 图书馆使用独立的 CookieJar 与 `token`，与教务、实验教学系统的会话互不影响。
+- 查询区域、座位、预约记录或提交预约时，如果图书馆会话失效，后端会用同一份加密凭据重新登录图书馆并只重试一次。

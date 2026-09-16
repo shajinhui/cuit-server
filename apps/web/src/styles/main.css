@@ -19,6 +19,7 @@
 @import './app-update.css';
 @import './autorun.css';
 @import './past-exams.css';
+@import './library.css';
 
 :root {
   font-family:
@@ -77,7 +78,8 @@ body {
 .add-course-sheet-backdrop,
 .pwa-install-guide-backdrop,
 .app-announcement-backdrop,
-.app-update-backdrop {
+.app-update-backdrop,
+.library-modal-backdrop {
   touch-action: pan-y;
 }
 

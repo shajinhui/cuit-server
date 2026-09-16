@@ -37,6 +37,20 @@ type JWXTClient interface {
 	GetClassroomSchedule(ctx context.Context, semesterID string, campusID string) (jwxt.ClassroomSchedule, error)
 }
 
+type libraryJWXTClient interface {
+	JWXTClient
+	LoginLibrary(ctx context.Context, username string, password string) error
+	GetLibraryCapabilities(ctx context.Context) (jwxt.LibraryCapabilities, error)
+	ListLibraryAreas(ctx context.Context, kind string) ([]jwxt.LibraryArea, error)
+	ListLibrarySeats(ctx context.Context, query jwxt.LibrarySeatQuery) ([]jwxt.LibrarySeat, error)
+	ListLibraryReservations(ctx context.Context, query jwxt.LibraryReservationQuery) ([]jwxt.LibraryReservation, error)
+	CreateLibraryReservation(ctx context.Context, request jwxt.LibraryCreateReservationRequest) (jwxt.LibraryOperationResult, error)
+	CancelLibraryReservation(ctx context.Context, uuid string) (jwxt.LibraryOperationResult, error)
+	FinishLibraryReservation(ctx context.Context, uuid string) (jwxt.LibraryOperationResult, error)
+	TemporaryLeaveLibraryReservation(ctx context.Context, reservationID string) (jwxt.LibraryOperationResult, error)
+	GetLibraryCaptcha(ctx context.Context) (jwxt.LibraryCaptcha, error)
+}
+
 type ClientFactory func() (JWXTClient, error)
 
 // clientEntry 既是某个用户的短期 JWXT Client 缓存，也是该用户访问教务系统的串行锁。
@@ -271,6 +285,110 @@ func (s *Service) GetClassroomSchedule(
 	})
 }
 
+func (s *Service) GetLibraryCapabilities(
+	ctx context.Context,
+	sessionID string,
+) (jwxt.LibraryCapabilities, error) {
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryCapabilities, error) {
+		return client.GetLibraryCapabilities(ctx)
+	})
+}
+
+func (s *Service) ListLibraryAreas(
+	ctx context.Context,
+	sessionID string,
+	kind string,
+) ([]jwxt.LibraryArea, error) {
+	kind = strings.TrimSpace(kind)
+	if kind != jwxt.LibraryKindSeat && kind != jwxt.LibraryKindStudy {
+		return nil, ErrInvalidInput
+	}
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) ([]jwxt.LibraryArea, error) {
+		return client.ListLibraryAreas(ctx, kind)
+	})
+}
+
+func (s *Service) ListLibrarySeats(
+	ctx context.Context,
+	sessionID string,
+	query jwxt.LibrarySeatQuery,
+) ([]jwxt.LibrarySeat, error) {
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) ([]jwxt.LibrarySeat, error) {
+		return client.ListLibrarySeats(ctx, query)
+	})
+}
+
+func (s *Service) ListLibraryReservations(
+	ctx context.Context,
+	sessionID string,
+	query jwxt.LibraryReservationQuery,
+) ([]jwxt.LibraryReservation, error) {
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) ([]jwxt.LibraryReservation, error) {
+		return client.ListLibraryReservations(ctx, query)
+	})
+}
+
+func (s *Service) CreateLibraryReservation(
+	ctx context.Context,
+	sessionID string,
+	request jwxt.LibraryCreateReservationRequest,
+) (jwxt.LibraryOperationResult, error) {
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryOperationResult, error) {
+		return client.CreateLibraryReservation(ctx, request)
+	})
+}
+
+func (s *Service) CancelLibraryReservation(
+	ctx context.Context,
+	sessionID string,
+	uuid string,
+) (jwxt.LibraryOperationResult, error) {
+	uuid = strings.TrimSpace(uuid)
+	if uuid == "" {
+		return jwxt.LibraryOperationResult{}, ErrInvalidInput
+	}
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryOperationResult, error) {
+		return client.CancelLibraryReservation(ctx, uuid)
+	})
+}
+
+func (s *Service) FinishLibraryReservation(
+	ctx context.Context,
+	sessionID string,
+	uuid string,
+) (jwxt.LibraryOperationResult, error) {
+	uuid = strings.TrimSpace(uuid)
+	if uuid == "" {
+		return jwxt.LibraryOperationResult{}, ErrInvalidInput
+	}
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryOperationResult, error) {
+		return client.FinishLibraryReservation(ctx, uuid)
+	})
+}
+
+func (s *Service) TemporaryLeaveLibraryReservation(
+	ctx context.Context,
+	sessionID string,
+	reservationID string,
+) (jwxt.LibraryOperationResult, error) {
+	reservationID = strings.TrimSpace(reservationID)
+	if reservationID == "" {
+		return jwxt.LibraryOperationResult{}, ErrInvalidInput
+	}
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryOperationResult, error) {
+		return client.TemporaryLeaveLibraryReservation(ctx, reservationID)
+	})
+}
+
+func (s *Service) GetLibraryCaptcha(
+	ctx context.Context,
+	sessionID string,
+) (jwxt.LibraryCaptcha, error) {
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryCaptcha, error) {
+		return client.GetLibraryCaptcha(ctx)
+	})
+}
+
 func (s *Service) Authenticated(ctx context.Context, sessionID string) (bool, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return false, nil
@@ -434,6 +552,56 @@ func withClient[T any](
 			return zero, loginErr
 		}
 		result, err = query(client)
+	}
+	if entry.client != nil && !entry.revoked {
+		entry.lastUsed = s.now()
+		s.scheduleClientReleaseLocked(entry)
+	}
+	return result, err
+}
+
+// withLibraryClient keeps the library authentication isolated inside the
+// existing per-user client. A retry only happens after the upstream explicitly
+// reports an expired session, so ambiguous network failures never duplicate a
+// reservation mutation.
+func withLibraryClient[T any](
+	s *Service,
+	ctx context.Context,
+	sessionID string,
+	operation func(libraryJWXTClient) (T, error),
+) (T, error) {
+	var zero T
+	entry, tokenHash, err := s.sessionEntry(ctx, sessionID)
+	if err != nil {
+		return zero, err
+	}
+
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.revoked {
+		return zero, ErrUnauthenticated
+	}
+	client, err := s.ensureClientLocked(ctx, tokenHash, entry)
+	if err != nil {
+		return zero, err
+	}
+	libraryClient, ok := client.(libraryJWXTClient)
+	if !ok {
+		return zero, errors.New("academic: JWXT client does not support library operations")
+	}
+	result, err := operation(libraryClient)
+	if errors.Is(err, jwxt.ErrSessionExpired) {
+		password, decryptErr := s.credentials.Decrypt(entry.user.EncryptedPassword)
+		if decryptErr != nil {
+			return zero, decryptErr
+		}
+		if loginErr := libraryClient.LoginLibrary(ctx, entry.user.StudentNo, password); loginErr != nil {
+			if errors.Is(loginErr, jwxt.ErrInvalidCredentials) {
+				return zero, s.invalidateSessionLocked(ctx, tokenHash, entry, loginErr)
+			}
+			return zero, loginErr
+		}
+		result, err = operation(libraryClient)
 	}
 	if entry.client != nil && !entry.revoked {
 		entry.lastUsed = s.now()

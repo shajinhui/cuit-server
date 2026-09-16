@@ -49,3 +49,26 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   }
   return payload.data
 }
+
+export async function requestBlob(path: string): Promise<Blob> {
+  const deviceHeaders = await clientDeviceHeaders()
+  const response = await fetch(`${apiBaseURL}${path}`, {
+    credentials: 'include',
+    headers: {
+      Accept: 'image/*, application/json',
+      ...deviceHeaders,
+    },
+  })
+  if (response.ok) return response.blob()
+
+  let message = '请求失败'
+  let code = 50000
+  try {
+    const payload = (await response.json()) as ApiResponse<unknown>
+    message = payload.message || message
+    code = payload.code
+  } catch {
+    message = '服务响应格式异常'
+  }
+  throw new ApiError(message, response.status, code)
+}

@@ -13,4 +13,7 @@ var (
 	ErrExamQueryFailed           = jwxterr.ErrExamQueryFailed
 	ErrProfileQueryFailed        = jwxterr.ErrProfileQueryFailed
 	ErrPlanCompletionQueryFailed = jwxterr.ErrPlanCompletionQueryFailed
+	ErrLibraryQueryFailed        = jwxterr.ErrLibraryQueryFailed
+	ErrLibraryOperationRejected  = jwxterr.ErrLibraryOperationRejected
+	ErrLibraryVerification       = jwxterr.ErrLibraryVerification
 )

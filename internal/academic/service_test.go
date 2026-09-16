@@ -43,6 +43,12 @@ type fakeJWXTClient struct {
 	classroomScheduleErr error
 	scheduleSemesterID   string
 	scheduleCampusID     string
+	libraryLoginUsername string
+	libraryLoginPassword string
+	libraryLoginCalls    int
+	libraryAreas         []jwxt.LibraryArea
+	libraryAreasErr      error
+	libraryAreaCalls     int
 	semesterStarted      chan struct{}
 	semesterRelease      chan struct{}
 }
@@ -127,6 +133,55 @@ func (f *fakeJWXTClient) GetClassroomSchedule(
 	f.scheduleSemesterID = semesterID
 	f.scheduleCampusID = campusID
 	return f.classroomSchedule, f.classroomScheduleErr
+}
+
+func (f *fakeJWXTClient) LoginLibrary(_ context.Context, username string, password string) error {
+	f.libraryLoginUsername = username
+	f.libraryLoginPassword = password
+	f.libraryLoginCalls++
+	return nil
+}
+
+func (f *fakeJWXTClient) GetLibraryCapabilities(context.Context) (jwxt.LibraryCapabilities, error) {
+	return jwxt.LibraryCapabilities{}, nil
+}
+
+func (f *fakeJWXTClient) ListLibraryAreas(context.Context, string) ([]jwxt.LibraryArea, error) {
+	f.libraryAreaCalls++
+	if f.libraryAreasErr != nil {
+		err := f.libraryAreasErr
+		f.libraryAreasErr = nil
+		return nil, err
+	}
+	return f.libraryAreas, nil
+}
+
+func (f *fakeJWXTClient) ListLibrarySeats(context.Context, jwxt.LibrarySeatQuery) ([]jwxt.LibrarySeat, error) {
+	return nil, nil
+}
+
+func (f *fakeJWXTClient) ListLibraryReservations(context.Context, jwxt.LibraryReservationQuery) ([]jwxt.LibraryReservation, error) {
+	return nil, nil
+}
+
+func (f *fakeJWXTClient) CreateLibraryReservation(context.Context, jwxt.LibraryCreateReservationRequest) (jwxt.LibraryOperationResult, error) {
+	return jwxt.LibraryOperationResult{}, nil
+}
+
+func (f *fakeJWXTClient) CancelLibraryReservation(context.Context, string) (jwxt.LibraryOperationResult, error) {
+	return jwxt.LibraryOperationResult{}, nil
+}
+
+func (f *fakeJWXTClient) FinishLibraryReservation(context.Context, string) (jwxt.LibraryOperationResult, error) {
+	return jwxt.LibraryOperationResult{}, nil
+}
+
+func (f *fakeJWXTClient) TemporaryLeaveLibraryReservation(context.Context, string) (jwxt.LibraryOperationResult, error) {
+	return jwxt.LibraryOperationResult{}, nil
+}
+
+func (f *fakeJWXTClient) GetLibraryCaptcha(context.Context) (jwxt.LibraryCaptcha, error) {
+	return jwxt.LibraryCaptcha{}, nil
 }
 
 func TestLoginPersistsEncryptedCredentialAndSession(t *testing.T) {
@@ -291,6 +346,31 @@ func TestLABMSCourseTableReloginsOnlyLABMSSession(t *testing.T) {
 	}
 	if client.loginUsername != "test-student" {
 		t.Fatal("the existing EAMS client should remain in use")
+	}
+}
+
+func TestLibraryQueryReloginsOnlyLibrarySession(t *testing.T) {
+	repository := newMemoryRepository()
+	credentials := testCredentialCipher(t)
+	client := &fakeJWXTClient{
+		libraryAreas:    []jwxt.LibraryArea{{ID: "7", Name: "二楼", Leaf: true}},
+		libraryAreasErr: jwxt.ErrSessionExpired,
+	}
+	service := NewService(func() (JWXTClient, error) { return client, nil }, repository, credentials, time.Hour)
+
+	sessionID, err := service.Login(context.Background(), "test-student", "test-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	areas, err := service.ListLibraryAreas(context.Background(), sessionID, jwxt.LibraryKindSeat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(areas) != 1 || client.libraryAreaCalls != 2 || client.libraryLoginCalls != 1 {
+		t.Fatalf("unexpected library recovery: areas=%+v query_calls=%d login_calls=%d", areas, client.libraryAreaCalls, client.libraryLoginCalls)
+	}
+	if client.libraryLoginUsername != "test-student" || client.libraryLoginPassword != "test-password" {
+		t.Fatal("library recovery did not use the stored credential")
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"cuit-server/pkg/jwxt/internal/jwxterr"
+	libraryflow "cuit-server/pkg/jwxt/internal/library"
 	loginflow "cuit-server/pkg/jwxt/internal/login"
 
 	"github.com/go-resty/resty/v2"
@@ -22,11 +23,14 @@ import (
 // Client 是 JWXT SDK 的核心客户端类型，封装了 HTTP 客户端、配置和会话状态。
 // 注意：每个 Client 实例维护自己的 CookieJar（在 NewClient 中创建），以避免多用户会话混淆。
 type Client struct {
-	resty         *resty.Client
-	labmsResty    *resty.Client
-	cfg           Config
-	loggedIn      bool
-	labmsLoggedIn bool
+	resty           *resty.Client
+	labmsResty      *resty.Client
+	libraryResty    *resty.Client
+	cfg             Config
+	loggedIn        bool
+	labmsLoggedIn   bool
+	libraryLoggedIn bool
+	libraryUser     libraryflow.UserSession
 }
 
 // NewClient 创建一个新的 JWXT SDK 客户端实例。
@@ -44,6 +48,12 @@ func NewClient(options ...Option) (*Client, error) {
 	}
 	if cfg.LABMSBaseURL == "" {
 		cfg.LABMSBaseURL = DefaultConfig().LABMSBaseURL
+	}
+	if cfg.LibraryBaseURL == "" {
+		cfg.LibraryBaseURL = DefaultConfig().LibraryBaseURL
+	}
+	if cfg.LibraryWebURL == "" {
+		cfg.LibraryWebURL = DefaultConfig().LibraryWebURL
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = DefaultConfig().Timeout
@@ -69,6 +79,12 @@ func NewClient(options ...Option) (*Client, error) {
 	if _, err := url.ParseRequestURI(cfg.LABMSBaseURL); err != nil {
 		return nil, jwxterr.WithMessage(ErrUnsupportedLoginPage, "invalid LABMS base URL")
 	}
+	if _, err := url.ParseRequestURI(cfg.LibraryBaseURL); err != nil {
+		return nil, jwxterr.WithMessage(ErrUnsupportedLoginPage, "invalid library base URL")
+	}
+	if _, err := url.ParseRequestURI(cfg.LibraryWebURL); err != nil {
+		return nil, jwxterr.WithMessage(ErrUnsupportedLoginPage, "invalid library web URL")
+	}
 
 	// 每个用户必须使用独立 CookieJar。CAS Cookie、EAMS JSESSIONID 和一次性
 	// ticket 都属于某个用户的认证上下文；如果多个用户共享 CookieJar，可能出现
@@ -86,11 +102,19 @@ func NewClient(options ...Option) (*Client, error) {
 	if cfg.Timeout < 2*time.Minute {
 		labmsClient.SetTimeout(2 * time.Minute)
 	}
+	libraryClient, err := newHTTPClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+	libraryClient.
+		SetHeader("Accept", "application/json, text/plain, */*").
+		SetHeader("lan", "1")
 
 	return &Client{
-		resty:      restyClient,
-		labmsResty: labmsClient,
-		cfg:        cfg,
+		resty:        restyClient,
+		labmsResty:   labmsClient,
+		libraryResty: libraryClient,
+		cfg:          cfg,
 	}, nil
 }
 

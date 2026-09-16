@@ -17,6 +17,7 @@ import (
 	autorunstore "cuit-server/internal/autorun/store"
 	autorunupstream "cuit-server/internal/autorun/upstream"
 	"cuit-server/internal/feedback"
+	"cuit-server/internal/library"
 	"cuit-server/internal/platform/admission"
 	platformcache "cuit-server/internal/platform/cache"
 	"cuit-server/internal/platform/cors"
@@ -136,6 +137,7 @@ func main() {
 	scheduleHandler := schedule.NewHandler(scheduleService, currentWeekService)
 	feedbackRepository := feedback.NewRepository(db)
 	feedbackHandler := feedback.NewHandler(academicService, feedbackRepository)
+	libraryHandler := library.NewHandler(jwxtService)
 
 	h := server.Default(server.WithHostPorts(address))
 	h.Use(accesslog.New())
@@ -161,6 +163,7 @@ func main() {
 	academicHandler.Register(h, loginGate.Middleware())
 	scheduleHandler.Register(h)
 	feedbackHandler.Register(h)
+	libraryHandler.Register(h)
 	autorunWorkerURL := strings.TrimSpace(os.Getenv("AUTORUN_WORKER_URL"))
 	autorunInternalSecret := strings.TrimSpace(os.Getenv("AUTORUN_INTERNAL_SECRET"))
 	autorunSecret := strings.TrimSpace(os.Getenv("AUTORUN_APP_SECRET"))

@@ -18,6 +18,9 @@ var (
 	ErrExamQueryFailed           = errors.New("jwxt: exam query failed")
 	ErrProfileQueryFailed        = errors.New("jwxt: profile query failed")
 	ErrPlanCompletionQueryFailed = errors.New("jwxt: plan completion query failed")
+	ErrLibraryQueryFailed        = errors.New("jwxt: library query failed")
+	ErrLibraryOperationRejected  = errors.New("jwxt: library operation rejected")
+	ErrLibraryVerification       = errors.New("jwxt: library verification required")
 )
 
 type SafeError struct {

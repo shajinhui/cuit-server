@@ -7,42 +7,60 @@ import (
 )
 
 const (
-	defaultEAMSBaseURL   = "http://jwgl.cuit.edu.cn/eams/"
-	defaultPortalBaseURL = "https://ywtb.cuit.edu.cn/"
-	defaultLABMSBaseURL  = "https://sjjx.cuit.edu.cn:56443/"
-	defaultUserAgent     = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
-	defaultAccept        = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+	defaultEAMSBaseURL    = "http://jwgl.cuit.edu.cn/eams/"
+	defaultPortalBaseURL  = "https://ywtb.cuit.edu.cn/"
+	defaultLABMSBaseURL   = "https://sjjx.cuit.edu.cn:56443/"
+	defaultLibraryBaseURL = "https://ywtb.cuit.edu.cn/third_api/yypt/ic-web/"
+	defaultLibraryWebURL  = "https://ywtb.cuit.edu.cn/file/apps/yypt/index.html"
+	defaultUserAgent      = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+	defaultAccept         = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 )
 
 type Config struct {
-	EAMSBaseURL   string
-	VerifyURL     string
-	PortalBaseURL string
-	LABMSBaseURL  string
-	Timeout       time.Duration
-	MaxRedirects  int
-	UserAgent     string
-	Output        io.Writer
+	EAMSBaseURL    string
+	VerifyURL      string
+	PortalBaseURL  string
+	LABMSBaseURL   string
+	LibraryBaseURL string
+	LibraryWebURL  string
+	Timeout        time.Duration
+	MaxRedirects   int
+	UserAgent      string
+	Output         io.Writer
 }
 
 type Option func(*Config)
 
 func DefaultConfig() Config {
 	return Config{
-		EAMSBaseURL:   defaultEAMSBaseURL,
-		VerifyURL:     defaultEAMSBaseURL,
-		PortalBaseURL: defaultPortalBaseURL,
-		LABMSBaseURL:  defaultLABMSBaseURL,
-		Timeout:       15 * time.Second,
-		MaxRedirects:  10,
-		UserAgent:     defaultUserAgent,
-		Output:        os.Stdout,
+		EAMSBaseURL:    defaultEAMSBaseURL,
+		VerifyURL:      defaultEAMSBaseURL,
+		PortalBaseURL:  defaultPortalBaseURL,
+		LABMSBaseURL:   defaultLABMSBaseURL,
+		LibraryBaseURL: defaultLibraryBaseURL,
+		LibraryWebURL:  defaultLibraryWebURL,
+		Timeout:        15 * time.Second,
+		MaxRedirects:   10,
+		UserAgent:      defaultUserAgent,
+		Output:         os.Stdout,
 	}
 }
 
 func WithLABMSBaseURL(rawURL string) Option {
 	return func(cfg *Config) {
 		cfg.LABMSBaseURL = rawURL
+	}
+}
+
+func WithLibraryBaseURL(rawURL string) Option {
+	return func(cfg *Config) {
+		cfg.LibraryBaseURL = rawURL
+	}
+}
+
+func WithLibraryWebURL(rawURL string) Option {
+	return func(cfg *Config) {
+		cfg.LibraryWebURL = rawURL
 	}
 }
 
