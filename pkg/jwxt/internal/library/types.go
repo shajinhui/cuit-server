@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
@@ -245,12 +246,12 @@ type upstreamReservation struct {
 	Building            string       `json:"labName"`
 	Room                string       `json:"roomName"`
 	DeviceName          string       `json:"devName"`
-	Start               string       `json:"resvBeginTime"`
-	End                 string       `json:"resvEndTime"`
-	ActualEnd           string       `json:"resvEndRealTime"`
+	Start               flexTime     `json:"resvBeginTime"`
+	End                 flexTime     `json:"resvEndTime"`
+	ActualEnd           flexTime     `json:"resvEndRealTime"`
 	Status              flexInt      `json:"resvStatus"`
 	EndEarly            bool         `json:"endEarly"`
-	TemporaryLeaveUntil string       `json:"tempLeaveEndTime"`
+	TemporaryLeaveUntil flexTime     `json:"tempLeaveEndTime"`
 	ViolationReason     string       `json:"checkInfo"`
 	Devices             []deviceInfo `json:"resvDevInfoList"`
 }
@@ -296,5 +297,38 @@ func (value *flexInt) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*value = flexInt(parsed)
+	return nil
+}
+
+// flexTime 兼容图书馆上游的两种时间表示：字符串时间与时间戳。
+// 预约记录接口（reserve/resvInfo、psgSeat/resvInfo）返回毫秒时间戳
+// （resvBeginTime: 1789555200000），座位与规则接口返回 "2006-01-02 15:04:05"
+// 字符串。两种都要归一化成前端可直接展示的字符串，否则整条预约记录解析失败。
+type flexTime string
+
+func (value *flexTime) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, []byte("null")) || bytes.Equal(data, []byte(`""`)) {
+		*value = ""
+		return nil
+	}
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil {
+		*value = flexTime(strings.TrimSpace(text))
+		return nil
+	}
+	var stamp int64
+	if err := json.Unmarshal(data, &stamp); err != nil {
+		return err
+	}
+	if stamp <= 0 {
+		*value = ""
+		return nil
+	}
+	// 上游使用毫秒时间戳；同时兼容秒级时间戳，避免上游切换单位后显示 1970 年。
+	seconds, nanos := stamp/1000, (stamp%1000)*int64(time.Millisecond)
+	if stamp < 100_000_000_000 {
+		seconds, nanos = stamp, 0
+	}
+	*value = flexTime(time.Unix(seconds, nanos).In(shanghaiLocation).Format(dateTimeLayout))
 	return nil
 }
