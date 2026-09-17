@@ -1,0 +1,95 @@
+成信友友 (cuit-server) 专有许可协议
+版权所有 (c) 2026 shajinhui。保留所有权利。
+
+一、定义
+
+"本作品"指本仓库及其全部内容，包括源代码、文档、设计稿、图片、配置、
+构建脚本、提交历史以及随附的其他材料。
+"著作权人"指本作品的权利人 shajinhui。
+
+二、未授予任何许可
+
+本作品以公开状态发布，仅为满足浏览、学习与评估的需要。除本协议第五条、
+第六条明文允许的行为外，著作权人未以任何方式授予任何明示或默示的许可。
+代码公开可见不等于获得使用授权。
+
+三、未经事先书面授权，禁止实施下列行为
+
+1. 复制、下载、镜像、归档本作品的全部或任何部分，但 Git 托管平台为提供
+   正常浏览、检索功能所必需的技术性复制除外；
+2. 修改、翻译、改编、演绎本作品，或基于本作品创作衍生作品；
+3. 分发、发布、公开传播、出租、出售、转授权本作品或其衍生作品；
+4. 将本作品或其衍生作品用于任何商业目的，包括付费服务、广告变现、
+   捆绑销售、代查代做等；
+5. 将本作品或其衍生作品部署为对外提供的服务，或用于其他组织或个人的
+   生产、运营环境；
+6. 将本作品用于训练机器学习模型、构建数据集，或实施其他大规模内容抽取；
+7. 移除、遮蔽、篡改本作品中的著作权声明、作者标识或其他权利声明。
+
+四、为协作目的的有限例外
+
+为向本项目提交问题报告或改进建议之目的而进行的必要复制行为不受第三条
+第一款限制。该例外不构成对本作品的其他任何授权。
+
+五、最终用户例外
+
+最终用户可以安装并使用著作权人官方发布的客户端（包括 PWA 与 Android
+APK 等），用于个人学习等非商业用途。该例外仅适用于著作权人官方发布的
+客户端，不代表对源代码的任何授权，也不允许任何人自行部署、二次分发、
+修改后再分发或将其用于向他人提供服务。
+
+六、第三方组件
+
+本作品依赖或引用的第三方开源组件适用其各自的许可证，不受本协议约束。
+本协议仅适用于著作权人享有著作权的部分。
+
+七、终止
+
+任何违反本协议的行为将自动终止本协议项下的全部例外许可。行为人应立即
+停止使用本作品并销毁其持有的全部副本。著作权人保留追究法律责任的权利。
+
+八、免责声明
+
+本作品按"现状"提供，不附带任何明示或默示的担保。因使用或无法使用本作品
+而产生的任何直接或间接损失，著作权人不承担任何责任。本作品为非官方学生
+项目，与成都信息工程大学及学校教务系统运营方无隶属或授权关系。
+
+九、授权申请
+
+如需获得本协议未授予的权利，请通过本仓库的 Issues 或作者公开联系方式
+提出书面申请，经著作权人书面同意后方可实施。
+
+十、适用法律
+
+本协议的解释与争议解决适用中华人民共和国法律。
+
+---
+
+English Notice
+
+Copyright (c) 2026 shajinhui. All rights reserved.
+
+This repository and all of its contents, including source code, documentation,
+design assets, configuration, build scripts and commit history, are proprietary.
+They are published for viewing, learning and evaluation purposes only. No
+license, express or implied, is granted to copy, modify, create derivative
+works from, distribute, sublicense, sell, deploy or otherwise use this work,
+in whole or in part, without prior written permission from the copyright
+holder. Public availability of the code does not grant any usage right.
+
+Installing and using an official client build published by the copyright
+holder, such as the PWA or the Android APK, for personal and non-commercial
+purposes is permitted. That exception applies only to official builds and
+grants no right to the source code.
+
+Third-party dependencies remain governed by their own licenses.
+
+The work is provided "as is", without warranty of any kind. The copyright
+holder is not liable for any damages arising from its use. This is an
+unofficial student project and is not affiliated with or authorized by
+Chengdu University of Information Technology.
+
+For permissions, contact the author through this repository's issues.
+
+In case of any conflict between the Chinese text above and this English
+notice, the Chinese text prevails.

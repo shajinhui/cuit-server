@@ -1,6 +1,7 @@
 {
   "name": "cuit-eams-connectivity-probe",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "check": "wrangler types && tsc --noEmit && wrangler deploy --dry-run",
