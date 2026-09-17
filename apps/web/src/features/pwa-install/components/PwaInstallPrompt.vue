@@ -24,6 +24,17 @@ const installing = ref(false)
 const guideDialog = ref<HTMLElement | null>(null)
 const showPromotion = computed(() => props.allowPromotion && shouldPromoteInstall.value)
 const installButtonLabel = computed(() => (canPromptInstall.value ? '安装' : '安装方法'))
+const browserOpenURL = computed(() => {
+  if (typeof window === 'undefined') return 'https://fanxiaogao05.dpdns.org'
+  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+    return window.location.href
+  }
+
+  return new URL(
+    `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    'https://fanxiaogao05.dpdns.org',
+  ).toString()
+})
 
 watch(guideVisible, async (visible) => {
   if (!visible) return
@@ -106,9 +117,30 @@ function handleKeydown(event: KeyboardEvent) {
               <p>{{ step }}</p>
             </li>
           </ol>
-          <button class="pwa-install-guide__done" type="button" @click="closeInstallGuide">
-            我知道了
-          </button>
+          <div class="pwa-install-guide__actions">
+            <a
+              v-if="installGuide.kind === 'ios'"
+              class="pwa-install-guide__browser"
+              :href="browserOpenURL"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="closeInstallGuide"
+            >
+              在浏览器打开
+              <svg aria-hidden="true" viewBox="0 0 20 20">
+                <path d="M7 5h8v8M15 5 7 13" />
+                <path d="M13 10v5H5V7h5" />
+              </svg>
+            </a>
+            <button
+              class="pwa-install-guide__done"
+              :class="{ 'is-secondary': installGuide.kind === 'ios' }"
+              type="button"
+              @click="closeInstallGuide"
+            >
+              我知道了
+            </button>
+          </div>
         </section>
       </div>
     </Transition>
