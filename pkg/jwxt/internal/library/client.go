@@ -475,11 +475,14 @@ func Renew(
 	if !allowed {
 		return OperationResult{}, &Error{Kind: jwxterr.ErrLibraryVerification, Message: "请选择图书馆允许的续座时长"}
 	}
+	// The upstream service binds these two fields from the JSON body, matching
+	// its own frontend. The duration endpoint beside it is the one that reads
+	// the query string, which is why renewals used to fail with 请求参数错误.
 	response, err := client.R().
 		SetContext(ctx).
-		SetQueryParams(map[string]string{
+		SetBody(map[string]any{
 			"resvId":   strings.TrimSpace(reservationID),
-			"duration": strconv.Itoa(duration),
+			"duration": duration,
 		}).
 		Post(endpoint(baseURL, "reserve/time/expand"))
 	if err != nil {

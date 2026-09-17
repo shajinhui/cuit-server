@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -196,7 +197,10 @@ func TestGetSeatMapRejectsForeignAssetURL(t *testing.T) {
 	}
 }
 
-func TestRenewUsesAllowedDurationAndPostQuery(t *testing.T) {
+// The upstream seat service reads the renewal duration from the POST body, the
+// same way its own frontend submits it through axios. Sending it as a query
+// string made every renewal fail with 请求参数错误.
+func TestRenewSubmitsDurationInPostBody(t *testing.T) {
 	requests := 0
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		requests++
@@ -208,8 +212,18 @@ func TestRenewUsesAllowedDurationAndPostQuery(t *testing.T) {
 			}
 			_, _ = writer.Write([]byte(`{"code":0,"data":{"min":30,"max":90,"timeInterval":30}}`))
 		case "/api/reserve/time/expand":
-			if request.Method != http.MethodPost || request.URL.Query().Get("resvId") != "88" || request.URL.Query().Get("duration") != "60" {
-				t.Fatalf("unexpected renew request: %s %s", request.Method, request.URL.String())
+			if request.Method != http.MethodPost {
+				t.Fatalf("unexpected renew method: %s", request.Method)
+			}
+			if request.URL.RawQuery != "" {
+				t.Fatalf("renewal parameters must not travel in the query string: %s", request.URL.RawQuery)
+			}
+			var body map[string]any
+			if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+				t.Fatalf("renewal body is not JSON: %v", err)
+			}
+			if body["resvId"] != "88" || body["duration"] != float64(60) {
+				t.Fatalf("unexpected renewal body: %+v", body)
 			}
 			_, _ = writer.Write([]byte(`{"code":0,"message":"续座成功"}`))
 		default:
