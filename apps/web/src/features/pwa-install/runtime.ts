@@ -49,6 +49,7 @@ export function registerPwaInstall() {
   if (installed.value) return
 
   if (
+    window.location.pathname !== '/' &&
     shouldOpenInitialInstallGuide({
       installed: installed.value,
       guideKind: installGuide.value.kind,

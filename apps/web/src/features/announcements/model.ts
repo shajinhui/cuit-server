@@ -12,10 +12,10 @@ export interface AnnouncementViewState {
 export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 1
 
 export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
-  id: 'ios-27-top-blur-2026-09-17',
-  title: 'iOS 27 顶部模糊问题说明',
+  id: 'library-and-multiplatform-update-2026-09-17',
+  title: '近期更新：图书馆与多端体验升级',
   description:
-    '更新 iOS 27 后，部分设备可能在 App 顶部看到模糊区域。问题已定位并完成代码修复，将随下一版 iOS 客户端生效，不影响功能使用；如仍有异常，欢迎加入交流群反馈，并附设备型号和截图（请遮挡个人信息）。',
+    '图书馆现已支持可视化选座、立即续座与一次性自动续座，并换用全新的日期时间选择器，解决部分 Android 设备无法正常选择时间的问题；同时完成手机横屏、平板和网页大屏适配，优化 iOS 27 顶部显示，并在 iPhone 和 iPad 的安装提示中新增“在浏览器打开”。如遇到问题，欢迎加入交流群反馈。',
 }
 
 export function getAnnouncementViewCount(

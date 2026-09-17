@@ -21,6 +21,7 @@
 @import './autorun.css';
 @import './past-exams.css';
 @import './library.css';
+@import './landing.css';
 
 :root {
   font-family:

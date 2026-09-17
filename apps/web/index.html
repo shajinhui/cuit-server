@@ -8,6 +8,7 @@
     />
     <meta name="theme-color" content="#fbfcf9" />
     <meta name="application-name" content="成信友友" />
+    <meta name="description" content="成信友友，面向成都信息工程大学学生的课表、成绩与校园生活助手。" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="成信友友" />
@@ -16,7 +17,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/app-icon-192.png" />
     <title>成信友友</title>
     <script>
-      if (location.pathname === '/' || location.pathname === '/schedule') {
+      if (location.pathname === '/schedule') {
         document.documentElement.dataset.initialPage = 'schedule'
         document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#c9d5e7')
       }
