@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
           short_name: '成信友友',
           description: '成信友友，课表、成绩与校园服务助手',
           lang: 'zh-CN',
-          theme_color: '#75b82a',
+          theme_color: '#f2f2f7',
           background_color: '#fbfcf9',
           display: 'standalone',
           display_override: ['standalone'],
