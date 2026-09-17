@@ -137,7 +137,9 @@ func main() {
 	scheduleHandler := schedule.NewHandler(scheduleService, currentWeekService)
 	feedbackRepository := feedback.NewRepository(db)
 	feedbackHandler := feedback.NewHandler(academicService, feedbackRepository)
-	libraryHandler := library.NewHandler(jwxtService)
+	libraryAutoRenewals := library.NewAutoRenewalRepository(db)
+	libraryHandler := library.NewHandler(jwxtService, libraryAutoRenewals)
+	defer startLibraryAutoRenewalScheduler(libraryAutoRenewals, jwxtService)()
 
 	h := server.Default(server.WithHostPorts(address))
 	h.Use(accesslog.New())
@@ -241,6 +243,32 @@ func startAutoRunScheduler(repository *autorunstore.Repository, client autoRunSc
 		defer cancel()
 		if err := autorunScheduler.Stop(ctx); err != nil {
 			log.Printf("停止 AutoRun 定时器失败: %v", err)
+		}
+	}
+}
+
+func startLibraryAutoRenewalScheduler(
+	repository *library.AutoRenewalRepository,
+	executor library.AutoRenewalExecutor,
+) func() {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("LIBRARY_AUTO_RENEWAL_ENABLED")), "false") {
+		log.Print("图书馆自动续座定时器未启用")
+		return func() {}
+	}
+	workers, err := positiveEnvironmentInt("LIBRARY_AUTO_RENEWAL_WORKERS", 2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	scheduler := library.NewAutoRenewalScheduler(repository, executor, library.AutoRenewalSchedulerConfig{
+		Workers: workers,
+	})
+	scheduler.Start()
+	log.Printf("图书馆自动续座定时器已启用: workers=%d", workers)
+	return func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := scheduler.Stop(ctx); err != nil {
+			log.Printf("停止图书馆自动续座定时器失败: %v", err)
 		}
 	}
 }

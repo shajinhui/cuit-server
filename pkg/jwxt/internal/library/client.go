@@ -408,6 +408,90 @@ func TemporaryLeave(
 	return operation(ctx, client, baseURL, "seatOperation/tempLeave", map[string]string{"resvId": strings.TrimSpace(reservationID)}, "已登记暂离")
 }
 
+func GetRenewalOptions(
+	ctx context.Context,
+	client *resty.Client,
+	baseURL *url.URL,
+	reservationID string,
+) (RenewalOptions, error) {
+	reservationID = strings.TrimSpace(reservationID)
+	if reservationID == "" {
+		return RenewalOptions{}, &Error{Kind: jwxterr.ErrLibraryVerification, Message: "预约记录标识不能为空"}
+	}
+	envelope, err := getEnvelope(ctx, client, baseURL, "reserve/time/expand/duration", map[string]string{
+		"resvId": reservationID,
+	}, jwxterr.ErrLibraryOperationRejected)
+	if err != nil {
+		return RenewalOptions{}, err
+	}
+	var upstream upstreamRenewalOptions
+	if err := json.Unmarshal(envelope.Data, &upstream); err != nil {
+		return RenewalOptions{}, &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "续座时长解析失败"}
+	}
+	minimum := int(upstream.Minimum)
+	maximum := int(upstream.Maximum)
+	interval := int(upstream.TimeInterval)
+	if interval <= 0 {
+		interval = 1
+	}
+	if minimum < 0 || maximum <= 0 || maximum < minimum || interval > maximum || maximum > 24*60 {
+		return RenewalOptions{}, &Error{Kind: jwxterr.ErrLibraryOperationRejected, Message: "当前预约暂不可续座"}
+	}
+	durations := make([]int, 0, maximum/interval+1)
+	for duration := minimum; duration <= maximum; duration += interval {
+		if duration > 0 {
+			durations = append(durations, duration)
+		}
+	}
+	if len(durations) == 0 {
+		return RenewalOptions{}, &Error{Kind: jwxterr.ErrLibraryOperationRejected, Message: "当前预约暂不可续座"}
+	}
+	return RenewalOptions{
+		MinimumMinutes:  minimum,
+		MaximumMinutes:  maximum,
+		IntervalMinutes: interval,
+		Durations:       durations,
+	}, nil
+}
+
+func Renew(
+	ctx context.Context,
+	client *resty.Client,
+	baseURL *url.URL,
+	reservationID string,
+	duration int,
+) (OperationResult, error) {
+	options, err := GetRenewalOptions(ctx, client, baseURL, reservationID)
+	if err != nil {
+		return OperationResult{}, err
+	}
+	allowed := false
+	for _, candidate := range options.Durations {
+		if candidate == duration {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return OperationResult{}, &Error{Kind: jwxterr.ErrLibraryVerification, Message: "请选择图书馆允许的续座时长"}
+	}
+	response, err := client.R().
+		SetContext(ctx).
+		SetQueryParams(map[string]string{
+			"resvId":   strings.TrimSpace(reservationID),
+			"duration": strconv.Itoa(duration),
+		}).
+		Post(endpoint(baseURL, "reserve/time/expand"))
+	if err != nil {
+		return OperationResult{}, jwxterr.WithMessage(jwxterr.ErrRemoteUnavailable, "request library service failed")
+	}
+	envelope, err := parseEnvelope(response, jwxterr.ErrLibraryOperationRejected)
+	if err != nil {
+		return OperationResult{}, err
+	}
+	return OperationResult{Message: messageOr(envelope.Message, "续座成功"), Detail: dataMessage(envelope.Data)}, nil
+}
+
 func createSeatReservation(
 	ctx context.Context,
 	client *resty.Client,
@@ -814,6 +898,7 @@ func mapReservation(item upstreamReservation, fallbackKind string) Reservation {
 		CanCancel:           status&4 == 0 && status&128 == 0,
 		CanTemporaryLeave:   kind == KindSeat && status&64 != 0 && status&(128|2048) == 0,
 		CanFinish:           item.EndEarly && status&128 == 0,
+		CanRenew:            kind == KindSeat && status&64 != 0 && status&128 == 0,
 		TemporaryLeaveUntil: string(item.TemporaryLeaveUntil),
 		ViolationReason:     localized(item.ViolationReason),
 	}

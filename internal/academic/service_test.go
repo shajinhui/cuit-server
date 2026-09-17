@@ -49,6 +49,10 @@ type fakeJWXTClient struct {
 	libraryAreas         []jwxt.LibraryArea
 	libraryAreasErr      error
 	libraryAreaCalls     int
+	libraryReservations  []jwxt.LibraryReservation
+	libraryRenewID       string
+	libraryRenewDuration int
+	libraryRenewCalls    int
 	semesterStarted      chan struct{}
 	semesterRelease      chan struct{}
 }
@@ -161,7 +165,7 @@ func (f *fakeJWXTClient) ListLibrarySeats(context.Context, jwxt.LibrarySeatQuery
 }
 
 func (f *fakeJWXTClient) ListLibraryReservations(context.Context, jwxt.LibraryReservationQuery) ([]jwxt.LibraryReservation, error) {
-	return nil, nil
+	return f.libraryReservations, nil
 }
 
 func (f *fakeJWXTClient) CreateLibraryReservation(context.Context, jwxt.LibraryCreateReservationRequest) (jwxt.LibraryOperationResult, error) {
@@ -178,6 +182,17 @@ func (f *fakeJWXTClient) FinishLibraryReservation(context.Context, string) (jwxt
 
 func (f *fakeJWXTClient) TemporaryLeaveLibraryReservation(context.Context, string) (jwxt.LibraryOperationResult, error) {
 	return jwxt.LibraryOperationResult{}, nil
+}
+
+func (f *fakeJWXTClient) GetLibraryRenewalOptions(context.Context, string) (jwxt.LibraryRenewalOptions, error) {
+	return jwxt.LibraryRenewalOptions{Durations: []int{30, 60}}, nil
+}
+
+func (f *fakeJWXTClient) RenewLibraryReservation(_ context.Context, reservationID string, duration int) (jwxt.LibraryOperationResult, error) {
+	f.libraryRenewID = reservationID
+	f.libraryRenewDuration = duration
+	f.libraryRenewCalls++
+	return jwxt.LibraryOperationResult{Message: "续座成功"}, nil
 }
 
 func (f *fakeJWXTClient) GetLibraryCaptcha(context.Context) (jwxt.LibraryCaptcha, error) {
@@ -378,6 +393,74 @@ func TestLibraryQueryReloginsOnlyLibrarySession(t *testing.T) {
 	}
 }
 
+func TestExecuteLibraryAutoRenewalRechecksReservationBeforeMutation(t *testing.T) {
+	repository := newMemoryRepository()
+	credentials := testCredentialCipher(t)
+	initial := &fakeJWXTClient{}
+	worker := &fakeJWXTClient{libraryReservations: []jwxt.LibraryReservation{{
+		ReservationID: "88",
+		Kind:          jwxt.LibraryKindSeat,
+		End:           "2026-09-17 18:00:00",
+		CanRenew:      true,
+	}}}
+	clients := []JWXTClient{initial, worker}
+	service := NewService(func() (JWXTClient, error) {
+		client := clients[0]
+		clients = clients[1:]
+		return client, nil
+	}, repository, credentials, time.Hour)
+	if _, err := service.Login(context.Background(), "test-student", "test-password"); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.ExecuteLibraryAutoRenewal(
+		context.Background(),
+		1,
+		"88",
+		60,
+		"2026-09-17 18:00:00",
+	)
+	if err != nil || result.Message != "续座成功" {
+		t.Fatalf("unexpected result: result=%+v err=%v", result, err)
+	}
+	if worker.loginUsername != "test-student" || worker.libraryLoginCalls != 1 ||
+		worker.libraryRenewID != "88" || worker.libraryRenewDuration != 60 || worker.libraryRenewCalls != 1 {
+		t.Fatalf("unexpected worker calls: %+v", worker)
+	}
+}
+
+func TestExecuteLibraryAutoRenewalSkipsChangedEndTime(t *testing.T) {
+	repository := newMemoryRepository()
+	credentials := testCredentialCipher(t)
+	initial := &fakeJWXTClient{}
+	worker := &fakeJWXTClient{libraryReservations: []jwxt.LibraryReservation{{
+		ReservationID: "88",
+		Kind:          jwxt.LibraryKindSeat,
+		End:           "2026-09-17 19:00:00",
+		CanRenew:      true,
+	}}}
+	clients := []JWXTClient{initial, worker}
+	service := NewService(func() (JWXTClient, error) {
+		client := clients[0]
+		clients = clients[1:]
+		return client, nil
+	}, repository, credentials, time.Hour)
+	if _, err := service.Login(context.Background(), "test-student", "test-password"); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := service.ExecuteLibraryAutoRenewal(
+		context.Background(),
+		1,
+		"88",
+		60,
+		"2026-09-17 18:00:00",
+	)
+	if !errors.Is(err, ErrLibraryAutoRenewalSkipped) || worker.libraryRenewCalls != 0 {
+		t.Fatalf("changed end time should skip mutation: calls=%d err=%v", worker.libraryRenewCalls, err)
+	}
+}
+
 func TestAvailableClassroomQueryReloginsAfterEAMSSessionExpires(t *testing.T) {
 	repository := newMemoryRepository()
 	credentials := testCredentialCipher(t)
@@ -479,7 +562,7 @@ func TestPlanCompletionQueryReloginsAfterEAMSSessionExpires(t *testing.T) {
 	}
 }
 
-func TestLoginReplacesPreviousSession(t *testing.T) {
+func TestLoginKeepsPreviousDeviceSession(t *testing.T) {
 	repository := newMemoryRepository()
 	credentials := testCredentialCipher(t)
 	service := NewService(func() (JWXTClient, error) {
@@ -501,8 +584,22 @@ func TestLoginReplacesPreviousSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !firstAuthenticated || !secondAuthenticated {
+		t.Fatalf("both device sessions should remain: first=%v second=%v", firstAuthenticated, secondAuthenticated)
+	}
+	if err := service.Logout(context.Background(), firstSession); err != nil {
+		t.Fatal(err)
+	}
+	firstAuthenticated, err = service.Authenticated(context.Background(), firstSession)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondAuthenticated, err = service.Authenticated(context.Background(), secondSession)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if firstAuthenticated || !secondAuthenticated {
-		t.Fatalf("only the latest session should remain: first=%v second=%v", firstAuthenticated, secondAuthenticated)
+		t.Fatalf("logout should affect only the current device: first=%v second=%v", firstAuthenticated, secondAuthenticated)
 	}
 }
 
@@ -538,7 +635,7 @@ func TestIdleClientIsRecreatedWithoutExpiringApplicationSession(t *testing.T) {
 	}
 }
 
-func TestSameUserQueriesAreSerialized(t *testing.T) {
+func TestSameSessionQueriesAreSerialized(t *testing.T) {
 	repository := newMemoryRepository()
 	credentials := testCredentialCipher(t)
 	client := &fakeJWXTClient{
@@ -585,6 +682,10 @@ func TestInvalidStoredCredentialRemovesSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	secondSessionID, err := service.Login(context.Background(), "test-student", "test-password")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	restartedService := NewService(func() (JWXTClient, error) {
 		return &fakeJWXTClient{loginErr: jwxt.ErrInvalidCredentials}, nil
@@ -595,6 +696,10 @@ func TestInvalidStoredCredentialRemovesSession(t *testing.T) {
 	authenticated, err := restartedService.Authenticated(context.Background(), sessionID)
 	if err != nil || authenticated {
 		t.Fatalf("invalid stored credential should remove session: authenticated=%v err=%v", authenticated, err)
+	}
+	secondAuthenticated, err := restartedService.Authenticated(context.Background(), secondSessionID)
+	if err != nil || secondAuthenticated {
+		t.Fatalf("invalid stored credential should remove every device session: authenticated=%v err=%v", secondAuthenticated, err)
 	}
 }
 
@@ -613,7 +718,6 @@ type memoryRepository struct {
 	users      map[int64]StoredUser
 	studentIDs map[string]int64
 	sessions   map[[sha256.Size]byte]int64
-	userTokens map[int64][sha256.Size]byte
 	nextUserID int64
 	findCalls  int
 }
@@ -623,7 +727,6 @@ func newMemoryRepository() *memoryRepository {
 		users:      make(map[int64]StoredUser),
 		studentIDs: make(map[string]int64),
 		sessions:   make(map[[sha256.Size]byte]int64),
-		userTokens: make(map[int64][sha256.Size]byte),
 	}
 }
 
@@ -651,11 +754,7 @@ func (r *memoryRepository) UpsertLogin(
 		EnrollmentYear:    loginUser.EnrollmentYear,
 		EncryptedPassword: append([]byte(nil), encryptedPassword...),
 	}
-	if oldToken, ok := r.userTokens[userID]; ok {
-		delete(r.sessions, oldToken)
-	}
 	r.sessions[tokenHash] = userID
-	r.userTokens[userID] = tokenHash
 	return userID, nil
 }
 
@@ -672,13 +771,31 @@ func (r *memoryRepository) FindUserBySession(_ context.Context, tokenHash [sha25
 	return user, nil
 }
 
+func (r *memoryRepository) FindUserByID(_ context.Context, userID int64) (StoredUser, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	user, ok := r.users[userID]
+	if !ok {
+		return StoredUser{}, ErrStoredUserNotFound
+	}
+	user.EncryptedPassword = append([]byte(nil), user.EncryptedPassword...)
+	return user, nil
+}
+
 func (r *memoryRepository) ClearSession(_ context.Context, tokenHash [sha256.Size]byte) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	userID := r.sessions[tokenHash]
 	delete(r.sessions, tokenHash)
-	if r.userTokens[userID] == tokenHash {
-		delete(r.userTokens, userID)
+	return nil
+}
+
+func (r *memoryRepository) ClearUserSessions(_ context.Context, userID int64) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for tokenHash, sessionUserID := range r.sessions {
+		if sessionUserID == userID {
+			delete(r.sessions, tokenHash)
+		}
 	}
 	return nil
 }

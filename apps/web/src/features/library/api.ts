@@ -66,6 +66,7 @@ export interface LibraryReservation {
   CanCancel: boolean
   CanTemporaryLeave: boolean
   CanFinish: boolean
+  CanRenew: boolean
   TemporaryLeaveUntil: string
   ViolationReason: string
 }
@@ -104,6 +105,34 @@ export interface LibraryCreateRequest {
 export interface LibraryOperationResult {
   Message: string
   Detail?: string
+}
+
+export interface LibraryRenewalOptions {
+  MinimumMinutes: number
+  MaximumMinutes: number
+  IntervalMinutes: number
+  Durations: number[]
+}
+
+export type LibraryAutoRenewalStatus =
+  | 'scheduled'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled'
+  | 'skipped'
+
+export interface LibraryAutoRenewal {
+  ID: number
+  ReservationID: string
+  ReservationUUID: string
+  DurationMinutes: number
+  ReservationEnd: string
+  ExecuteAt: string
+  Status: LibraryAutoRenewalStatus
+  AttemptCount: number
+  LastMessage: string
+  CompletedAt?: string
 }
 
 export function getLibraryCapabilities() {
@@ -162,6 +191,43 @@ export function temporaryLeaveLibraryReservation(uuid: string, reservationID: st
       method: 'POST',
       body: JSON.stringify({ ReservationID: reservationID }),
     },
+  )
+}
+
+export function getLibraryRenewalOptions(reservationID: string) {
+  return request<LibraryRenewalOptions>(
+    `/api/v1/library/reservations/${encodeURIComponent(reservationID)}/renewal-options`,
+  )
+}
+
+export function renewLibraryReservation(reservationID: string, durationMinutes: number) {
+  return request<LibraryOperationResult>(
+    `/api/v1/library/reservations/${encodeURIComponent(reservationID)}/renew`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ DurationMinutes: durationMinutes }),
+    },
+  )
+}
+
+export function listLibraryAutoRenewals() {
+  return request<LibraryAutoRenewal[]>('/api/v1/library/auto-renewals')
+}
+
+export function scheduleLibraryAutoRenewal(reservationID: string, durationMinutes: number) {
+  return request<LibraryAutoRenewal>(
+    `/api/v1/library/reservations/${encodeURIComponent(reservationID)}/auto-renewal`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ DurationMinutes: durationMinutes }),
+    },
+  )
+}
+
+export function cancelLibraryAutoRenewal(reservationID: string) {
+  return request<LibraryAutoRenewal>(
+    `/api/v1/library/reservations/${encodeURIComponent(reservationID)}/auto-renewal`,
+    { method: 'DELETE' },
   )
 }
 

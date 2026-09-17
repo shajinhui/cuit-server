@@ -4,18 +4,23 @@ import { useSessionStore } from '@/features/session'
 import { ApiError } from '@/shared/api/client'
 
 import {
+  cancelLibraryAutoRenewal,
   cancelLibraryReservation,
   createLibraryReservation,
   finishLibraryReservation,
   getLibraryCapabilities,
+  getLibraryRenewalOptions,
+  listLibraryAutoRenewals,
   listLibraryAreas,
   listLibraryReservations,
   listLibrarySeats,
+  renewLibraryReservation,
+  scheduleLibraryAutoRenewal,
   temporaryLeaveLibraryReservation,
   type LibraryArea,
+  type LibraryAutoRenewal,
   type LibraryCapabilities,
   type LibraryKind,
-  type LibraryOperationResult,
   type LibraryReservation,
   type LibrarySeat,
 } from './api'
@@ -52,6 +57,8 @@ export const useLibraryStore = defineStore('library', {
     loadingReservations: false,
     reservationsLoaded: false,
     reservationError: '',
+    autoRenewals: [] as LibraryAutoRenewal[],
+    autoRenewalError: '',
     mutating: false,
     seatRequestVersion: 0,
   }),
@@ -65,6 +72,8 @@ export const useLibraryStore = defineStore('library', {
     availableSeats(state) {
       return state.seats.filter((seat) => seat.Status === 'available' && !seat.OnlyView)
     },
+    autoRenewalByReservation: (state) => (reservationID: string) =>
+      state.autoRenewals.find((item) => item.ReservationID === reservationID),
   },
   actions: {
     async initialize(force = false) {
@@ -161,6 +170,7 @@ export const useLibraryStore = defineStore('library', {
         this.reservations = await listLibraryReservations()
         this.reservationsLoaded = true
         useSessionStore().markAuthenticated()
+        await this.loadAutoRenewals()
         return true
       } catch (error) {
         this.handleAuthorizationError(error)
@@ -169,6 +179,17 @@ export const useLibraryStore = defineStore('library', {
         return false
       } finally {
         this.loadingReservations = false
+      }
+    },
+    async loadAutoRenewals() {
+      this.autoRenewalError = ''
+      try {
+        this.autoRenewals = await listLibraryAutoRenewals()
+        return true
+      } catch (error) {
+        this.handleAuthorizationError(error)
+        this.autoRenewalError = errorMessage(error, '自动续座状态读取失败')
+        return false
       }
     },
     async create(seatID: string, memo: string, captcha: string) {
@@ -213,7 +234,41 @@ export const useLibraryStore = defineStore('library', {
         return result
       })
     },
-    async mutate(operation: () => Promise<LibraryOperationResult>) {
+    async renewalOptions(reservation: LibraryReservation) {
+      try {
+        const result = await getLibraryRenewalOptions(reservation.ReservationID)
+        useSessionStore().markAuthenticated()
+        return result
+      } catch (error) {
+        this.handleAuthorizationError(error)
+        throw error
+      }
+    },
+    async renew(reservation: LibraryReservation, durationMinutes: number) {
+      return this.mutate(async () => {
+        const result = await renewLibraryReservation(reservation.ReservationID, durationMinutes)
+        await this.loadReservations()
+        return result
+      })
+    },
+    async scheduleAutoRenewal(reservation: LibraryReservation, durationMinutes: number) {
+      return this.mutate(async () => {
+        const result = await scheduleLibraryAutoRenewal(
+          reservation.ReservationID,
+          durationMinutes,
+        )
+        await this.loadAutoRenewals()
+        return result
+      })
+    },
+    async cancelAutoRenewal(reservation: LibraryReservation) {
+      return this.mutate(async () => {
+        const result = await cancelLibraryAutoRenewal(reservation.ReservationID)
+        await this.loadAutoRenewals()
+        return result
+      })
+    },
+    async mutate<T>(operation: () => Promise<T>): Promise<T> {
       if (this.mutating) throw new Error('上一项操作仍在处理中')
       this.mutating = true
       try {
@@ -261,6 +316,8 @@ export const useLibraryStore = defineStore('library', {
       this.loadingReservations = false
       this.reservationsLoaded = false
       this.reservationError = ''
+      this.autoRenewals = []
+      this.autoRenewalError = ''
       this.mutating = false
       this.resetFilters()
     },

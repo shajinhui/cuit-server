@@ -24,6 +24,7 @@ type LibraryReservationQuery = libraryflow.ReservationQuery
 type LibraryCreateReservationRequest = libraryflow.CreateReservationRequest
 type LibraryCapabilities = libraryflow.Capabilities
 type LibraryOperationResult = libraryflow.OperationResult
+type LibraryRenewalOptions = libraryflow.RenewalOptions
 type LibraryCaptcha = libraryflow.Captcha
 type LibrarySeatMap = libraryflow.SeatMap
 
@@ -164,6 +165,33 @@ func (c *Client) TemporaryLeaveLibraryReservation(
 		return LibraryOperationResult{}, err
 	}
 	result, err := libraryflow.TemporaryLeave(ctx, c.libraryResty, baseURL, reservationID)
+	c.observeLibraryError(err)
+	return result, err
+}
+
+func (c *Client) GetLibraryRenewalOptions(
+	ctx context.Context,
+	reservationID string,
+) (LibraryRenewalOptions, error) {
+	baseURL, err := c.readyLibraryBaseURL()
+	if err != nil {
+		return LibraryRenewalOptions{}, err
+	}
+	result, err := libraryflow.GetRenewalOptions(ctx, c.libraryResty, baseURL, reservationID)
+	c.observeLibraryError(err)
+	return result, err
+}
+
+func (c *Client) RenewLibraryReservation(
+	ctx context.Context,
+	reservationID string,
+	duration int,
+) (LibraryOperationResult, error) {
+	baseURL, err := c.readyLibraryBaseURL()
+	if err != nil {
+		return LibraryOperationResult{}, err
+	}
+	result, err := libraryflow.Renew(ctx, c.libraryResty, baseURL, reservationID, duration)
 	c.observeLibraryError(err)
 	return result, err
 }

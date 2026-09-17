@@ -51,9 +51,9 @@ GET    /api/v1/schedule/current-week 查询当前教学周
 GET    /api/v1/health           健康检查
 ```
 
-登录成功后，API 会保存用户学号、已取得的学籍资料、加密后的教务密码和应用 Session Token 哈希。同一学号再次登录会直接覆盖旧 Session。
+登录成功后，API 会保存用户学号、已取得的学籍资料、加密后的教务密码和应用 Session Token 哈希。同一学号可以在多台设备同时登录，每次登录都会创建独立 Session；退出登录只撤销当前设备。
 
-应用 Session 本身不设置业务过期时间，只会在新登录覆盖、主动退出或已保存凭据失效时撤销。学校系统 Cookie 只存在对应用户的独立 `jwxt.Client` 中；同一用户的查询会串行执行，Client 空闲 3 分钟后释放，下一次查询会使用加密凭据自动登录。
+应用 Session 本身不设置业务过期时间，只会在当前设备主动退出或已保存凭据失效时撤销；凭据明确失效时会撤销该账号的全部设备会话。学校系统 Cookie 只存在对应设备会话的独立 `jwxt.Client` 中；同一会话的查询会串行执行，Client 空闲 3 分钟后释放，下一次查询会使用加密凭据自动登录。
 
 Debian 13、Cloudflare Pages 和 Cloudflare Tunnel 的正式部署步骤见
 [`deploy/README.md`](../../deploy/README.md)。

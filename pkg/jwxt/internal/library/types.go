@@ -95,6 +95,7 @@ type Reservation struct {
 	CanCancel           bool   `json:"CanCancel"`
 	CanTemporaryLeave   bool   `json:"CanTemporaryLeave"`
 	CanFinish           bool   `json:"CanFinish"`
+	CanRenew            bool   `json:"CanRenew"`
 	TemporaryLeaveUntil string `json:"TemporaryLeaveUntil"`
 	ViolationReason     string `json:"ViolationReason"`
 }
@@ -131,6 +132,13 @@ type OperationResult struct {
 	Detail  string `json:"Detail,omitempty"`
 }
 
+type RenewalOptions struct {
+	MinimumMinutes  int   `json:"MinimumMinutes"`
+	MaximumMinutes  int   `json:"MaximumMinutes"`
+	IntervalMinutes int   `json:"IntervalMinutes"`
+	Durations       []int `json:"Durations"`
+}
+
 type Captcha struct {
 	ContentType string
 	Data        []byte
@@ -146,6 +154,12 @@ type SeatMap struct {
 
 type systemInfo struct {
 	Content string `json:"content"`
+}
+
+type upstreamRenewalOptions struct {
+	Minimum      flexInt `json:"min"`
+	Maximum      flexInt `json:"max"`
+	TimeInterval flexInt `json:"timeInterval"`
 }
 
 // Error preserves the upstream message while keeping errors.Is useful for

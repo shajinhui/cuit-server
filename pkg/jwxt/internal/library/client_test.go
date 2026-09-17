@@ -131,6 +131,55 @@ func TestGetSeatMapRejectsForeignAssetURL(t *testing.T) {
 	}
 }
 
+func TestRenewUsesAllowedDurationAndPostQuery(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		requests++
+		writer.Header().Set("Content-Type", "application/json")
+		switch request.URL.Path {
+		case "/api/reserve/time/expand/duration":
+			if request.Method != http.MethodGet || request.URL.Query().Get("resvId") != "88" {
+				t.Fatalf("unexpected duration request: %s %s", request.Method, request.URL.String())
+			}
+			_, _ = writer.Write([]byte(`{"code":0,"data":{"min":30,"max":90,"timeInterval":30}}`))
+		case "/api/reserve/time/expand":
+			if request.Method != http.MethodPost || request.URL.Query().Get("resvId") != "88" || request.URL.Query().Get("duration") != "60" {
+				t.Fatalf("unexpected renew request: %s %s", request.Method, request.URL.String())
+			}
+			_, _ = writer.Write([]byte(`{"code":0,"message":"续座成功"}`))
+		default:
+			t.Fatalf("unexpected path: %s", request.URL.Path)
+		}
+	}))
+	defer server.Close()
+	baseURL, _ := url.Parse(server.URL + "/api/")
+
+	result, err := Renew(context.Background(), resty.New(), baseURL, "88", 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Message != "续座成功" || requests != 2 {
+		t.Fatalf("unexpected result: %+v requests=%d", result, requests)
+	}
+}
+
+func TestRenewRejectsDurationOutsideUpstreamOptions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/api/reserve/time/expand/duration" {
+			t.Fatalf("mutation should not be submitted: %s", request.URL.Path)
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"code":0,"data":{"min":30,"max":90,"timeInterval":30}}`))
+	}))
+	defer server.Close()
+	baseURL, _ := url.Parse(server.URL + "/api/")
+
+	_, err := Renew(context.Background(), resty.New(), baseURL, "88", 45)
+	if !errors.Is(err, jwxterr.ErrLibraryVerification) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestStudyBeginTimeUsesOpenTimeAndNeverStartsInThePast(t *testing.T) {
 	tomorrow := time.Now().In(shanghaiLocation).AddDate(0, 0, 1).Format(dateLayout)
 	if got := studyBeginTime(tomorrow, "08:30"); got != tomorrow+" 08:30:00" {

@@ -12,7 +12,7 @@ import (
 	"cuit-server/migrations"
 )
 
-func TestSQLiteRepositoryKeepsOnlyLatestSession(t *testing.T) {
+func TestSQLiteRepositorySupportsMultipleSessions(t *testing.T) {
 	ctx := context.Background()
 	db, err := database.OpenSQLite(ctx, filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -40,14 +40,32 @@ func TestSQLiteRepositoryKeepsOnlyLatestSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := repository.FindUserBySession(ctx, firstToken); !errors.Is(err, ErrStoredSessionNotFound) {
-		t.Fatalf("old session should be overwritten, got %v", err)
+	firstStored, err := repository.FindUserBySession(ctx, firstToken)
+	if err != nil {
+		t.Fatal(err)
 	}
 	stored, err := repository.FindUserBySession(ctx, secondToken)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.StudentNo != user.StudentNo || string(stored.EncryptedPassword) != "encrypted-two" {
+	if firstStored.StudentNo != user.StudentNo || stored.StudentNo != user.StudentNo ||
+		string(firstStored.EncryptedPassword) != "encrypted-two" || string(stored.EncryptedPassword) != "encrypted-two" {
 		t.Fatalf("unexpected stored user: %+v", stored)
+	}
+
+	if err := repository.ClearSession(ctx, firstToken); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FindUserBySession(ctx, firstToken); !errors.Is(err, ErrStoredSessionNotFound) {
+		t.Fatalf("cleared device session should be removed, got %v", err)
+	}
+	if _, err := repository.FindUserBySession(ctx, secondToken); err != nil {
+		t.Fatalf("other device session should remain, got %v", err)
+	}
+	if err := repository.ClearUserSessions(ctx, stored.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FindUserBySession(ctx, secondToken); !errors.Is(err, ErrStoredSessionNotFound) {
+		t.Fatalf("all user sessions should be removed, got %v", err)
 	}
 }

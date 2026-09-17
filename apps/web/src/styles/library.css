@@ -71,6 +71,7 @@
 
 .library-page button:focus-visible,
 .library-page input:focus-visible,
+.library-page select:focus-visible,
 .library-page textarea:focus-visible {
   outline: 3px solid rgba(0, 136, 255, 0.35);
   outline-offset: 2px;
@@ -143,6 +144,7 @@
 
 .library-field input,
 .library-modal-field input,
+.library-modal-field select,
 .library-modal-field textarea {
   width: 100%;
   min-height: 52px;
@@ -163,6 +165,7 @@
 
 .library-field input:focus,
 .library-modal-field input:focus,
+.library-modal-field select:focus,
 .library-modal-field textarea:focus {
   border-color: var(--library-accent);
   box-shadow: 0 0 0 3px rgba(0, 136, 255, 0.15);
@@ -587,6 +590,7 @@
 }
 
 .library-reservation-card .library-leave-note,
+.library-reservation-card .library-auto-renewal-note,
 .library-reservation-card .library-violation-note {
   margin-top: 12px;
   padding: 10px 12px;
@@ -602,6 +606,21 @@
 .library-reservation-card .library-violation-note {
   color: #b42328;
   background: rgba(255, 56, 60, 0.08);
+}
+
+.library-reservation-card .library-auto-renewal-note.is-active {
+  color: #075985;
+  background: rgba(14, 165, 233, 0.1);
+}
+
+.library-reservation-card .library-auto-renewal-note.is-success {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.library-reservation-card .library-auto-renewal-note.is-warning {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.12);
 }
 
 .library-reservation-card footer {
@@ -623,6 +642,11 @@
   font-size: 14px;
   font-weight: 650;
   background: #f2f2f7;
+}
+
+.library-reservation-card footer button.is-auto-renew {
+  color: #fff;
+  background: var(--library-accent);
 }
 
 .library-list-loader,
@@ -817,6 +841,16 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.library-renewal-loading {
+  min-height: 56px;
+  padding: 16px;
+  border-radius: 14px;
+  color: var(--library-secondary);
+  font-size: 14px;
+  text-align: center;
+  background: #f2f2f7;
 }
 
 .library-modal__footnote {

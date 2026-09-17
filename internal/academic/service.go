@@ -48,13 +48,15 @@ type libraryJWXTClient interface {
 	CancelLibraryReservation(ctx context.Context, uuid string) (jwxt.LibraryOperationResult, error)
 	FinishLibraryReservation(ctx context.Context, uuid string) (jwxt.LibraryOperationResult, error)
 	TemporaryLeaveLibraryReservation(ctx context.Context, reservationID string) (jwxt.LibraryOperationResult, error)
+	GetLibraryRenewalOptions(ctx context.Context, reservationID string) (jwxt.LibraryRenewalOptions, error)
+	RenewLibraryReservation(ctx context.Context, reservationID string, duration int) (jwxt.LibraryOperationResult, error)
 	GetLibraryCaptcha(ctx context.Context) (jwxt.LibraryCaptcha, error)
 	GetLibrarySeatMap(ctx context.Context, roomID string) (jwxt.LibrarySeatMap, error)
 }
 
 type ClientFactory func() (JWXTClient, error)
 
-// clientEntry 既是某个用户的短期 JWXT Client 缓存，也是该用户访问教务系统的串行锁。
+// clientEntry 既是某台设备会话的短期 JWXT Client 缓存，也是该会话访问教务系统的串行锁。
 // 应用 Session 不过期；只有内部 Client 在空闲三分钟后释放。
 type clientEntry struct {
 	mu         sync.Mutex
@@ -67,14 +69,13 @@ type clientEntry struct {
 }
 
 type Service struct {
-	mu                sync.Mutex
-	sessions          map[[sha256.Size]byte]*clientEntry
-	activeTokenByUser map[int64][sha256.Size]byte
-	clientFactory     ClientFactory
-	repository        UserRepository
-	credentials       *CredentialCipher
-	now               func() time.Time
-	clientIdleTTL     time.Duration
+	mu            sync.Mutex
+	sessions      map[[sha256.Size]byte]*clientEntry
+	clientFactory ClientFactory
+	repository    UserRepository
+	credentials   *CredentialCipher
+	now           func() time.Time
+	clientIdleTTL time.Duration
 }
 
 func NewService(
@@ -87,13 +88,12 @@ func NewService(
 		clientIdleTTL = defaultClientIdleTTL
 	}
 	return &Service{
-		sessions:          make(map[[sha256.Size]byte]*clientEntry),
-		activeTokenByUser: make(map[int64][sha256.Size]byte),
-		clientFactory:     clientFactory,
-		repository:        repository,
-		credentials:       credentials,
-		now:               time.Now,
-		clientIdleTTL:     clientIdleTTL,
+		sessions:      make(map[[sha256.Size]byte]*clientEntry),
+		clientFactory: clientFactory,
+		repository:    repository,
+		credentials:   credentials,
+		now:           time.Now,
+		clientIdleTTL: clientIdleTTL,
 	}
 }
 
@@ -447,9 +447,6 @@ func (s *Service) Logout(ctx context.Context, sessionID string) error {
 	entry := s.sessions[tokenHash]
 	if err == nil {
 		delete(s.sessions, tokenHash)
-		if entry != nil && s.activeTokenByUser[entry.user.ID] == tokenHash {
-			delete(s.activeTokenByUser, entry.user.ID)
-		}
 	}
 	s.mu.Unlock()
 	if err != nil {
@@ -480,7 +477,7 @@ func (s *Service) saveLogin(
 		lastUsed: now,
 	}
 
-	// 同一学号的数据库 Token 和内存映射在一个临界区内一起覆盖。
+	// 每次登录都创建独立设备会话；同一用户已有会话继续有效，并同步使用最新凭据。
 	s.mu.Lock()
 	userID, err := s.repository.UpsertLogin(ctx, user, encryptedPassword, tokenHash, now)
 	if err != nil {
@@ -488,21 +485,25 @@ func (s *Service) saveLogin(
 		return err
 	}
 	entry.user.ID = userID
-	oldHash, hasOld := s.activeTokenByUser[userID]
-	oldEntry := s.sessions[oldHash]
-	if hasOld {
-		delete(s.sessions, oldHash)
+	existingEntries := make([]*clientEntry, 0)
+	for _, existing := range s.sessions {
+		if existing.user.ID == userID {
+			existingEntries = append(existingEntries, existing)
+		}
 	}
 	s.sessions[tokenHash] = entry
-	s.activeTokenByUser[userID] = tokenHash
 	s.mu.Unlock()
 
+	for _, existing := range existingEntries {
+		existing.mu.Lock()
+		if !existing.revoked {
+			existing.user = cloneStoredUser(entry.user)
+		}
+		existing.mu.Unlock()
+	}
 	entry.mu.Lock()
 	s.scheduleClientReleaseLocked(entry)
 	entry.mu.Unlock()
-	if hasOld && oldEntry != entry {
-		revokeEntry(oldEntry)
-	}
 	return nil
 }
 
@@ -533,7 +534,6 @@ func (s *Service) sessionEntry(
 	}
 	entry := &clientEntry{user: user}
 	s.sessions[tokenHash] = entry
-	s.activeTokenByUser[user.ID] = tokenHash
 	s.mu.Unlock()
 	return entry, tokenHash, nil
 }
@@ -576,7 +576,7 @@ func withClient[T any](
 }
 
 // withLibraryClient keeps the library authentication isolated inside the
-// existing per-user client. A retry only happens after the upstream explicitly
+// current device session's client. A retry only happens after the upstream explicitly
 // reports an expired session, so ambiguous network failures never duplicate a
 // reservation mutation.
 func withLibraryClient[T any](
@@ -612,7 +612,7 @@ func withLibraryClient[T any](
 		}
 		if loginErr := libraryClient.LoginLibrary(ctx, entry.user.StudentNo, password); loginErr != nil {
 			if errors.Is(loginErr, jwxt.ErrInvalidCredentials) {
-				return zero, s.invalidateSessionLocked(ctx, tokenHash, entry, loginErr)
+				return zero, s.invalidateSessionLocked(ctx, entry, loginErr)
 			}
 			return zero, loginErr
 		}
@@ -652,7 +652,7 @@ func (s *Service) loginClientLocked(
 	}
 	if err := client.Login(ctx, entry.user.StudentNo, password); err != nil {
 		if errors.Is(err, jwxt.ErrInvalidCredentials) {
-			return nil, s.invalidateSessionLocked(ctx, tokenHash, entry, err)
+			return nil, s.invalidateSessionLocked(ctx, entry, err)
 		}
 		return nil, err
 	}
@@ -663,26 +663,37 @@ func (s *Service) loginClientLocked(
 
 func (s *Service) invalidateSessionLocked(
 	ctx context.Context,
-	tokenHash [sha256.Size]byte,
 	entry *clientEntry,
 	cause error,
 ) error {
 	entry.revoked = true
 	s.dropClientLocked(entry)
-	clearErr := s.repository.ClearSession(ctx, tokenHash)
+	clearErr := s.repository.ClearUserSessions(ctx, entry.user.ID)
 
+	otherEntries := make([]*clientEntry, 0)
 	s.mu.Lock()
-	if s.sessions[tokenHash] == entry {
-		delete(s.sessions, tokenHash)
-	}
-	if s.activeTokenByUser[entry.user.ID] == tokenHash {
-		delete(s.activeTokenByUser, entry.user.ID)
+	for storedHash, storedEntry := range s.sessions {
+		if storedEntry.user.ID != entry.user.ID {
+			continue
+		}
+		delete(s.sessions, storedHash)
+		if storedEntry != entry {
+			otherEntries = append(otherEntries, storedEntry)
+		}
 	}
 	s.mu.Unlock()
+	for _, otherEntry := range otherEntries {
+		revokeEntry(otherEntry)
+	}
 	if clearErr != nil {
 		return errors.Join(cause, clearErr)
 	}
 	return cause
+}
+
+func cloneStoredUser(user StoredUser) StoredUser {
+	user.EncryptedPassword = append([]byte(nil), user.EncryptedPassword...)
+	return user
 }
 
 func (s *Service) scheduleClientReleaseLocked(entry *clientEntry) {
