@@ -12,10 +12,10 @@ export interface AnnouncementViewState {
 export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 1
 
 export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
-  id: 'feedback-community-2026-09-17',
-  title: '遇到问题？欢迎加群反馈',
+  id: 'ios-27-top-blur-2026-09-17',
+  title: 'iOS 27 顶部模糊问题说明',
   description:
-    '使用中遇到登录、课表、成绩、校园跑等问题，欢迎加入交流群反馈；请说明设备和复现步骤，截图时注意遮挡个人信息。',
+    '更新 iOS 27 后，部分设备可能在 App 顶部看到模糊区域。问题已定位并完成代码修复，将随下一版 iOS 客户端生效，不影响功能使用；如仍有异常，欢迎加入交流群反馈，并附设备型号和截图（请遮挡个人信息）。',
 }
 
 export function getAnnouncementViewCount(
