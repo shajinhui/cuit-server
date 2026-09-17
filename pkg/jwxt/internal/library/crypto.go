@@ -14,12 +14,12 @@ import (
 
 const encryptionIV = "ABCDEF1234123412"
 
-func encryptSeatID(publicKeyPEM string, seatID string) (string, string, error) {
+func encryptSeatID(encodedPublicKey string, seatID string) (string, string, error) {
 	key, err := randomASCIIKey(16)
 	if err != nil {
 		return "", "", err
 	}
-	encryptedKey, err := rsaEncrypt(publicKeyPEM, []byte(key))
+	encryptedKey, err := rsaEncrypt(encodedPublicKey, []byte(key))
 	if err != nil {
 		return "", "", err
 	}
@@ -46,24 +46,46 @@ func randomASCIIKey(length int) (string, error) {
 	return string(result), nil
 }
 
-func rsaEncrypt(publicKeyPEM string, value []byte) ([]byte, error) {
-	block, _ := pem.Decode([]byte(strings.TrimSpace(publicKeyPEM)))
-	if block == nil {
+// parseRSAPublicKey accepts the upstream key in either PEM or bare base64 DER
+// form, because the school service hands out a headerless SubjectPublicKeyInfo
+// payload that its own JSEncrypt frontend consumes verbatim.
+func parseRSAPublicKey(encoded string) (*rsa.PublicKey, error) {
+	encoded = strings.TrimSpace(encoded)
+	if encoded == "" {
 		return nil, fmt.Errorf("library: invalid public key")
 	}
-	var publicKey *rsa.PublicKey
-	if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
-		var ok bool
-		publicKey, ok = parsed.(*rsa.PublicKey)
+	der := []byte(nil)
+	if block, _ := pem.Decode([]byte(encoded)); block != nil {
+		der = block.Bytes
+	} else {
+		compact := strings.Join(strings.Fields(encoded), "")
+		decoded, err := base64.StdEncoding.DecodeString(compact)
+		if err != nil {
+			decoded, err = base64.RawStdEncoding.DecodeString(compact)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("library: invalid public key")
+		}
+		der = decoded
+	}
+	if parsed, err := x509.ParsePKIXPublicKey(der); err == nil {
+		publicKey, ok := parsed.(*rsa.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf("library: public key is not RSA")
 		}
-	} else {
-		parsed, parseErr := x509.ParsePKCS1PublicKey(block.Bytes)
-		if parseErr != nil {
-			return nil, fmt.Errorf("library: parse public key: %w", parseErr)
-		}
-		publicKey = parsed
+		return publicKey, nil
+	}
+	publicKey, err := x509.ParsePKCS1PublicKey(der)
+	if err != nil {
+		return nil, fmt.Errorf("library: parse public key: %w", err)
+	}
+	return publicKey, nil
+}
+
+func rsaEncrypt(encodedPublicKey string, value []byte) ([]byte, error) {
+	publicKey, err := parseRSAPublicKey(encodedPublicKey)
+	if err != nil {
+		return nil, err
 	}
 	return rsa.EncryptPKCS1v15(rand.Reader, publicKey, value)
 }

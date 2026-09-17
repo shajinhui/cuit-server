@@ -674,14 +674,25 @@ func getPublicKey(ctx context.Context, client *resty.Client, baseURL *url.URL) (
 		return "", err
 	}
 	var direct flexString
-	if err := json.Unmarshal(envelope.Data, &direct); err == nil && strings.Contains(string(direct), "BEGIN PUBLIC KEY") {
-		return string(direct), nil
+	if err := json.Unmarshal(envelope.Data, &direct); err == nil {
+		if value := strings.TrimSpace(string(direct)); value != "" {
+			if _, err := parseRSAPublicKey(value); err == nil {
+				return value, nil
+			}
+		}
 	}
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(envelope.Data, &object); err == nil {
 		for _, key := range []string{"publicKey", "key", "rsaPublicKey"} {
 			var value string
-			if json.Unmarshal(object[key], &value) == nil && strings.TrimSpace(value) != "" {
+			if json.Unmarshal(object[key], &value) != nil {
+				continue
+			}
+			value = strings.TrimSpace(value)
+			if value == "" {
+				continue
+			}
+			if _, err := parseRSAPublicKey(value); err == nil {
 				return value, nil
 			}
 		}

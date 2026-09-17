@@ -2,11 +2,17 @@ package library
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,6 +62,65 @@ func TestCapabilitiesReadsDirectPublicConfig(t *testing.T) {
 	}
 	if capabilities.CaptchaMode != "image" || !capabilities.MemoRequired || capabilities.MemoMaximumLength != 60 {
 		t.Fatalf("unexpected capabilities: %+v", capabilities)
+	}
+}
+
+func TestGetPublicKeyAcceptsUpstreamEncodings(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pkixDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bare := base64.StdEncoding.EncodeToString(pkixDER)
+	pemText := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pkixDER}))
+	cases := []struct {
+		name     string
+		payload  string
+		expected string
+	}{
+		{"bare base64 object payload", fmt.Sprintf(`{"publicKey":%q,"nonceStr":"n"}`, bare), bare},
+		{"bare base64 direct payload", fmt.Sprintf("%q", bare), bare},
+		{"pem object payload", fmt.Sprintf(`{"publicKey":%q}`, pemText), strings.TrimSpace(pemText)},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+				writer.Header().Set("Content-Type", "application/json")
+				_, _ = fmt.Fprintf(writer, `{"code":0,"message":"查询成功","data":%s}`, testCase.payload)
+			}))
+			defer server.Close()
+			baseURL, _ := url.Parse(server.URL + "/")
+
+			key, err := getPublicKey(context.Background(), resty.New(), baseURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if key != testCase.expected {
+				t.Fatalf("public key = %q, want %q", key, testCase.expected)
+			}
+		})
+	}
+}
+
+func TestGetPublicKeyRejectsUnusablePayload(t *testing.T) {
+	for _, payload := range []string{`{"publicKey":"","key":"not-a-key"}`, `{}`} {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintf(writer, `{"code":0,"message":"查询成功","data":%s}`, payload)
+		}))
+		baseURL, _ := url.Parse(server.URL + "/")
+
+		_, err := getPublicKey(context.Background(), resty.New(), baseURL)
+		server.Close()
+		if err == nil {
+			t.Fatalf("getPublicKey(%s) succeeded, want error", payload)
+		}
+		if PublicMessage(err) != "预约加密公钥读取失败" {
+			t.Fatalf("unexpected error: %v", err)
+		}
 	}
 }
 
