@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
           display: 'standalone',
           display_override: ['standalone'],
           orientation: 'any',
-          start_url: '/',
+          start_url: '/schedule',
           icons: [
             {
               src: '/icons/app-icon-192.png',

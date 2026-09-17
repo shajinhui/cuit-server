@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { createRouter, createWebHistory } from 'vue-router'
 
 import {
@@ -11,7 +12,12 @@ import SchedulePage from '@/pages/SchedulePage.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', redirect: '/schedule' },
+    {
+      path: '/',
+      name: 'landing',
+      component: () => import('@/pages/LandingPage.vue'),
+      beforeEnter: () => (shouldOpenAppFromRoot() ? { name: 'schedule' } : true),
+    },
     { path: '/login', name: 'login', component: () => import('@/pages/LoginPage.vue') },
     {
       path: '/schedule',
@@ -109,6 +115,19 @@ const router = createRouter({
 })
 
 let backgroundSessionVerification: Promise<void> | undefined
+
+function shouldOpenAppFromRoot() {
+  if (Capacitor.isNativePlatform()) return true
+  if (typeof window === 'undefined') return false
+
+  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean }
+  return (
+    navigatorWithStandalone.standalone === true ||
+    ['standalone', 'fullscreen', 'minimal-ui'].some((mode) =>
+      window.matchMedia(`(display-mode: ${mode})`).matches,
+    )
+  )
+}
 
 router.beforeEach(async (to) => {
   const session = useSessionStore()
