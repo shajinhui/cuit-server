@@ -159,6 +159,16 @@ type ClubJoinProgress struct {
 // ClubJoinNum is the original method/type spelling.
 type ClubJoinNum = ClubJoinProgress
 
+// ClubMembershipResult is the business result returned by the club join and
+// cancel endpoints.  Those endpoints can return a successful outer envelope
+// while rejecting the membership change in response.status.
+type ClubMembershipResult struct {
+	Success     bool   `json:"success"`
+	Message     string `json:"message,omitempty"`
+	Status      string `json:"status,omitempty"`
+	RawResponse string `json:"rawResponse,omitempty"`
+}
+
 type ClubTopActivity struct {
 	ClubActivityID    string `json:"clubActivityId"`
 	ActivityItemID    string `json:"activityItemId"`

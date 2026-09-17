@@ -130,11 +130,56 @@ func TestClientAcceptsMutationNullOrMissingResponseAndStringClubCode(t *testing.
 	if _, err := client.SignInOrSignBack(context.Background(), "token", SignRequestBody{ActivityID: 8, Latitude: "30.1", Longitude: "104.1", SignType: "1", StudentID: 2}); err != nil {
 		t.Fatalf("sign response:null: %v", err)
 	}
-	if _, err := client.JoinClubActivity(context.Background(), "token", 2, 8); err != nil {
+	result, err := client.JoinClubActivity(context.Background(), "token", 2, 8)
+	if err != nil {
 		t.Fatalf("join omitted response: %v", err)
+	}
+	if !result.Success {
+		t.Fatalf("join omitted response result = %+v", result)
 	}
 	if calls != 2 {
 		t.Fatalf("calls = %d, want 2", calls)
+	}
+}
+
+func TestClientReadsClubMembershipBusinessResult(t *testing.T) {
+	responses := []string{
+		`{"code":10000,"msg":"ok","response":{"status":"0","message":"当天已报名并签到，不能再报名其他活动"}}`,
+		`{"code":"1000","message":"ok","response":{"status":"1","message":"报名成功"}}`,
+		`{"code":10000,"msg":"ok","response":{"status":"2","message":"取消成功"}}`,
+	}
+	var calls int
+	client := NewClient(Options{
+		AppKey: "test-key", AppSecret: "test-secret",
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			response := jsonResponse(r, responses[calls])
+			calls++
+			return response, nil
+		}),
+	})
+
+	rejected, err := client.JoinClubActivity(context.Background(), "token", 2, 8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rejected.Success || rejected.Status != "0" || rejected.Message != "当天已报名并签到，不能再报名其他活动" {
+		t.Fatalf("rejected result = %+v", rejected)
+	}
+
+	accepted, err := client.JoinClubActivity(context.Background(), "token", 2, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !accepted.Success || accepted.Status != "1" || accepted.Message != "报名成功" {
+		t.Fatalf("accepted result = %+v", accepted)
+	}
+
+	canceled, err := client.CancelClubActivity(context.Background(), "token", 2, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !canceled.Success || canceled.Status != "2" || canceled.Message != "取消成功" {
+		t.Fatalf("canceled result = %+v", canceled)
 	}
 }
 

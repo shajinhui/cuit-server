@@ -76,7 +76,8 @@ Redis 只保存上述可重建数据，不保存密码、Cookie、Ticket、应�
 Authorization: Bearer <sessionKey>
 ```
 
-Worker D1 和 Go SQLite 都只保存上游 token 的加密密文，不保存校园跑密码。
+Worker D1 保存上游 token 的加密密文；Go SQLite 的新定时配置只保存不透明
+`sessionKey`，不接收当前 token。两端都不保存校园跑密码。
 `APP_SECRET` 仅存在于 Worker Secret，绝不能写入前端代码、Go 环境或构建变量。
 
 ### 登录与恢复会话
@@ -89,7 +90,8 @@ Content-Type: application/json
 ```
 
 成功响应的 `response` 包含 `userId`、`studentId`、`schoolId`、`sessionKey` 和
-`tokenSrc`。同一学生再次登录会生成新 `sessionKey`，旧设备随后收到 `401/40100`。
+`tokenSrc`。同一学生再次登录会更新 D1 token 并保留已有 `sessionKey`，已开启的 Go
+定时配置不需要重新切换。
 
 ```http
 POST /api/session_bootstrap
@@ -208,6 +210,8 @@ Authorization: Bearer <sessionKey>
 - 页面回到前台时调用 `session_bootstrap`；收到 HTTP `401` 或业务码 `40100` 后清除本地会话并弹出登录框。普通断网或 `502` 不应误判为登录失效。
 - `run`、`club_sign`、`club_join` 和 `club_cancel` 都是写操作。请求超时代表结果未知，客户端不得自动重试，必须先重新读取状态并由用户决定。
 - 轨迹生成和距离计算位于前端；上游签名与手动请求位于 Worker。Go 只负责任务编排和持久化，并通过 HMAC 内部接口让 Worker 执行定时查询及签到/签退，关闭页面不影响任务。
+- 定时签到/签退结果不确定时，Go 只读取 Worker 的 D1 去重状态；确认完成后补齐本地状态，未确认时不会重放写请求。
+- 每个活动的签退开放状态最多由 3 个已确认签到成功的账号探测；其他账号只复用公共活动结果，仍各自执行并记录签退。
 - Service Worker 不能缓存任何 `/api` 响应。若以后把 Web 和 API 放到同一域名，也仍应保持这些响应 `Cache-Control: no-store`。
 
 ## 管理员统计

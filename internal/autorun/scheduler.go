@@ -2,8 +2,10 @@ package autorun
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,11 +14,14 @@ import (
 )
 
 const (
-	refreshInterval     = 4 * time.Hour
-	refreshRetry        = 30 * time.Minute
-	expiredSessionRetry = 6 * time.Hour
-	probeRetry          = 2 * time.Minute
-	eventWindowGrace    = 3 * time.Minute
+	refreshInterval         = 4 * time.Hour
+	refreshRetry            = 30 * time.Minute
+	expiredSessionRetry     = 6 * time.Hour
+	probeRetry              = 2 * time.Minute
+	eventWindowGrace        = 3 * time.Minute
+	schedulerJobTimeout     = 45 * time.Second
+	persistenceTimeout      = 3 * time.Second
+	signBackProbeCandidates = 3
 )
 
 type schedulerRepository interface {
@@ -34,18 +39,57 @@ type schedulerRepository interface {
 	ExpireEvent(context.Context, int64, string) error
 	UpdateScheduleRuntime(context.Context, int64, store.ScheduleRuntimeUpdate) error
 	TryClaimAction(context.Context, int64, string, time.Time, ...time.Duration) (bool, error)
-	IsActionComplete(context.Context, int64, string) (bool, error)
+	GetActionClaim(context.Context, int64, string) (*store.ActionClaim, error)
 	CompleteScheduledAction(context.Context, int64, string, store.SignType, time.Time, string) error
 }
 
-type scheduledMutationClient interface {
-	SignInOrSignBackWithKey(context.Context, string, string, upstream.SignRequestBody) (string, error)
+type sessionKeySchedulerClient interface {
+	GetClubActivityListBySessionKey(context.Context, string, int64, string, int64) ([]upstream.ClubInfo, error)
+	GetSignInTfBySessionKey(context.Context, string, int64) (*upstream.SignInTf, error)
+	IsActionCompleteBySessionKey(context.Context, string, int64, string) (bool, error)
+	SignInOrSignBackWithSessionKey(context.Context, string, string, upstream.SignRequestBody) (string, error)
 }
 
 type schedulerUpstreamClient interface {
 	GetSignInTf(context.Context, string, int64) (*upstream.SignInTf, error)
 	SignInOrSignBack(context.Context, string, upstream.SignRequestBody) (string, error)
 	GetClubActivityList(context.Context, string, int64, string, int64) ([]upstream.ClubInfo, error)
+}
+
+type scheduledAccess struct {
+	client     schedulerUpstreamClient
+	relay      sessionKeySchedulerClient
+	credential string
+	studentID  int64
+	schoolID   int64
+}
+
+func (a scheduledAccess) activities(ctx context.Context, queryDate string) ([]upstream.ClubInfo, error) {
+	if a.relay != nil {
+		return a.relay.GetClubActivityListBySessionKey(ctx, a.credential, a.studentID, queryDate, a.schoolID)
+	}
+	return a.client.GetClubActivityList(ctx, a.credential, a.studentID, queryDate, a.schoolID)
+}
+
+func (a scheduledAccess) signTask(ctx context.Context) (*upstream.SignInTf, error) {
+	if a.relay != nil {
+		return a.relay.GetSignInTfBySessionKey(ctx, a.credential, a.studentID)
+	}
+	return a.client.GetSignInTf(ctx, a.credential, a.studentID)
+}
+
+func (a scheduledAccess) actionComplete(ctx context.Context, actionKey string) (bool, error) {
+	if a.relay == nil {
+		return false, nil
+	}
+	return a.relay.IsActionCompleteBySessionKey(ctx, a.credential, a.studentID, actionKey)
+}
+
+func (a scheduledAccess) sign(ctx context.Context, actionKey string, body upstream.SignRequestBody) (string, error) {
+	if a.relay != nil {
+		return a.relay.SignInOrSignBackWithSessionKey(ctx, a.credential, actionKey, body)
+	}
+	return a.client.SignInOrSignBack(ctx, a.credential, body)
 }
 
 type SchedulerConfig struct {
@@ -151,7 +195,7 @@ func (s *Scheduler) run(ctx context.Context, done chan struct{}) {
 						return
 					case <-pace.C:
 					}
-					jobCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
+					jobCtx, cancel := context.WithTimeout(ctx, schedulerJobTimeout)
 					if err := s.process(jobCtx, job, time.Now()); err != nil {
 						log.Printf("AutoRun 定时任务失败: type=%s student_id=%d: %v", job.kind, job.studentID, err)
 					}
@@ -234,18 +278,14 @@ func (s *Scheduler) refresh(ctx context.Context, studentID int64, now time.Time)
 	if schedule == nil || !schedule.Enabled {
 		return nil
 	}
-	session, err := s.scheduledSession(ctx, schedule)
+	access, err := s.scheduledAccess(ctx, schedule)
 	if err != nil {
 		return err
 	}
-	if session == nil || session.Token == "" {
+	if access == nil {
 		return s.repository.DeferScheduleRefresh(ctx, studentID, queryDate, now.Add(expiredSessionRetry), "活动时间同步失败：缺少可用登录态，请重新登录", now)
 	}
-	schoolID := session.SchoolID
-	if schoolID <= 0 {
-		schoolID = schedule.SchoolID
-	}
-	activities, err := s.upstream.GetClubActivityList(ctx, session.Token, session.StudentID, queryDate, schoolID)
+	activities, err := access.activities(ctx, queryDate)
 	if err != nil {
 		retry := refreshRetry
 		message := "活动时间同步失败：上游请求失败"
@@ -253,10 +293,14 @@ func (s *Scheduler) refresh(ctx context.Context, studentID int64, now time.Time)
 			retry = expiredSessionRetry
 			message = "活动时间同步失败：登录态已过期，请重新登录"
 		}
-		return s.repository.DeferScheduleRefresh(ctx, studentID, queryDate, now.Add(retry), message, now)
+		persistCtx, cancel := schedulerPersistenceContext(ctx)
+		defer cancel()
+		return s.repository.DeferScheduleRefresh(persistCtx, studentID, queryDate, now.Add(retry), message, now)
 	}
 	events := buildScheduleEvents(queryDate, studentID, activities)
-	return s.repository.ReplaceScheduleEvents(ctx, studentID, queryDate, events, now, now.Add(refreshInterval))
+	persistCtx, cancel := schedulerPersistenceContext(ctx)
+	defer cancel()
+	return s.repository.ReplaceScheduleEvents(persistCtx, studentID, queryDate, events, now, now.Add(refreshInterval))
 }
 
 func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string, now time.Time) error {
@@ -281,72 +325,181 @@ func (s *Scheduler) probe(ctx context.Context, studentID int64, actionKey string
 	if event.SignType == store.SignBackType {
 		completedKey = schedule.LastSignBackKey
 	}
-	complete, err := s.repository.IsActionComplete(ctx, studentID, actionKey)
+	claim, err := s.repository.GetActionClaim(ctx, studentID, actionKey)
 	if err != nil {
 		return err
 	}
-	if completedKey == actionKey || complete {
-		return s.repository.CompleteScheduledAction(ctx, studentID, actionKey, event.SignType, now, "自动"+signTypeName(event.SignType)+"已完成（去重确认）")
+	if completedKey == actionKey || claim != nil && claim.Status == store.ActionDone {
+		return s.completeScheduledAction(ctx, event, now, "自动"+signTypeName(event.SignType)+"已完成（去重确认）")
 	}
 
-	session, err := s.scheduledSession(ctx, schedule)
+	access, err := s.scheduledAccess(ctx, schedule)
 	if err != nil {
 		return err
 	}
-	if session == nil || session.Token == "" {
-		return s.deferProbe(ctx, event, now, "定时任务缺少可用登录态，请重新登录")
+	if access == nil {
+		return s.deferProbeAfterExternal(ctx, event, now, "定时任务缺少可用登录态，请重新登录")
 	}
-	schoolID := session.SchoolID
-	if schoolID <= 0 {
-		schoolID = schedule.SchoolID
+	if claim != nil && claim.Status == store.ActionInFlight {
+		return s.reconcileSubmittedAction(ctx, access, event, now)
 	}
-	probeResult, err := s.probes.Do(ctx, activityProbeKey{
-		SchoolID:   schoolID,
+	probeKey := activityProbeKey{
+		SchoolID:   access.schoolID,
 		ActivityID: event.ActivityID,
 		SignType:   event.SignType,
-	}, func(probeCtx context.Context) (activityProbeResult, error) {
-		task, probeErr := s.upstream.GetSignInTf(probeCtx, session.Token, session.StudentID)
-		if probeErr != nil {
-			return activityProbeResult{}, probeErr
+	}
+	if event.SignType == store.SignBackType {
+		eligible, eligibleErr := s.signBackProbeEligible(ctx, schedule, access, event, now)
+		if eligibleErr != nil {
+			persistErr := s.deferProbeAfterExternal(ctx, event, now, "签退探测账号状态核对失败，稍后重试")
+			return errors.Join(fmt.Errorf("check sign-in status before sign-back probe: %w", eligibleErr), persistErr)
 		}
-		return resolveActivityProbe(event, task), nil
-	})
-	if err != nil {
+		if !eligible {
+			return s.deferProbeAfterExternal(ctx, event, now, "尚未确认签到成功，不执行签退探测")
+		}
+	}
+	probeResult, found := s.probes.OpenResult(probeKey)
+	if event.SignType == store.SignBackType && !found {
+		if !s.probes.ReserveCandidate(probeKey, studentID, signBackProbeCandidates, event.WindowEnd.Add(eventWindowGrace)) {
+			return s.deferProbeAfterExternal(ctx, event, now, "等待签退探测账号确认开放状态")
+		}
+	}
+	var probeErr error
+	if !found {
+		probeResult, probeErr = s.probes.Do(ctx, probeKey, func(probeCtx context.Context) (activityProbeResult, error) {
+			task, requestErr := access.signTask(probeCtx)
+			if requestErr != nil {
+				return activityProbeResult{}, requestErr
+			}
+			return resolveActivityProbe(event, task), nil
+		})
+	}
+	if probeErr != nil {
+		if event.SignType == store.SignBackType && upstream.IsTokenExpired(probeErr) {
+			s.probes.ReleaseCandidate(probeKey, studentID)
+		}
 		message := "试探签到/签退失败：上游请求失败"
-		if upstream.IsTokenExpired(err) {
+		if upstream.IsTokenExpired(probeErr) {
 			message = "试探签到/签退失败：登录态已过期，请重新登录"
 		}
-		return s.deferProbe(ctx, event, now, message)
+		return s.deferProbeAfterExternal(ctx, event, now, message)
 	}
 	if !probeResult.Open {
-		return s.deferProbe(ctx, event, now, probeResult.Message)
+		return s.deferProbeAfterExternal(ctx, event, now, probeResult.Message)
+	}
+	if err := ctx.Err(); err != nil {
+		persistErr := s.deferProbeAfterExternal(ctx, event, now, "自动"+signTypeName(event.SignType)+"任务超时，稍后重试")
+		return errors.Join(err, persistErr)
 	}
 
 	// mutation claim 在请求前落盘。请求超时可能代表上游已经成功，因此无论错误
 	// 类型都不自动释放 claim，也不在本窗口二次发送。
-	claimed, err := s.repository.TryClaimAction(ctx, studentID, actionKey, now, 24*time.Hour)
+	persistCtx, cancel := schedulerPersistenceContext(ctx)
+	claimed, err := s.repository.TryClaimAction(persistCtx, studentID, actionKey, now, 24*time.Hour)
+	cancel()
 	if err != nil {
 		return err
 	}
 	if !claimed {
-		return s.deferProbe(ctx, event, now, "自动"+signTypeName(event.SignType)+"已提交，等待去重确认")
+		claimCtx, claimCancel := schedulerPersistenceContext(ctx)
+		claim, claimErr := s.repository.GetActionClaim(claimCtx, studentID, actionKey)
+		claimCancel()
+		if claimErr != nil {
+			return claimErr
+		}
+		if claim != nil && claim.Status == store.ActionDone {
+			return s.completeScheduledAction(ctx, event, now, "自动"+signTypeName(event.SignType)+"已完成（去重确认）")
+		}
+		return s.reconcileSubmittedAction(ctx, access, event, now)
 	}
 	request := upstream.SignRequestBody{
 		ActivityID: probeResult.ActivityID, Latitude: probeResult.Latitude, Longitude: probeResult.Longitude,
-		SignType: string(event.SignType), StudentID: session.StudentID,
+		SignType: string(event.SignType), StudentID: access.studentID,
 	}
-	if keyed, ok := s.upstream.(scheduledMutationClient); ok {
-		_, err = keyed.SignInOrSignBackWithKey(ctx, session.Token, actionKey, request)
-	} else {
-		// 仅供旧版直接上游客户端回滚；生产 relay 始终实现带 actionKey 的接口。
-		_, err = s.upstream.SignInOrSignBack(ctx, session.Token, request)
-	}
+	_, err = access.sign(ctx, actionKey, request)
 	if err != nil {
-		_ = s.repository.DeferScheduleEvent(context.WithoutCancel(ctx), studentID, actionKey, event.WindowEnd.Add(eventWindowGrace))
-		_ = s.updateMessage(context.WithoutCancel(ctx), studentID, now, "自动"+signTypeName(event.SignType)+"结果未知，为避免重复提交已停止重试")
-		return fmt.Errorf("submit scheduled mutation once: %w", err)
+		persistErr := s.deferProbeAfterExternal(ctx, event, now, "自动"+signTypeName(event.SignType)+"结果未知，等待去重确认")
+		return errors.Join(fmt.Errorf("submit scheduled mutation once: %w", err), persistErr)
 	}
-	return s.repository.CompleteScheduledAction(ctx, studentID, actionKey, event.SignType, now, "自动"+signTypeName(event.SignType)+"成功")
+	return s.completeScheduledAction(ctx, event, now, "自动"+signTypeName(event.SignType)+"成功")
+}
+
+func (s *Scheduler) signBackProbeEligible(
+	ctx context.Context,
+	schedule *store.Schedule,
+	access *scheduledAccess,
+	event *store.Event,
+	now time.Time,
+) (bool, error) {
+	signInKey := signInActionKey(event.ActionKey)
+	if signInKey == "" {
+		return false, nil
+	}
+	if schedule.LastSignInKey == signInKey {
+		return true, nil
+	}
+	claim, err := s.repository.GetActionClaim(ctx, event.StudentID, signInKey)
+	if err != nil {
+		return false, err
+	}
+	if claim == nil {
+		return false, nil
+	}
+	if claim.Status == store.ActionDone {
+		return true, nil
+	}
+	if claim.Status != store.ActionInFlight || access.relay == nil {
+		return false, nil
+	}
+	complete, err := access.actionComplete(ctx, signInKey)
+	if err != nil || !complete {
+		return false, err
+	}
+	persistCtx, cancel := schedulerPersistenceContext(ctx)
+	defer cancel()
+	if err := s.repository.CompleteScheduledAction(
+		persistCtx,
+		event.StudentID,
+		signInKey,
+		store.SignInType,
+		now,
+		"自动签到已完成（签退前远端确认）",
+	); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func signInActionKey(signBackKey string) string {
+	suffix := ":" + string(store.SignBackType)
+	if !strings.HasSuffix(signBackKey, suffix) {
+		return ""
+	}
+	return strings.TrimSuffix(signBackKey, suffix) + ":" + string(store.SignInType)
+}
+
+func (s *Scheduler) reconcileSubmittedAction(ctx context.Context, access *scheduledAccess, event *store.Event, now time.Time) error {
+	if access.relay != nil {
+		complete, err := access.actionComplete(ctx, event.ActionKey)
+		if err != nil {
+			message := "自动" + signTypeName(event.SignType) + "状态核对失败，稍后重试"
+			if upstream.IsTokenExpired(err) {
+				message = "自动" + signTypeName(event.SignType) + "状态核对失败：登录态已过期，请重新登录"
+			}
+			persistErr := s.deferProbeAfterExternal(ctx, event, now, message)
+			return errors.Join(fmt.Errorf("check scheduled mutation status: %w", err), persistErr)
+		}
+		if complete {
+			return s.completeScheduledAction(ctx, event, now, "自动"+signTypeName(event.SignType)+"已完成（远端确认）")
+		}
+	}
+	return s.deferProbeAfterExternal(ctx, event, now, "自动"+signTypeName(event.SignType)+"已提交，等待去重确认")
+}
+
+func (s *Scheduler) completeScheduledAction(ctx context.Context, event *store.Event, now time.Time, message string) error {
+	persistCtx, cancel := schedulerPersistenceContext(ctx)
+	defer cancel()
+	return s.repository.CompleteScheduledAction(persistCtx, event.StudentID, event.ActionKey, event.SignType, now, message)
 }
 
 func resolveActivityProbe(event *store.Event, task *upstream.SignInTf) activityProbeResult {
@@ -375,6 +528,30 @@ func (s *Scheduler) scheduledSession(ctx context.Context, schedule *store.Schedu
 	return s.repository.GetSessionByStudentID(ctx, schedule.StudentID)
 }
 
+func (s *Scheduler) scheduledAccess(ctx context.Context, schedule *store.Schedule) (*scheduledAccess, error) {
+	if relay, ok := s.upstream.(sessionKeySchedulerClient); ok {
+		if schedule.SessionKey == "" || schedule.StudentID <= 0 || schedule.SchoolID <= 0 {
+			return nil, nil
+		}
+		return &scheduledAccess{
+			client: s.upstream, relay: relay, credential: schedule.SessionKey,
+			studentID: schedule.StudentID, schoolID: schedule.SchoolID,
+		}, nil
+	}
+	session, err := s.scheduledSession(ctx, schedule)
+	if err != nil || session == nil || session.Token == "" {
+		return nil, err
+	}
+	schoolID := session.SchoolID
+	if schoolID <= 0 {
+		schoolID = schedule.SchoolID
+	}
+	return &scheduledAccess{
+		client: s.upstream, credential: session.Token,
+		studentID: session.StudentID, schoolID: schoolID,
+	}, nil
+}
+
 func (s *Scheduler) deferProbe(ctx context.Context, event *store.Event, now time.Time, message string) error {
 	next := now.Add(probeRetry)
 	if next.After(event.WindowEnd.Add(eventWindowGrace)) {
@@ -384,6 +561,16 @@ func (s *Scheduler) deferProbe(ctx context.Context, event *store.Event, now time
 		return err
 	}
 	return s.updateMessage(ctx, event.StudentID, now, message)
+}
+
+func (s *Scheduler) deferProbeAfterExternal(ctx context.Context, event *store.Event, now time.Time, message string) error {
+	persistCtx, cancel := schedulerPersistenceContext(ctx)
+	defer cancel()
+	return s.deferProbe(persistCtx, event, now, message)
+}
+
+func schedulerPersistenceContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), persistenceTimeout)
 }
 
 func (s *Scheduler) updateMessage(ctx context.Context, studentID int64, now time.Time, message string) error {

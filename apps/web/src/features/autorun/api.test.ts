@@ -6,6 +6,7 @@ import {
   DEFAULT_AUTORUN_API_BASE_URL,
   getAutoRunInfo,
   isAutoRunAuthExpiredError,
+  joinAutoRunClub,
   loginToAutoRun,
   prepareAutoRun,
   signAutoRunClub,
@@ -111,6 +112,26 @@ describe('校园跑 API 客户端', () => {
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit
     expect(request.body).toBe(
       JSON.stringify({ activityId: 12, latitude: '30.1', longitude: '103.9', signType: '1' }),
+    )
+  })
+
+  it('俱乐部报名被业务规则拒绝时展示上游原因', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          code: 10000,
+          msg: 'ok',
+          response: {
+            success: false,
+            message: '当天已报名并签到，不能再报名其他活动',
+          },
+        }),
+      ),
+    )
+
+    await expect(joinAutoRunClub('session-example', 12)).rejects.toEqual(
+      new AutoRunApiError('当天已报名并签到，不能再报名其他活动', 409, 40900),
     )
   })
 

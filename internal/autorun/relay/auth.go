@@ -21,6 +21,7 @@ const (
 var errUnauthorized = errors.New("autorun relay: unauthorized")
 
 func signRequest(secret, method, pathname string, body []byte, now time.Time) (string, string) {
+	secret = strings.TrimSpace(secret)
 	timestamp := strconv.FormatInt(now.Unix(), 10)
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write([]byte(canonicalRequest(timestamp, method, pathname, body)))
@@ -28,7 +29,8 @@ func signRequest(secret, method, pathname string, body []byte, now time.Time) (s
 }
 
 func verifyRequest(secret, method, pathname string, body []byte, timestamp, signature string, now time.Time) error {
-	if len(strings.TrimSpace(secret)) < 32 {
+	secret = strings.TrimSpace(secret)
+	if len(secret) < 32 {
 		return errUnauthorized
 	}
 	timestamp = strings.TrimSpace(timestamp)

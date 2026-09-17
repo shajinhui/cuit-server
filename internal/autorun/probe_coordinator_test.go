@@ -108,6 +108,51 @@ func TestActivityProbeCoordinatorRetriesAfterCandidateError(t *testing.T) {
 	}
 }
 
+func TestActivityProbeCoordinatorSharesInfrastructureError(t *testing.T) {
+	coordinator := newActivityProbeCoordinator()
+	key := activityProbeKey{SchoolID: 33, ActivityID: 88, SignType: store.SignInType}
+	started := make(chan struct{})
+	release := make(chan struct{})
+	startTogether := make(chan struct{})
+	var calls atomic.Int32
+
+	const callers = 64
+	errorsFound := make(chan error, callers)
+	var wait sync.WaitGroup
+	wait.Add(callers)
+	for range callers {
+		go func() {
+			defer wait.Done()
+			<-startTogether
+			_, err := coordinator.Do(context.Background(), key, func(context.Context) (activityProbeResult, error) {
+				if calls.Add(1) == 1 {
+					close(started)
+				}
+				<-release
+				return activityProbeResult{}, errors.New("upstream timeout")
+			})
+			errorsFound <- err
+		}()
+	}
+
+	close(startTogether)
+	<-started
+	// Give every caller a chance to join the same in-flight request.
+	time.Sleep(20 * time.Millisecond)
+	close(release)
+	wait.Wait()
+	close(errorsFound)
+
+	if got := calls.Load(); got != 1 {
+		t.Fatalf("upstream probe calls = %d, want 1", got)
+	}
+	for err := range errorsFound {
+		if err == nil || err.Error() != "upstream timeout" {
+			t.Fatalf("Do() error = %v, want shared timeout", err)
+		}
+	}
+}
+
 func TestActivityProbeCoordinatorUsesShortLivedCache(t *testing.T) {
 	coordinator := newActivityProbeCoordinator()
 	clock := time.Date(2026, time.September, 11, 8, 0, 0, 0, time.FixedZone("Asia/Shanghai", 8*60*60))

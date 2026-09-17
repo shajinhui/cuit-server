@@ -40,8 +40,8 @@ type upstreamClient interface {
 	GetSignInTf(context.Context, string, int64) (*upstream.SignInTf, error)
 	SignInOrSignBack(context.Context, string, upstream.SignRequestBody) (string, error)
 	GetClubActivityList(context.Context, string, int64, string, int64) ([]upstream.ClubInfo, error)
-	JoinClubActivity(context.Context, string, int64, int64) (string, error)
-	CancelClubActivity(context.Context, string, int64, int64) (string, error)
+	JoinClubActivity(context.Context, string, int64, int64) (upstream.ClubMembershipResult, error)
+	CancelClubActivity(context.Context, string, int64, int64) (upstream.ClubMembershipResult, error)
 	GetRunInfo(context.Context, string, int64, string) (upstream.RunInfo, error)
 	GetClubJoinNum(context.Context, string, int64, int64) (upstream.ClubJoinNum, error)
 	GetSchoolActivityTopThree(context.Context, string) ([]upstream.ClubTopActivity, error)
@@ -308,16 +308,19 @@ func (s *Service) mutateClubMembership(ctx context.Context, sessionKey string, a
 	if err != nil {
 		return nil, err
 	}
-	var raw string
+	var result upstream.ClubMembershipResult
 	if join {
-		raw, err = s.upstream.JoinClubActivity(ctx, session.Token, session.StudentID, activityID)
+		result, err = s.upstream.JoinClubActivity(ctx, session.Token, session.StudentID, activityID)
 	} else {
-		raw, err = s.upstream.CancelClubActivity(ctx, session.Token, session.StudentID, activityID)
+		result, err = s.upstream.CancelClubActivity(ctx, session.Token, session.StudentID, activityID)
 	}
 	if err != nil {
 		return nil, wrapUpstream("提交俱乐部报名操作", err)
 	}
-	return map[string]any{"rawResponse": raw, "sessionKey": session.SessionKey, "tokenSrc": "local"}, nil
+	return map[string]any{
+		"success": result.Success, "message": result.Message, "status": result.Status,
+		"rawResponse": result.RawResponse, "sessionKey": session.SessionKey, "tokenSrc": "local",
+	}, nil
 }
 
 type SignClubRequest struct {

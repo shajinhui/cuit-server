@@ -291,8 +291,11 @@ async function toggleClubJoin(activity: AutoRunClubActivityView) {
         : joinAutoRunClub(sessionKey.value, activity.activityId),
     )
     adoptRotatedSession(result.data)
-    pushToast(activity.isJoined ? '已取消报名' : '报名成功', 'success')
     await loadClubData()
+    pushToast(
+      result.data.message || (activity.isJoined ? '已取消报名' : '报名成功'),
+      'success',
+    )
   } catch (error) {
     pushToast(handleApiError(error, '操作失败'), 'error')
   } finally {

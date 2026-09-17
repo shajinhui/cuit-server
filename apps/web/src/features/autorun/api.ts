@@ -107,6 +107,8 @@ export interface AutoRunClubData {
 
 export interface AutoRunActionResult {
   success?: boolean
+  message?: string
+  status?: string
   rawResponse?: string
   sessionKey?: string
   schedule?: AutoRunClubSchedule
@@ -225,12 +227,24 @@ export function signAutoRunClub(
   return callAutoRunApi<AutoRunActionResult>('club_sign', request, sessionKey)
 }
 
-export function joinAutoRunClub(sessionKey: string, activityId: number) {
-  return callAutoRunApi<AutoRunActionResult>('club_join', { activityId }, sessionKey)
+export async function joinAutoRunClub(sessionKey: string, activityId: number) {
+  const result = await callAutoRunApi<AutoRunActionResult>('club_join', { activityId }, sessionKey)
+  return requireSuccessfulClubMembership(result, '报名未成功')
 }
 
-export function cancelAutoRunClub(sessionKey: string, activityId: number) {
-  return callAutoRunApi<AutoRunActionResult>('club_cancel', { activityId }, sessionKey)
+export async function cancelAutoRunClub(sessionKey: string, activityId: number) {
+  const result = await callAutoRunApi<AutoRunActionResult>('club_cancel', { activityId }, sessionKey)
+  return requireSuccessfulClubMembership(result, '取消报名未成功')
+}
+
+function requireSuccessfulClubMembership(
+  result: AutoRunApiResult<AutoRunActionResult>,
+  fallback: string,
+) {
+  if (result.data.success === false) {
+    throw new AutoRunApiError(result.data.message?.trim() || fallback, 409, 40900)
+  }
+  return result
 }
 
 export function setAutoRunClubSchedule(sessionKey: string, enabled: boolean) {

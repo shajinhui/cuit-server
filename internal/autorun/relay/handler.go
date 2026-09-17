@@ -16,7 +16,6 @@ import (
 const internalRequestTimeout = 10 * time.Second
 
 type repository interface {
-	SaveSession(context.Context, string, store.Session, ...string) (store.Session, error)
 	GetSessionByKey(context.Context, string) (*store.Session, error)
 	GetSchedule(context.Context, int64) (*store.Schedule, error)
 	SaveSchedule(context.Context, int64, int64, string, bool, ...time.Time) (*store.Schedule, error)
@@ -31,7 +30,7 @@ type Handler struct {
 }
 
 func NewHandler(repository repository, secret string) *Handler {
-	return &Handler{repository: repository, secret: secret, now: time.Now}
+	return &Handler{repository: repository, secret: strings.TrimSpace(secret), now: time.Now}
 }
 
 func (h *Handler) Register(router *server.Hertz) {
@@ -42,8 +41,6 @@ func (h *Handler) Register(router *server.Hertz) {
 
 type internalRequest struct {
 	SessionKey string `json:"sessionKey"`
-	Token      string `json:"token"`
-	UserID     int64  `json:"userId"`
 	StudentID  int64  `json:"studentId"`
 	SchoolID   int64  `json:"schoolId"`
 	Enabled    *bool  `json:"enabled"`
@@ -116,19 +113,11 @@ func (h *Handler) execute(ctx context.Context, action string, request internalRe
 		}
 		return map[string]any{"schedule": publicSchedule(schedule, request.StudentID)}, nil
 	case "schedule_set":
-		if !validSessionKey(request.SessionKey) || strings.TrimSpace(request.Token) == "" ||
-			request.UserID <= 0 || request.StudentID <= 0 || request.SchoolID <= 0 || request.Enabled == nil {
+		if !validSessionKey(request.SessionKey) || request.StudentID <= 0 || request.SchoolID <= 0 || request.Enabled == nil {
 			return nil, errInvalidRequest
 		}
-		// SQLite receives the same opaque session key used by D1. The upstream
-		// token stays encrypted at rest and passwords never cross this endpoint.
-		_, err := h.repository.SaveSession(ctx, "", store.Session{
-			Token: request.Token, UserID: request.UserID,
-			StudentID: request.StudentID, SchoolID: request.SchoolID,
-		}, request.SessionKey)
-		if err != nil {
-			return nil, err
-		}
+		// Go persists only the opaque Worker session key. The current upstream
+		// token remains in D1 and never crosses this scheduling-state endpoint.
 		schedule, err := h.repository.SaveSchedule(
 			ctx, request.StudentID, request.SchoolID, request.SessionKey, *request.Enabled, h.now(),
 		)

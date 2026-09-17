@@ -66,8 +66,8 @@ openssl rand -hex 32
 
 ### 配置 AutoRun
 
-Go 只运行 AutoRun 定时器，需要配置 Worker 地址、两端共享的内部签名密钥和本地
-token 加密密钥：
+Go 只运行 AutoRun 定时器，需要配置 Worker 地址和两端共享的内部签名密钥。旧会话
+迁移接口仍需读取切流前的加密 token，因此迁移期继续保留原本地加密密钥：
 
 ```text
 AUTORUN_SESSION_ENCRYPTION_KEY=<至少 16 字符的随机密钥>
@@ -89,6 +89,8 @@ AUTORUN_SCHEDULER_ENABLED=false
 
 两套定时器不能同时启用。Go 会在 SQLite 中先 claim，Worker 在真正访问上游前还会
 用 `studentId + actionKey` 在 D1 中二次 claim；请求结果不确定时两边都不会自动释放。
+Go 会定时读取 Worker 的 D1 完成状态：确认成功后补齐 SQLite 状态，仍为 `in_flight`
+时只继续核对，绝不再次发送签到/签退请求。
 默认
 `AUTORUN_SCHEDULER_WORKERS=10`、`AUTORUN_SCHEDULER_JOBS_PER_SECOND=5`；1000 个
 同一时间窗口任务约需数分钟展开。提高速率前先观察上游失败率和服务器连接数。
@@ -96,12 +98,16 @@ AUTORUN_SCHEDULER_ENABLED=false
 调度器会按 `schoolId + activityId + signType` 合并同一活动的状态探测：开放结果
 缓存 30 秒，未开放结果缓存 5 秒，同一时刻只允许一个上游探测。缓存只保存活动
 编号和坐标，不保存或共享学生 token、studentId、个人签到状态；实际签到/签退仍
-为每位学生单独落盘 claim 并单独发送。候选学生的探测请求失败时不会缓存错误，
-下一位学生会用自己的会话重新探测。
+为每位学生单独落盘 claim 并单独发送。候选学生登录态失效时，下一位学生会用自己的
+会话重新探测；超时、网络故障等公共错误会由同一波等待者共享，避免故障期间级联请求。
+签退阶段只从已确认签到成功的学生中保留最多 3 个探测账号；其余学生不调用上游
+探测接口，只复用已开放的活动编号和坐标。共享结果不会绕过个人签到成功校验。
 
-不再需要在 D1 与 SQLite 之间手工导入整库。开启定时时，Worker 会把当前 token、
-学生编号和同一个 `sessionKey` 写入 Go；切流前只存在于 Go 的旧会话也会在用户访问时
-按需迁回 D1。内部接口只接受 5 分钟内的 HMAC-SHA256 请求，不记录 token 或签名正文。
+不再需要在 D1 与 SQLite 之间手工导入整库。开启定时时，Worker 只把学生编号、学校
+编号和不透明 `sessionKey` 写入 Go；调度执行时 Go 也只把这些标识和动作幂等键发给
+Worker，当前 token 始终由 Worker 从 D1 解析。切流前只存在于 Go 的旧会话仍可按需
+迁回 D1，但只在该学生尚无 D1 会话时插入，不能覆盖更新的登录态。内部接口只接受
+5 分钟内的 HMAC-SHA256 请求，不记录签名正文。
 
 把 SQL 文件上传到服务器后，先停服务并备份 SQLite，再导入：
 

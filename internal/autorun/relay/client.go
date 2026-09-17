@@ -17,7 +17,7 @@ import (
 
 const (
 	executePath      = "/internal/scheduler/execute"
-	clientTimeout    = 20 * time.Second
+	clientTimeout    = 35 * time.Second
 	maxResponseBytes = 2 * 1024 * 1024
 )
 
@@ -33,10 +33,13 @@ type Client struct {
 func NewClient(baseURL, secret string) (*Client, error) {
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	parsed, err := url.Parse(baseURL)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
+	if err != nil || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" ||
+		(parsed.Path != "" && parsed.Path != "/") ||
+		(parsed.Scheme != "https" && !(parsed.Scheme == "http" && isLoopbackHost(parsed.Hostname()))) {
 		return nil, errors.New("autorun relay: invalid Worker URL")
 	}
-	if len(strings.TrimSpace(secret)) < 32 {
+	secret = strings.TrimSpace(secret)
+	if len(secret) < 32 {
 		return nil, errors.New("autorun relay: internal secret must contain at least 32 characters")
 	}
 	client := &http.Client{Timeout: clientTimeout}
@@ -44,23 +47,45 @@ func NewClient(baseURL, secret string) (*Client, error) {
 	return &Client{baseURL: baseURL, secret: secret, httpClient: client, now: time.Now}, nil
 }
 
+func isLoopbackHost(host string) bool {
+	return host == "localhost" || host == "127.0.0.1" || host == "::1"
+}
+
 func (c *Client) GetClubActivityList(ctx context.Context, token string, studentID int64, date string, schoolID int64) ([]upstream.ClubInfo, error) {
+	return nil, errors.New("autorun relay: scheduler session key is required")
+}
+
+func (c *Client) GetClubActivityListBySessionKey(ctx context.Context, sessionKey string, studentID int64, date string, schoolID int64) ([]upstream.ClubInfo, error) {
 	var response struct {
 		Activities []upstream.ClubInfo `json:"activities"`
 	}
 	err := c.request(ctx, map[string]any{
-		"action": "activities", "token": token, "studentId": studentID,
+		"action": "activities", "sessionKey": sessionKey, "studentId": studentID,
 		"queryDate": date, "schoolId": schoolID,
 	}, &response)
 	return response.Activities, err
 }
 
 func (c *Client) GetSignInTf(ctx context.Context, token string, studentID int64) (*upstream.SignInTf, error) {
+	return nil, errors.New("autorun relay: scheduler session key is required")
+}
+
+func (c *Client) GetSignInTfBySessionKey(ctx context.Context, sessionKey string, studentID int64) (*upstream.SignInTf, error) {
 	var response struct {
 		SignTask *upstream.SignInTf `json:"signTask"`
 	}
-	err := c.request(ctx, map[string]any{"action": "probe", "token": token, "studentId": studentID}, &response)
+	err := c.request(ctx, map[string]any{"action": "probe", "sessionKey": sessionKey, "studentId": studentID}, &response)
 	return response.SignTask, err
+}
+
+func (c *Client) IsActionCompleteBySessionKey(ctx context.Context, sessionKey string, studentID int64, actionKey string) (bool, error) {
+	var response struct {
+		Complete bool `json:"complete"`
+	}
+	err := c.request(ctx, map[string]any{
+		"action": "status", "sessionKey": sessionKey, "studentId": studentID, "actionKey": actionKey,
+	}, &response)
+	return response.Complete, err
 }
 
 // SignInOrSignBack exists only to satisfy the scheduler's rollback-compatible
@@ -69,13 +94,13 @@ func (c *Client) SignInOrSignBack(context.Context, string, upstream.SignRequestB
 	return "", errors.New("autorun relay: scheduled mutation requires an action key")
 }
 
-func (c *Client) SignInOrSignBackWithKey(ctx context.Context, token, actionKey string, body upstream.SignRequestBody) (string, error) {
+func (c *Client) SignInOrSignBackWithSessionKey(ctx context.Context, sessionKey, actionKey string, body upstream.SignRequestBody) (string, error) {
 	var response struct {
 		RawResponse string `json:"rawResponse"`
 		AlreadyDone bool   `json:"alreadyDone"`
 	}
 	err := c.request(ctx, map[string]any{
-		"action": "sign", "token": token, "studentId": body.StudentID,
+		"action": "sign", "sessionKey": sessionKey, "studentId": body.StudentID,
 		"actionKey": actionKey, "request": body,
 	}, &response)
 	if err != nil {

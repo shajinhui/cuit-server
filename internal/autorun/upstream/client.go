@@ -276,28 +276,149 @@ func (c *Client) GetClubActivityList(ctx context.Context, token string, studentI
 	return c.GetClubActivities(ctx, token, studentID, date, schoolID)
 }
 
-func (c *Client) JoinClubActivity(ctx context.Context, token string, studentID, activityID int64) (string, error) {
+func (c *Client) JoinClubActivity(ctx context.Context, token string, studentID, activityID int64) (ClubMembershipResult, error) {
 	query := []queryParam{
 		{key: "studentId", value: strconv.FormatInt(studentID, 10)},
 		{key: "activityId", value: strconv.FormatInt(activityID, 10)},
 	}
 	envelope, err := c.request(ctx, http.MethodGet, "v1/clubactivity/joinClubActivity", query, nil, token, "加入俱乐部失败", clubSuccessCodes, true)
 	if err != nil {
-		return "", err
+		return ClubMembershipResult{}, err
 	}
-	return envelope.raw, nil
+	return decodeClubMembershipResult(envelope), nil
 }
 
-func (c *Client) CancelClubActivity(ctx context.Context, token string, studentID, activityID int64) (string, error) {
+func (c *Client) CancelClubActivity(ctx context.Context, token string, studentID, activityID int64) (ClubMembershipResult, error) {
 	query := []queryParam{
 		{key: "studentId", value: strconv.FormatInt(studentID, 10)},
 		{key: "activityId", value: strconv.FormatInt(activityID, 10)},
 	}
 	envelope, err := c.request(ctx, http.MethodGet, "v1/clubactivity/cancelActivity", query, nil, token, "取消报名失败", clubSuccessCodes, true)
 	if err != nil {
-		return "", err
+		return ClubMembershipResult{}, err
 	}
-	return envelope.raw, nil
+	return decodeClubMembershipResult(envelope), nil
+}
+
+func decodeClubMembershipResult(envelope rawEnvelope) ClubMembershipResult {
+	result := ClubMembershipResult{
+		Success:     true,
+		Message:     clubMutationMessage(envelope.message),
+		RawResponse: envelope.raw,
+	}
+	trimmed := bytes.TrimSpace(envelope.response)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		return result
+	}
+
+	var object map[string]json.RawMessage
+	if json.Unmarshal(trimmed, &object) == nil && object != nil {
+		if message := firstStringRaw(object["message"], object["msg"]); message != "" {
+			result.Message = clubMutationMessage(message)
+		}
+		if status, present := object["status"]; present {
+			result.Status = rawScalarText(status)
+			if success, known := clubMutationStatus(status); known {
+				result.Success = success
+			} else {
+				result.Success = clubMutationMessageSucceeded(result.Message)
+			}
+			return result
+		}
+		if success, present := object["success"]; present {
+			result.Success, _ = clubMutationStatus(success)
+			return result
+		}
+		if clubMutationMessageFailed(result.Message) {
+			result.Success = false
+		}
+		return result
+	}
+
+	var accepted bool
+	if json.Unmarshal(trimmed, &accepted) == nil {
+		result.Success = accepted
+		return result
+	}
+	if message := stringRaw(trimmed); message != "" {
+		result.Message = clubMutationMessage(message)
+		result.Success = !clubMutationMessageFailed(result.Message)
+	}
+	return result
+}
+
+func clubMutationStatus(raw json.RawMessage) (bool, bool) {
+	var boolean bool
+	if json.Unmarshal(raw, &boolean) == nil {
+		return boolean, true
+	}
+	if number, ok := integer64Raw(raw); ok {
+		switch number {
+		case 1, 200, 1000, 10000:
+			return true, true
+		case -1, 0:
+			return false, true
+		default:
+			return false, false
+		}
+	}
+	value := strings.ToLower(strings.TrimSpace(stringRaw(raw)))
+	if value == "" {
+		return false, false
+	}
+	if value == "true" || value == "ok" || value == "success" || strings.Contains(value, "成功") {
+		return true, true
+	}
+	if value == "false" || value == "fail" || value == "failed" || value == "error" ||
+		strings.Contains(value, "失败") {
+		return false, true
+	}
+	return false, false
+}
+
+func clubMutationMessage(value string) string {
+	message := safeMessage(value)
+	if strings.EqualFold(message, "ok") || strings.EqualFold(message, "success") {
+		return ""
+	}
+	return message
+}
+
+func clubMutationMessageSucceeded(message string) bool {
+	message = strings.ToLower(strings.TrimSpace(message))
+	return message == "ok" || message == "success" || strings.Contains(message, "成功")
+}
+
+func clubMutationMessageFailed(message string) bool {
+	message = strings.ToLower(strings.TrimSpace(message))
+	if message == "" || clubMutationMessageSucceeded(message) {
+		return false
+	}
+	for _, marker := range []string{
+		"失败", "不能", "不可", "不允许", "无法", "已满", "限制", "重复", "已签到",
+		"failed", "failure", "denied", "not allowed", "already", "limit", "full",
+	} {
+		if strings.Contains(message, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstStringRaw(values ...json.RawMessage) string {
+	for _, value := range values {
+		if text := strings.TrimSpace(stringRaw(value)); text != "" {
+			return text
+		}
+	}
+	return ""
+}
+
+func rawScalarText(raw json.RawMessage) string {
+	if text := strings.TrimSpace(stringRaw(raw)); text != "" {
+		return text
+	}
+	return strings.TrimSpace(string(raw))
 }
 
 func (c *Client) GetRunInfo(ctx context.Context, token string, userID int64, yearSemester string) (RunInfo, error) {
