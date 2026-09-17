@@ -12,9 +12,10 @@ export interface AnnouncementViewState {
 export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 1
 
 export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
-  id: 'qq-community-2026-09-04',
-  title: '加入成信友友交流群',
-  description: '欢迎加入交流互助群，与同学讨论使用体验、反馈问题或提出建议。',
+  id: 'feedback-community-2026-09-17',
+  title: '遇到问题？欢迎加群反馈',
+  description:
+    '使用中遇到登录、课表、成绩、校园跑等问题，欢迎加入交流群反馈；请说明设备和复现步骤，截图时注意遮挡个人信息。',
 }
 
 export function getAnnouncementViewCount(
