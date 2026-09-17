@@ -36,6 +36,7 @@ describe('library store privacy lifecycle', () => {
         CanCancel: true,
         CanTemporaryLeave: false,
         CanFinish: false,
+        CanRenew: false,
         TemporaryLeaveUntil: '',
         ViolationReason: '',
       },
@@ -46,6 +47,7 @@ describe('library store privacy lifecycle', () => {
     expect(store.initialized).toBe(false)
     expect(store.capabilities).toBeNull()
     expect(store.reservations).toEqual([])
+    expect(store.autoRenewals).toEqual([])
     expect(store.selectedRoomID).toBe('')
   })
 })

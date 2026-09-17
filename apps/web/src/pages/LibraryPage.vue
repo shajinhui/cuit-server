@@ -11,7 +11,9 @@ import {
   reservationLocation,
   ruleSummary,
   seatTitle,
+  type LibraryAutoRenewal,
   type LibraryKind,
+  type LibraryRenewalOptions,
   type LibraryReservation,
   type LibrarySeat,
   useLibraryStore,
@@ -20,14 +22,16 @@ import LibrarySeatMap from '@/features/library/components/LibrarySeatMap.vue'
 import { useSessionStore } from '@/features/session'
 import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import AppDateTimePicker from '@/shared/ui/AppDateTimePicker.vue'
 import AppSelect from '@/shared/ui/AppSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'LibraryPage' })
 
 type PageTab = LibraryKind | 'reservations'
-type ReservationAction = 'cancel' | 'finish' | 'temporary-leave'
+type ReservationAction = 'cancel' | 'finish' | 'temporary-leave' | 'auto-renew-cancel'
 type SeatViewMode = 'map' | 'list'
+type RenewalMode = 'manual' | 'auto'
 
 const router = useRouter()
 const store = useLibraryStore()
@@ -43,6 +47,12 @@ const submitError = ref('')
 const actionTarget = ref<LibraryReservation | null>(null)
 const actionType = ref<ReservationAction>('cancel')
 const actionError = ref('')
+const renewalTarget = ref<LibraryReservation | null>(null)
+const renewalMode = ref<RenewalMode>('auto')
+const renewalOptions = ref<LibraryRenewalOptions | null>(null)
+const renewalDuration = ref(0)
+const renewalLoading = ref(false)
+const renewalError = ref('')
 const toast = ref('')
 const seatMapURL = ref('')
 const seatMapRoomID = ref('')
@@ -95,6 +105,11 @@ const actionCopy = computed(() => {
       title: '登记暂离？',
       detail: '请在图书馆规定时间内返回并重新签到，逾期可能产生违约记录。',
       button: '确认暂离',
+    },
+    'auto-renew-cancel': {
+      title: '关闭自动续座？',
+      detail: '关闭后服务端将不再为这次预约自动提交续座，你仍可在结束前手动续座。',
+      button: '确认关闭',
     },
   }
   return copies[actionType.value]
@@ -263,6 +278,12 @@ async function confirmAction() {
   if (!actionTarget.value || store.mutating) return
   actionError.value = ''
   try {
+    if (actionType.value === 'auto-renew-cancel') {
+      await store.cancelAutoRenewal(actionTarget.value)
+      actionTarget.value = null
+      showToast('自动续座已关闭')
+      return
+    }
     const result =
       actionType.value === 'cancel'
         ? await store.cancel(actionTarget.value)
@@ -274,6 +295,69 @@ async function confirmAction() {
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : '操作失败，请稍后重试'
   }
+}
+
+async function openRenewal(reservation: LibraryReservation, mode: RenewalMode) {
+  if (store.mutating) return
+  renewalTarget.value = reservation
+  renewalMode.value = mode
+  renewalOptions.value = null
+  renewalDuration.value = 0
+  renewalError.value = ''
+  renewalLoading.value = true
+  try {
+    renewalOptions.value = await store.renewalOptions(reservation)
+  } catch (error) {
+    renewalError.value = error instanceof Error ? error.message : '续座时长读取失败'
+  } finally {
+    renewalLoading.value = false
+  }
+}
+
+function closeRenewal() {
+  if (store.mutating) return
+  renewalTarget.value = null
+  renewalOptions.value = null
+  renewalDuration.value = 0
+  renewalError.value = ''
+}
+
+async function submitRenewal() {
+  if (!renewalTarget.value || renewalDuration.value <= 0 || store.mutating) return
+  renewalError.value = ''
+  try {
+    if (renewalMode.value === 'auto') {
+      await store.scheduleAutoRenewal(renewalTarget.value, renewalDuration.value)
+      showToast('自动续座已开启')
+    } else {
+      const result = await store.renew(renewalTarget.value, renewalDuration.value)
+      showToast(result.Message || '续座成功')
+    }
+    closeRenewal()
+  } catch (error) {
+    renewalError.value = error instanceof Error ? error.message : '续座设置失败'
+  }
+}
+
+function visibleAutoRenewal(reservation: LibraryReservation) {
+  const renewal = store.autoRenewalByReservation(reservation.ReservationID)
+  return renewal?.Status === 'cancelled' ? undefined : renewal
+}
+
+function autoRenewalDescription(renewal: LibraryAutoRenewal) {
+  if (renewal.Status === 'scheduled') {
+    return `已开启：${formatLibraryDateTime(renewal.ExecuteAt)} 尝试续 ${renewal.DurationMinutes} 分钟`
+  }
+  if (renewal.Status === 'running') return '正在提交续座，请勿重复操作'
+  if (renewal.Status === 'succeeded') return renewal.LastMessage || '自动续座成功'
+  if (renewal.Status === 'skipped') return renewal.LastMessage || '预约状态已变化，自动续座已跳过'
+  return renewal.LastMessage || '自动续座失败，未自动重试'
+}
+
+function autoRenewalTone(renewal: LibraryAutoRenewal) {
+  if (renewal.Status === 'scheduled' || renewal.Status === 'running') return 'active'
+  if (renewal.Status === 'succeeded') return 'success'
+  return 'warning'
 }
 
 function openOfficialPage() {
@@ -388,25 +472,39 @@ function reservationIsDanger(status: number) {
           <div class="library-date-grid">
             <label class="library-field">
               <span>{{ activeTab === 'study' ? '开始日期' : '预约日期' }}</span>
-              <input
+              <AppDateTimePicker
                 v-model="store.startDate"
-                type="date"
+                mode="date"
+                :title="activeTab === 'study' ? '选择开始日期' : '选择预约日期'"
                 :min="libraryDate()"
                 :max="activeTab === 'seat' ? regularDateMaximum : undefined"
               />
             </label>
             <label v-if="activeTab === 'study'" class="library-field">
               <span>结束日期</span>
-              <input v-model="store.endDate" type="date" :min="store.startDate" />
+              <AppDateTimePicker
+                v-model="store.endDate"
+                mode="date"
+                title="选择结束日期"
+                :min="store.startDate"
+              />
             </label>
             <template v-else>
               <label class="library-field">
                 <span>开始时间</span>
-                <input v-model="store.startTime" type="time" step="1800" />
+                <AppDateTimePicker
+                  v-model="store.startTime"
+                  mode="time"
+                  title="选择开始时间"
+                />
               </label>
               <label class="library-field">
                 <span>结束时间</span>
-                <input v-model="store.endTime" type="time" step="1800" />
+                <AppDateTimePicker
+                  v-model="store.endTime"
+                  mode="time"
+                  title="选择结束时间"
+                />
               </label>
             </template>
           </div>
@@ -532,7 +630,37 @@ function reservationIsDanger(status: number) {
             </dl>
             <p v-if="reservation.TemporaryLeaveUntil" class="library-leave-note">暂离截止：{{ formatLibraryDateTime(reservation.TemporaryLeaveUntil) }}</p>
             <p v-if="reservation.ViolationReason" class="library-violation-note">{{ reservation.ViolationReason }}</p>
-            <footer v-if="reservation.CanCancel || reservation.CanTemporaryLeave || reservation.CanFinish">
+            <p
+              v-if="visibleAutoRenewal(reservation)"
+              class="library-auto-renewal-note"
+              :class="`is-${autoRenewalTone(visibleAutoRenewal(reservation)!)}`"
+            >
+              {{ autoRenewalDescription(visibleAutoRenewal(reservation)!) }}
+            </p>
+            <footer v-if="reservation.CanCancel || reservation.CanTemporaryLeave || reservation.CanFinish || reservation.CanRenew || visibleAutoRenewal(reservation)?.Status === 'scheduled'">
+              <button
+                v-if="reservation.CanRenew && !visibleAutoRenewal(reservation)"
+                type="button"
+                @click="openRenewal(reservation, 'manual')"
+              >
+                立即续座
+              </button>
+              <button
+                v-if="reservation.CanRenew && !visibleAutoRenewal(reservation)"
+                type="button"
+                class="is-auto-renew"
+                @click="openRenewal(reservation, 'auto')"
+              >
+                自动续座
+              </button>
+              <button
+                v-if="visibleAutoRenewal(reservation)?.Status === 'scheduled'"
+                type="button"
+                class="is-danger"
+                @click="requestAction(reservation, 'auto-renew-cancel')"
+              >
+                关闭自动续座
+              </button>
               <button v-if="reservation.CanTemporaryLeave" type="button" @click="requestAction(reservation, 'temporary-leave')">暂离</button>
               <button v-if="reservation.CanFinish" type="button" @click="requestAction(reservation, 'finish')">提前结束</button>
               <button v-if="reservation.CanCancel" type="button" class="is-danger" @click="requestAction(reservation, 'cancel')">取消预约</button>
@@ -612,6 +740,46 @@ function reservationIsDanger(status: number) {
     </Transition>
 
     <Transition name="library-modal">
+      <div v-if="renewalTarget" class="library-modal-backdrop" role="presentation" @click.self="closeRenewal">
+        <section class="library-modal library-modal--compact" role="dialog" aria-modal="true" aria-labelledby="library-renewal-title">
+          <div class="library-modal__handle" aria-hidden="true" />
+          <header>
+            <div>
+              <span>{{ renewalMode === 'auto' ? '一次性自动续座' : '立即续座' }}</span>
+              <h2 id="library-renewal-title">{{ renewalTarget.Name || renewalTarget.Seat || '当前座位' }}</h2>
+            </div>
+            <button type="button" aria-label="关闭" :disabled="store.mutating" @click="closeRenewal">×</button>
+          </header>
+          <div class="library-confirm-summary">
+            <p>当前结束时间：{{ formatLibraryDateTime(renewalTarget.End) }}</p>
+            <strong v-if="renewalMode === 'auto'">将在结束前约 5 分钟尝试一次</strong>
+            <strong v-else>确认后立即向图书馆提交</strong>
+            <small>不会无限续座；响应不确定时不会自动重复提交。</small>
+          </div>
+          <div v-if="renewalLoading" class="library-renewal-loading">正在读取学校允许的续座时长…</div>
+          <label v-else-if="renewalOptions" class="library-modal-field">
+            <span>续座时长</span>
+            <select v-model.number="renewalDuration">
+              <option :value="0" disabled>请选择（分钟）</option>
+              <option v-for="duration in renewalOptions.Durations" :key="duration" :value="duration">
+                {{ duration }} 分钟
+              </option>
+            </select>
+          </label>
+          <p v-if="renewalError" class="library-inline-error" role="alert">{{ renewalError }}</p>
+          <button
+            type="button"
+            class="library-primary-button"
+            :disabled="renewalLoading || !renewalDuration || store.mutating"
+            @click="submitRenewal"
+          >
+            {{ store.mutating ? '处理中…' : renewalMode === 'auto' ? '开启自动续座' : '确认立即续座' }}
+          </button>
+        </section>
+      </div>
+    </Transition>
+
+    <Transition name="library-modal">
       <div v-if="actionTarget" class="library-modal-backdrop" role="presentation" @click.self="closeAction">
         <section class="library-modal library-modal--compact" role="alertdialog" aria-modal="true" aria-labelledby="library-action-title">
           <div class="library-modal__handle" aria-hidden="true" />
@@ -622,7 +790,7 @@ function reservationIsDanger(status: number) {
             <button type="button" :disabled="store.mutating" @click="closeAction">先不操作</button>
             <button
               type="button"
-              :class="{ 'is-danger': actionType === 'cancel' }"
+              :class="{ 'is-danger': actionType === 'cancel' || actionType === 'auto-renew-cancel' }"
               :disabled="store.mutating"
               @click="confirmAction"
             >
