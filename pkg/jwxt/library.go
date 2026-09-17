@@ -25,6 +25,7 @@ type LibraryCreateReservationRequest = libraryflow.CreateReservationRequest
 type LibraryCapabilities = libraryflow.Capabilities
 type LibraryOperationResult = libraryflow.OperationResult
 type LibraryCaptcha = libraryflow.Captcha
+type LibrarySeatMap = libraryflow.SeatMap
 
 // LoginLibrary creates a library session with a CookieJar independent from
 // EAMS and LABMS. Credentials are only used during this call.
@@ -173,6 +174,16 @@ func (c *Client) GetLibraryCaptcha(ctx context.Context) (LibraryCaptcha, error) 
 		return LibraryCaptcha{}, err
 	}
 	result, err := libraryflow.GetCaptcha(ctx, c.libraryResty, baseURL)
+	c.observeLibraryError(err)
+	return result, err
+}
+
+func (c *Client) GetLibrarySeatMap(ctx context.Context, roomID string) (LibrarySeatMap, error) {
+	baseURL, err := c.readyLibraryBaseURL()
+	if err != nil {
+		return LibrarySeatMap{}, err
+	}
+	result, err := libraryflow.GetSeatMap(ctx, c.libraryResty, baseURL, roomID)
 	c.observeLibraryError(err)
 	return result, err
 }

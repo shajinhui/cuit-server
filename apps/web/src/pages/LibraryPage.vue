@@ -5,6 +5,8 @@ import { useRouter } from 'vue-router'
 import {
   formatLibraryDateTime,
   getLibraryCaptcha,
+  getLibrarySeatMap,
+  librarySeatPosition,
   libraryDate,
   reservationLocation,
   ruleSummary,
@@ -14,7 +16,9 @@ import {
   type LibrarySeat,
   useLibraryStore,
 } from '@/features/library'
+import LibrarySeatMap from '@/features/library/components/LibrarySeatMap.vue'
 import { useSessionStore } from '@/features/session'
+import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import AppSelect from '@/shared/ui/AppSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
@@ -23,6 +27,7 @@ defineOptions({ name: 'LibraryPage' })
 
 type PageTab = LibraryKind | 'reservations'
 type ReservationAction = 'cancel' | 'finish' | 'temporary-leave'
+type SeatViewMode = 'map' | 'list'
 
 const router = useRouter()
 const store = useLibraryStore()
@@ -39,6 +44,12 @@ const actionTarget = ref<LibraryReservation | null>(null)
 const actionType = ref<ReservationAction>('cancel')
 const actionError = ref('')
 const toast = ref('')
+const seatMapURL = ref('')
+const seatMapRoomID = ref('')
+const seatMapLoading = ref(false)
+const seatMapError = ref('')
+const seatViewMode = ref<SeatViewMode>('list')
+let seatMapRequestVersion = 0
 let toastTimer: number | undefined
 
 usePageTheme('#f2f2f7')
@@ -58,6 +69,20 @@ const queryValid = computed(() => {
 const availableCount = computed(
   () => store.seats.filter((seat) => seat.Status === 'available' && !seat.OnlyView).length,
 )
+const hasPositionedSeats = computed(() =>
+  store.seats.some((seat) => librarySeatPosition(seat.Coordinate) !== null),
+)
+const seatMapAvailable = computed(
+  () =>
+    store.kind === 'seat' &&
+    Boolean(seatMapURL.value) &&
+    seatMapRoomID.value === store.selectedRoomID &&
+    hasPositionedSeats.value,
+)
+const resultTitle = computed(() => {
+  if (activeTab.value === 'study') return '自修室列表'
+  return seatViewMode.value === 'map' ? '座位平面图' : '座位列表'
+})
 const modalTimeLabel = computed(() => {
   if (store.kind === 'study') return `${store.startDate} 至 ${store.endDate}`
   return `${store.startDate} · ${store.startTime}–${store.endTime}`
@@ -81,6 +106,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   revokeCaptchaURL()
+  clearSeatMap()
   window.clearTimeout(toastTimer)
 })
 
@@ -102,8 +128,16 @@ watch(
 )
 
 watch(
-  () => [store.endDate, store.startTime, store.endTime, store.selectedRoomID],
+  () => [store.endDate, store.startTime, store.endTime],
   () => store.resetSeats(),
+)
+
+watch(
+  () => store.selectedRoomID,
+  () => {
+    store.resetSeats()
+    clearSeatMap()
+  },
 )
 
 async function chooseTab(tab: PageTab) {
@@ -112,6 +146,7 @@ async function chooseTab(tab: PageTab) {
     await store.loadReservations()
     return
   }
+  clearSeatMap()
   await store.changeKind(tab)
 }
 
@@ -123,9 +158,43 @@ async function refresh() {
   if (activeTab.value === 'reservations') {
     await store.loadReservations()
   } else if (store.hasSearched) {
-    await store.searchSeats()
+    await searchSeats()
   } else {
     await store.loadAreas()
+  }
+}
+
+async function searchSeats() {
+  const roomID = store.selectedRoomID
+  const searched = await store.searchSeats()
+  if (!searched || roomID !== store.selectedRoomID) return
+  if (store.kind !== 'seat' || !hasPositionedSeats.value) {
+    clearSeatMap()
+    return
+  }
+  await loadSeatMap(roomID)
+}
+
+async function loadSeatMap(roomID: string) {
+  if (seatMapURL.value && seatMapRoomID.value === roomID) return
+  const version = ++seatMapRequestVersion
+  seatMapLoading.value = true
+  seatMapError.value = ''
+  try {
+    const blob = await getLibrarySeatMap(roomID)
+    if (version !== seatMapRequestVersion || roomID !== store.selectedRoomID) return
+    revokeSeatMapURL()
+    seatMapURL.value = URL.createObjectURL(blob)
+    seatMapRoomID.value = roomID
+    seatViewMode.value = 'map'
+    session.markAuthenticated()
+  } catch (error) {
+    if (version !== seatMapRequestVersion) return
+    if (error instanceof ApiError && error.status === 401) session.markAnonymous()
+    seatMapError.value = error instanceof Error ? error.message : '平面图读取失败，已显示座位列表'
+    seatViewMode.value = 'list'
+  } finally {
+    if (version === seatMapRequestVersion) seatMapLoading.value = false
   }
 }
 
@@ -223,6 +292,20 @@ function showToast(message: string) {
 function revokeCaptchaURL() {
   if (captchaURL.value) URL.revokeObjectURL(captchaURL.value)
   captchaURL.value = ''
+}
+
+function revokeSeatMapURL() {
+  if (seatMapURL.value) URL.revokeObjectURL(seatMapURL.value)
+  seatMapURL.value = ''
+  seatMapRoomID.value = ''
+}
+
+function clearSeatMap() {
+  seatMapRequestVersion += 1
+  seatMapLoading.value = false
+  seatMapError.value = ''
+  seatViewMode.value = 'list'
+  revokeSeatMapURL()
 }
 
 function seatStatusLabel(seat: LibrarySeat) {
@@ -340,7 +423,7 @@ function reservationIsDanger(status: number) {
             type="button"
             class="library-primary-button"
             :disabled="!queryValid || store.loadingSeats"
-            @click="store.searchSeats"
+            @click="searchSeats"
           >
             {{ store.loadingSeats ? '正在查询…' : '查询可预约座位' }}
           </button>
@@ -349,39 +432,70 @@ function reservationIsDanger(status: number) {
         <section v-if="store.hasSearched || store.loadingSeats" class="library-results" aria-live="polite">
           <header>
             <div>
-              <h2>{{ activeTab === 'seat' ? '座位列表' : '自修室列表' }}</h2>
+              <h2>{{ resultTitle }}</h2>
               <p>{{ store.selectedAreaLabel }}</p>
             </div>
             <strong v-if="store.hasSearched">{{ availableCount }} 个可约</strong>
           </header>
+
+          <nav v-if="seatMapAvailable" class="library-view-switch" aria-label="座位显示方式">
+            <button
+              type="button"
+              :class="{ 'is-selected': seatViewMode === 'map' }"
+              :aria-pressed="seatViewMode === 'map'"
+              @click="seatViewMode = 'map'"
+            >
+              平面图
+            </button>
+            <button
+              type="button"
+              :class="{ 'is-selected': seatViewMode === 'list' }"
+              :aria-pressed="seatViewMode === 'list'"
+              @click="seatViewMode = 'list'"
+            >
+              列表
+            </button>
+          </nav>
 
           <div v-if="store.loadingSeats && !store.hasSearched" class="library-list-loader">
             <HamsterLoader label="正在读取座位…" />
           </div>
           <div v-else-if="store.seatError" class="library-list-message library-list-message--error" role="alert">
             <p>{{ store.seatError }}</p>
-            <button type="button" @click="store.searchSeats">重试</button>
+            <button type="button" @click="searchSeats">重试</button>
           </div>
           <div v-else-if="store.seats.length === 0" class="library-list-message">
             <span aria-hidden="true">—</span>
             <h3>这个时段暂无可用座位</h3>
             <p>可以调整区域或时间后再次查询。</p>
           </div>
-          <div v-else class="library-seat-grid">
-            <button
-              v-for="seat in store.seats"
-              :key="seat.ID"
-              type="button"
-              class="library-seat-card"
-              :class="`is-${seat.Status}`"
-              :disabled="seat.Status !== 'available' || seat.OnlyView"
-              @click="openReservation(seat)"
-            >
-              <span class="library-seat-card__number">{{ seatTitle(seat) }}</span>
-              <span class="library-seat-card__location">{{ [seat.Building, seat.Room].filter(Boolean).join(' · ') || '当前区域' }}</span>
-              <span class="library-seat-card__status">{{ seatStatusLabel(seat) }}</span>
-            </button>
-          </div>
+          <div v-else-if="seatMapLoading" class="library-map-loading" role="status">正在加载座位平面图…</div>
+          <LibrarySeatMap
+            v-else-if="seatMapAvailable && seatViewMode === 'map'"
+            :image-url="seatMapURL"
+            :seats="store.seats"
+            @select="openReservation"
+          />
+          <template v-else>
+            <p v-if="seatMapError && activeTab === 'seat'" class="library-map-fallback">
+              {{ seatMapError }}，可继续使用列表预约。
+            </p>
+            <div class="library-seat-grid">
+              <button
+                v-for="seat in store.seats"
+                :key="seat.ID"
+                type="button"
+                class="library-seat-card"
+                :class="`is-${seat.Status}`"
+                :disabled="seat.Status !== 'available' || seat.OnlyView"
+                @click="openReservation(seat)"
+              >
+                <span class="library-seat-card__number">{{ seatTitle(seat) }}</span>
+                <span class="library-seat-card__location">{{ [seat.Building, seat.Room].filter(Boolean).join(' · ') || '当前区域' }}</span>
+                <span class="library-seat-card__status">{{ seatStatusLabel(seat) }}</span>
+              </button>
+            </div>
+          </template>
         </section>
       </template>
 

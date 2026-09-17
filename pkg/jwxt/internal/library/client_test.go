@@ -87,6 +87,50 @@ func TestCaptchaDoesNotTreatExpiredJSONAsAnImage(t *testing.T) {
 	}
 }
 
+func TestGetSeatMapLooksUpAndDownloadsRoomImage(t *testing.T) {
+	image := []byte("\x89PNG\r\n\x1a\nseat-map")
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/api/sysInfo":
+			query := request.URL.Query()
+			if query.Get("sysType") != "2" || query.Get("sysValue") != "7" || query.Get("sysKind") != "16" {
+				t.Fatalf("unexpected query: %s", request.URL.RawQuery)
+			}
+			writer.Header().Set("Content-Type", "application/json")
+			_, _ = writer.Write([]byte(`{"code":0,"data":{"content":"uploads/maps/room-7.png"}}`))
+		case "/api/uploads/maps/room-7.png":
+			writer.Header().Set("Content-Type", "application/octet-stream")
+			_, _ = writer.Write(image)
+		default:
+			t.Fatalf("unexpected path: %s", request.URL.Path)
+		}
+	}))
+	defer server.Close()
+	baseURL, _ := url.Parse(server.URL + "/api/")
+
+	seatMap, err := GetSeatMap(context.Background(), resty.New(), baseURL, "7")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seatMap.ContentType != "image/png" || string(seatMap.Data) != string(image) {
+		t.Fatalf("unexpected seat map: type=%q data=%q", seatMap.ContentType, seatMap.Data)
+	}
+}
+
+func TestGetSeatMapRejectsForeignAssetURL(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		_, _ = writer.Write([]byte(`{"code":0,"data":{"content":"https://foreign.example/map.png"}}`))
+	}))
+	defer server.Close()
+	baseURL, _ := url.Parse(server.URL + "/api/")
+
+	_, err := GetSeatMap(context.Background(), resty.New(), baseURL, "7")
+	if !errors.Is(err, jwxterr.ErrLibraryQueryFailed) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestStudyBeginTimeUsesOpenTimeAndNeverStartsInThePast(t *testing.T) {
 	tomorrow := time.Now().In(shanghaiLocation).AddDate(0, 0, 1).Format(dateLayout)
 	if got := studyBeginTime(tomorrow, "08:30"); got != tomorrow+" 08:30:00" {

@@ -28,11 +28,14 @@ http://127.0.0.1:8888
 | `message` | string | 面向调用方的结果说明 |
 | `data` | any | 成功时为业务数据，失败时为 `null` |
 
-JWXT 业务响应包含：
+JWXT JSON 业务响应和验证码响应包含：
 
 ```http
 Cache-Control: no-store
 ```
+
+座位平面图是稳定的房间图片，使用单用户私有的 5 分钟浏览器缓存；座位实时状态不在图片中，
+仍随座位查询接口实时返回。
 
 ## 服务端缓存
 
@@ -967,7 +970,7 @@ GET /api/v1/library/seats?kind=seat&room_id=7&start_date=2026-09-16&end_date=202
       "Name": "18号座位",
       "Building": "图书馆",
       "Room": "二楼阅览室",
-      "Coordinate": "120,340",
+      "Coordinate": "12.5,64.25,16",
       "Status": "available",
       "OnlyView": false,
       "OpenStart": "08:00",
@@ -989,7 +992,20 @@ GET /api/v1/library/seats?kind=seat&room_id=7&start_date=2026-09-16&end_date=202
 }
 ```
 
-### 7.4 查询预约记录
+`Coordinate` 为学校端返回的平面图百分比坐标，前两项依次为横向和纵向位置，
+第三项为可选的座位方向。坐标无效时，前端仍可在列表中展示该座位。
+
+### 7.4 查询座位平面图
+
+```http
+GET /api/v1/library/seat-map?room_id=7
+```
+
+`room_id` 为 7.2 返回的叶子区域 ID。接口通过当前用户的图书馆会话读取学校端平面图，
+直接返回图片字节（`Content-Type: image/*`，`Cache-Control: private, max-age=300`）。
+前端将 7.3 返回的 `Coordinate` 叠加到该图片上；区域没有图片或有效坐标时回退到座位列表。
+
+### 7.5 查询预约记录
 
 ```http
 GET /api/v1/library/reservations?start_date=2026-06-16&end_date=2026-12-16
@@ -1027,7 +1043,7 @@ GET /api/v1/library/reservations?start_date=2026-06-16&end_date=2026-12-16
 
 `CanCancel`、`CanTemporaryLeave`、`CanFinish` 由后端按上游状态位换算，前端只展示对应按钮。
 
-### 7.5 查询图形验证码
+### 7.6 查询图形验证码
 
 ```http
 GET /api/v1/library/captcha
@@ -1037,7 +1053,7 @@ GET /api/v1/library/captcha
 只有 `CaptchaMode` 为 `image` 时才需要调用。验证码与当前图书馆会话绑定，
 提交失败后必须重新读取。
 
-### 7.6 创建预约
+### 7.7 创建预约
 
 ```http
 POST /api/v1/library/reservations
@@ -1075,15 +1091,15 @@ POST /api/v1/library/reservations
 成功与失败信息均来自图书馆系统，前端直接展示。网络错误不会自动重试提交，
 避免生成重复预约；只有上游明确返回会话过期时，后端才重新登录并重试一次。
 
-### 7.7 取消预约
+### 7.8 取消预约
 
 ```http
 DELETE /api/v1/library/reservations/{uuid}
 ```
 
-`uuid` 为 7.4 返回的 `UUID`。
+`uuid` 为 7.5 返回的 `UUID`。
 
-### 7.8 提前结束预约
+### 7.9 提前结束预约
 
 ```http
 POST /api/v1/library/reservations/{uuid}/finish
@@ -1091,7 +1107,7 @@ POST /api/v1/library/reservations/{uuid}/finish
 
 仅在 `CanFinish` 为 `true` 时可用。
 
-### 7.9 登记暂离
+### 7.10 登记暂离
 
 ```http
 POST /api/v1/library/reservations/{uuid}/temporary-leave

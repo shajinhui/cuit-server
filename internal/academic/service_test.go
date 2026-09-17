@@ -184,6 +184,10 @@ func (f *fakeJWXTClient) GetLibraryCaptcha(context.Context) (jwxt.LibraryCaptcha
 	return jwxt.LibraryCaptcha{}, nil
 }
 
+func (f *fakeJWXTClient) GetLibrarySeatMap(context.Context, string) (jwxt.LibrarySeatMap, error) {
+	return jwxt.LibrarySeatMap{}, nil
+}
+
 func TestLoginPersistsEncryptedCredentialAndSession(t *testing.T) {
 	repository := newMemoryRepository()
 	credentials := testCredentialCipher(t)

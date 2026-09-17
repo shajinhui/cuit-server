@@ -27,6 +27,7 @@ type Service interface {
 	FinishLibraryReservation(ctx context.Context, sessionID string, uuid string) (jwxt.LibraryOperationResult, error)
 	TemporaryLeaveLibraryReservation(ctx context.Context, sessionID string, reservationID string) (jwxt.LibraryOperationResult, error)
 	GetLibraryCaptcha(ctx context.Context, sessionID string) (jwxt.LibraryCaptcha, error)
+	GetLibrarySeatMap(ctx context.Context, sessionID string, roomID string) (jwxt.LibrarySeatMap, error)
 }
 
 type Handler struct {
@@ -48,6 +49,7 @@ func (h *Handler) Register(server *server.Hertz) {
 	group.GET("/seats", h.listSeats)
 	group.GET("/reservations", h.listReservations)
 	group.GET("/captcha", h.getCaptcha)
+	group.GET("/seat-map", h.getSeatMap)
 	group.POST("/reservations", h.createReservation)
 	group.DELETE("/reservations/:uuid", h.cancelReservation)
 	group.POST("/reservations/:uuid/finish", h.finishReservation)
@@ -124,6 +126,24 @@ func (h *Handler) getCaptcha(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	c.Header("Cache-Control", "no-store")
+	c.Data(http.StatusOK, result.ContentType, result.Data)
+}
+
+func (h *Handler) getSeatMap(ctx context.Context, c *app.RequestContext) {
+	roomID := strings.TrimSpace(c.Query("room_id"))
+	if roomID == "" {
+		apiresponse.Error(c, http.StatusBadRequest, 40000, "预约区域不能为空")
+		return
+	}
+	requestCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	result, err := h.service.GetLibrarySeatMap(requestCtx, sessionID(c), roomID)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.Header("Cache-Control", "private, max-age=300")
+	c.Header("X-Content-Type-Options", "nosniff")
 	c.Data(http.StatusOK, result.ContentType, result.Data)
 }
 

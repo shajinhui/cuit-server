@@ -49,6 +49,7 @@ type libraryJWXTClient interface {
 	FinishLibraryReservation(ctx context.Context, uuid string) (jwxt.LibraryOperationResult, error)
 	TemporaryLeaveLibraryReservation(ctx context.Context, reservationID string) (jwxt.LibraryOperationResult, error)
 	GetLibraryCaptcha(ctx context.Context) (jwxt.LibraryCaptcha, error)
+	GetLibrarySeatMap(ctx context.Context, roomID string) (jwxt.LibrarySeatMap, error)
 }
 
 type ClientFactory func() (JWXTClient, error)
@@ -386,6 +387,20 @@ func (s *Service) GetLibraryCaptcha(
 ) (jwxt.LibraryCaptcha, error) {
 	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibraryCaptcha, error) {
 		return client.GetLibraryCaptcha(ctx)
+	})
+}
+
+func (s *Service) GetLibrarySeatMap(
+	ctx context.Context,
+	sessionID string,
+	roomID string,
+) (jwxt.LibrarySeatMap, error) {
+	roomID = strings.TrimSpace(roomID)
+	if roomID == "" {
+		return jwxt.LibrarySeatMap{}, ErrInvalidInput
+	}
+	return withLibraryClient(s, ctx, sessionID, func(client libraryJWXTClient) (jwxt.LibrarySeatMap, error) {
+		return client.GetLibrarySeatMap(ctx, roomID)
 	})
 }
 

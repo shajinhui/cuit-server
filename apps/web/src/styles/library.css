@@ -252,6 +252,209 @@
   white-space: nowrap;
 }
 
+.library-view-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--library-control);
+}
+
+.library-view-switch button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--library-secondary);
+  font-size: 14px;
+  font-weight: 650;
+  background: transparent;
+  transition:
+    color 140ms ease,
+    background 140ms ease;
+}
+
+.library-view-switch button.is-selected {
+  color: var(--library-label);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.library-seat-map {
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.library-seat-map__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 7px 8px 7px 16px;
+  border-bottom: 0.5px solid var(--library-separator);
+}
+
+.library-seat-map__toolbar p {
+  margin: 0;
+  color: var(--library-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.library-seat-map__toolbar > div {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: 44px 58px 44px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f2f2f7;
+}
+
+.library-seat-map__toolbar button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  color: var(--library-accent);
+  font-size: 18px;
+  font-weight: 650;
+  background: transparent;
+}
+
+.library-seat-map__toolbar button:nth-child(2) {
+  border-right: 0.5px solid var(--library-separator);
+  border-left: 0.5px solid var(--library-separator);
+  font-size: 12px;
+}
+
+.library-seat-map__toolbar button:active:not(:disabled) {
+  background: rgba(60, 60, 67, 0.1);
+}
+
+.library-seat-map__toolbar button:disabled {
+  color: var(--library-tertiary);
+  opacity: 0.45;
+}
+
+.library-seat-map__viewport {
+  max-height: 62dvh;
+  min-height: 220px;
+  overflow: auto;
+  background: #f8f8fa;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+.library-seat-map__canvas {
+  position: relative;
+  min-width: 100%;
+  line-height: 0;
+  transition: width 180ms var(--ease-out);
+}
+
+.library-seat-map__canvas > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.library-map-seat {
+  position: absolute;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.96);
+  border-radius: 50%;
+  background: #34c759;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(0, 0, 0, 0.08);
+  transform: translate(-1px, -1px);
+  transition:
+    transform 120ms ease,
+    filter 120ms ease;
+}
+
+.library-map-seat::before {
+  position: absolute;
+  content: '';
+  inset: -8px;
+}
+
+.library-map-seat:active:not(:disabled) {
+  z-index: 2;
+  filter: brightness(0.92);
+  transform: translate(-1px, -1px) scale(1.18);
+}
+
+.library-map-seat.is-reserved {
+  background: #ffb020;
+}
+
+.library-map-seat.is-unavailable,
+.library-map-seat.is-view-only {
+  background: #8e8e93;
+}
+
+.library-map-seat:disabled {
+  opacity: 0.82;
+}
+
+.library-seat-map__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 16px;
+  padding: 13px 16px 15px;
+  border-top: 0.5px solid var(--library-separator);
+}
+
+.library-seat-map__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--library-secondary);
+  font-size: 12px;
+}
+
+.library-seat-map__legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8e8e93;
+}
+
+.library-seat-map__legend i.is-available {
+  background: #34c759;
+}
+
+.library-seat-map__legend i.is-reserved {
+  background: #ffb020;
+}
+
+.library-map-loading,
+.library-map-fallback {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: var(--library-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.library-map-loading {
+  text-align: center;
+}
+
 .library-seat-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -748,6 +951,9 @@
   .library-toast-enter-active,
   .library-toast-leave-active,
   .library-seat-card,
+  .library-seat-map__canvas,
+  .library-map-seat,
+  .library-view-switch button,
   .library-primary-button {
     transition-duration: 0.01ms;
   }

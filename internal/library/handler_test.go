@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -66,6 +67,10 @@ func (service *fakeLibraryService) TemporaryLeaveLibraryReservation(context.Cont
 
 func (service *fakeLibraryService) GetLibraryCaptcha(context.Context, string) (jwxt.LibraryCaptcha, error) {
 	return jwxt.LibraryCaptcha{ContentType: "image/png", Data: []byte("png")}, service.err
+}
+
+func (service *fakeLibraryService) GetLibrarySeatMap(context.Context, string, string) (jwxt.LibrarySeatMap, error) {
+	return jwxt.LibrarySeatMap{ContentType: "image/jpeg", Data: []byte("floor-plan")}, service.err
 }
 
 func TestSeatEndpointReturnsNormalizedSeats(t *testing.T) {
@@ -141,5 +146,30 @@ func TestCaptchaEndpointReturnsImageWithoutCaching(t *testing.T) {
 	}
 	if !strings.HasPrefix(string(response.Header.ContentType()), "image/png") || string(response.Header.Peek("Cache-Control")) != "no-store" {
 		t.Fatalf("unexpected headers: content-type=%s cache-control=%s", response.Header.ContentType(), response.Header.Peek("Cache-Control"))
+	}
+}
+
+func TestSeatMapEndpointReturnsPrivateImage(t *testing.T) {
+	h := server.Default()
+	NewHandler(&fakeLibraryService{}).Register(h)
+
+	response := ut.PerformRequest(h.Engine, "GET", "/api/v1/library/seat-map?room_id=7", nil).Result()
+	if response.StatusCode() != 200 || string(response.Body()) != "floor-plan" {
+		t.Fatalf("unexpected response: status=%d body=%s", response.StatusCode(), response.Body())
+	}
+	if !strings.HasPrefix(string(response.Header.ContentType()), "image/jpeg") ||
+		string(response.Header.Peek("Cache-Control")) != "private, max-age=300" ||
+		string(response.Header.Peek("X-Content-Type-Options")) != "nosniff" {
+		t.Fatalf("unexpected headers: content-type=%s cache-control=%s", response.Header.ContentType(), response.Header.Peek("Cache-Control"))
+	}
+}
+
+func TestSeatMapEndpointRequiresRoom(t *testing.T) {
+	h := server.Default()
+	NewHandler(&fakeLibraryService{}).Register(h)
+
+	response := ut.PerformRequest(h.Engine, "GET", "/api/v1/library/seat-map", nil).Result()
+	if response.StatusCode() != http.StatusBadRequest {
+		t.Fatalf("unexpected response: status=%d body=%s", response.StatusCode(), response.Body())
 	}
 }

@@ -136,6 +136,18 @@ type Captcha struct {
 	Data        []byte
 }
 
+// SeatMap contains the room floor plan used to position seats by Coordinate.
+// It intentionally stays out of JSON responses: the HTTP handler streams the
+// authenticated upstream image directly to the browser.
+type SeatMap struct {
+	ContentType string
+	Data        []byte
+}
+
+type systemInfo struct {
+	Content string `json:"content"`
+}
+
 // Error preserves the upstream message while keeping errors.Is useful for
 // callers that need stable error categories.
 type Error struct {

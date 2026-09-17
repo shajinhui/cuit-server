@@ -7,6 +7,11 @@ export interface LibraryAreaOption {
   total: number
 }
 
+export interface LibrarySeatPosition {
+  left: string
+  top: string
+}
+
 export function flattenLibraryAreas(areas: LibraryArea[]): LibraryAreaOption[] {
   return areas.flatMap((area) => {
     const children = area.Children ?? []
@@ -60,6 +65,15 @@ export function reservationLocation(reservation: LibraryReservation) {
 export function seatTitle(seat: LibrarySeat) {
   if (seat.Number && seat.Name && seat.Number !== seat.Name) return `${seat.Number} · ${seat.Name}`
   return seat.Number || seat.Name || '未命名座位'
+}
+
+export function librarySeatPosition(coordinate: string): LibrarySeatPosition | null {
+  const [leftValue, topValue] = coordinate.split(',')
+  const left = Number.parseFloat(leftValue ?? '')
+  const top = Number.parseFloat(topValue ?? '')
+  if (!Number.isFinite(left) || !Number.isFinite(top)) return null
+  if (left < 0 || left > 100 || top < 0 || top > 100) return null
+  return { left: `${left}%`, top: `${top}%` }
 }
 
 export function ruleSummary(rule: LibraryRule) {

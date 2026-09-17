@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	dateLayout     = "2006-01-02"
-	dateTimeLayout = "2006-01-02 15:04:05"
-	allStatuses    = 32766
+	dateLayout       = "2006-01-02"
+	dateTimeLayout   = "2006-01-02 15:04:05"
+	allStatuses      = 32766
+	maximumImageSize = 12 << 20
 )
 
 var shanghaiLocation = func() *time.Location {
@@ -264,6 +265,87 @@ func GetCaptcha(
 		contentType = "image/png"
 	}
 	return Captcha{ContentType: contentType, Data: append([]byte(nil), response.Body()...)}, nil
+}
+
+// GetSeatMap follows the same sysInfo lookup used by the official client:
+// sysType=2 identifies a room, while sysKind=16 identifies its seat map.
+func GetSeatMap(
+	ctx context.Context,
+	client *resty.Client,
+	baseURL *url.URL,
+	roomID string,
+) (SeatMap, error) {
+	roomID = strings.TrimSpace(roomID)
+	if roomID == "" {
+		return SeatMap{}, &Error{Kind: jwxterr.ErrLibraryVerification, Message: "预约区域不能为空"}
+	}
+	envelope, err := getEnvelope(ctx, client, baseURL, "sysInfo", map[string]string{
+		"sysType":  "2",
+		"sysValue": roomID,
+		"sysKind":  "16",
+	}, jwxterr.ErrLibraryQueryFailed)
+	if err != nil {
+		return SeatMap{}, err
+	}
+	var info systemInfo
+	if err := json.Unmarshal(envelope.Data, &info); err != nil {
+		return SeatMap{}, &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图信息解析失败"}
+	}
+	assetURL, err := seatMapAssetURL(baseURL, info.Content)
+	if err != nil {
+		return SeatMap{}, err
+	}
+	response, err := client.R().SetContext(ctx).Get(assetURL)
+	if err != nil {
+		return SeatMap{}, jwxterr.WithMessage(jwxterr.ErrRemoteUnavailable, "request library seat map failed")
+	}
+	if response.StatusCode() == http.StatusUnauthorized || response.StatusCode() == http.StatusForbidden ||
+		(response.StatusCode() >= 300 && response.StatusCode() < 400) {
+		return SeatMap{}, &Error{Kind: jwxterr.ErrSessionExpired, Message: "图书馆登录已失效"}
+	}
+	if response.IsError() || len(response.Body()) == 0 {
+		return SeatMap{}, &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图读取失败"}
+	}
+	if len(response.Body()) > maximumImageSize {
+		return SeatMap{}, &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图文件过大"}
+	}
+	contentType := strings.TrimSpace(response.Header().Get("Content-Type"))
+	if strings.Contains(strings.ToLower(contentType), "json") || strings.HasPrefix(strings.TrimSpace(string(response.Body())), "{") {
+		if _, envelopeErr := parseEnvelope(response, jwxterr.ErrLibraryQueryFailed); envelopeErr != nil {
+			return SeatMap{}, envelopeErr
+		}
+		return SeatMap{}, &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图响应中未包含图片"}
+	}
+	if !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		contentType = http.DetectContentType(response.Body())
+	}
+	if !strings.HasPrefix(strings.ToLower(contentType), "image/") {
+		return SeatMap{}, &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图格式无效"}
+	}
+	return SeatMap{ContentType: contentType, Data: append([]byte(nil), response.Body()...)}, nil
+}
+
+func seatMapAssetURL(baseURL *url.URL, content string) (string, error) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return "", &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "该区域暂无座位平面图"}
+	}
+	reference, err := url.Parse(content)
+	if err != nil {
+		return "", &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图地址无效"}
+	}
+	if reference.IsAbs() {
+		if !strings.EqualFold(reference.Scheme, baseURL.Scheme) || !strings.EqualFold(reference.Host, baseURL.Host) {
+			return "", &Error{Kind: jwxterr.ErrLibraryQueryFailed, Message: "座位平面图地址无效"}
+		}
+		return reference.String(), nil
+	}
+	assetBase := *baseURL
+	if !strings.HasSuffix(assetBase.Path, "/") {
+		assetBase.Path += "/"
+	}
+	reference.Path = strings.TrimLeft(reference.Path, "/")
+	return assetBase.ResolveReference(reference).String(), nil
 }
 
 func CreateReservation(

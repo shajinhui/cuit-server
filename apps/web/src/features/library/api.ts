@@ -168,3 +168,8 @@ export function temporaryLeaveLibraryReservation(uuid: string, reservationID: st
 export function getLibraryCaptcha() {
   return requestBlob(`/api/v1/library/captcha?t=${Date.now()}`)
 }
+
+export function getLibrarySeatMap(roomID: string) {
+  const parameters = new URLSearchParams({ room_id: roomID })
+  return requestBlob(`/api/v1/library/seat-map?${parameters}`)
+}
