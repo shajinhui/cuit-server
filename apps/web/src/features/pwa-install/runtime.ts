@@ -1,7 +1,13 @@
 import { Capacitor } from '@capacitor/core'
 import { computed, readonly, ref, shallowRef } from 'vue'
 
-import { isInstalledDisplay, resolveInstallGuide, shouldOpenInitialInstallGuide } from './model'
+import {
+  isInstalledDisplay,
+  manualInstallGuide,
+  resolveInstallGuide,
+  shouldOpenInitialInstallGuide,
+  type ManualInstallGuideKind,
+} from './model'
 
 interface InstallChoice {
   outcome: 'accepted' | 'dismissed'
@@ -24,6 +30,7 @@ const DISPLAY_MODES = ['standalone', 'fullscreen', 'minimal-ui']
 const deferredPrompt = shallowRef<BeforeInstallPromptEvent | null>(null)
 const installed = ref(false)
 const guideVisible = ref(false)
+const guideKind = ref<ManualInstallGuideKind | null>(null)
 const dismissedUntil = ref(0)
 let registered = false
 
@@ -33,10 +40,13 @@ const shouldPromoteInstall = computed(
     !installed.value &&
     !isAndroidBrowser() &&
     dismissedUntil.value <= Date.now() &&
-    (canPromptInstall.value || installGuide.value.kind === 'ios'),
+    (canPromptInstall.value || detectedGuide.value.kind === 'ios'),
+)
+const detectedGuide = computed(() =>
+  resolveInstallGuide(typeof navigator === 'undefined' ? '' : navigator.userAgent),
 )
 const installGuide = computed(() =>
-  resolveInstallGuide(typeof navigator === 'undefined' ? '' : navigator.userAgent),
+  guideKind.value ? manualInstallGuide(guideKind.value) : detectedGuide.value,
 )
 
 export function registerPwaInstall() {
@@ -146,13 +156,15 @@ function dismissInstallPromotion() {
   }
 }
 
-function openInstallGuide() {
+function openInstallGuide(kind?: ManualInstallGuideKind) {
   if (installed.value) return
+  guideKind.value = kind ?? null
   guideVisible.value = true
 }
 
 function closeInstallGuide() {
   guideVisible.value = false
+  guideKind.value = null
 }
 
 function readInstalledDisplay(): boolean {
