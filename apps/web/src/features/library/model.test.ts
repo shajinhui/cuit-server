@@ -7,6 +7,7 @@ import {
   flattenLibraryAreas,
   formatLibraryDateTime,
   libraryDate,
+  librarySeatPosition,
   reservationLocation,
 } from './model'
 
@@ -62,5 +63,11 @@ describe('library presentation model', () => {
     } as LibraryReservation
     expect(formatLibraryDateTime('2026-09-16 09:30:00')).toBe('9月16日 09:30')
     expect(reservationLocation(reservation)).toBe('航空港图书馆 · 二楼 · A-18')
+  })
+
+  it('maps official percentage coordinates and rejects invalid positions', () => {
+    expect(librarySeatPosition('12.5,64.25,16')).toEqual({ left: '12.5%', top: '64.25%' })
+    expect(librarySeatPosition('101,20')).toBeNull()
+    expect(librarySeatPosition('not-a-position')).toBeNull()
   })
 })
