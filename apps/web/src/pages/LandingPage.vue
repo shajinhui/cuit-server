@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import landingCalendar from '@/assets/landing/landing-calendar.webp'
 import landingClassrooms from '@/assets/landing/landing-classrooms.webp'
@@ -15,11 +16,10 @@ import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 defineOptions({ name: 'LandingPage' })
 
-const { requestInstall } = usePwaInstall()
-const installing = ref(false)
+const router = useRouter()
+const { openInstallGuide } = usePwaInstall()
 const usageChooserVisible = ref(false)
 const heroStage = ref<HTMLElement | null>(null)
-const appWebURL = 'https://fanxiaogao05.dpdns.org'
 const androidAPKURL =
   'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v1.0.0/app-release-signed.apk'
 let revealObserver: IntersectionObserver | undefined
@@ -59,19 +59,21 @@ function openApp() {
   usageChooserVisible.value = true
 }
 
+function openWebApp() {
+  void router.push({ name: 'login' })
+}
+
+function chooseInstallGuide(kind: 'ios' | 'android-pwa') {
+  usageChooserVisible.value = false
+  openInstallGuide(kind)
+}
+
 function closeUsageChooser() {
   usageChooserVisible.value = false
 }
 
 function handleUsageChooserKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape' && usageChooserVisible.value) closeUsageChooser()
-}
-
-async function installApp() {
-  if (installing.value) return
-  installing.value = true
-  await requestInstall()
-  installing.value = false
 }
 
 function scrollToFeatures() {
@@ -105,7 +107,7 @@ function resetHeroPerspective() {
         <RouterLink :to="{ name: 'privacy' }">隐私</RouterLink>
         <a href="https://github.com/shajinhui/cuit-server" target="_blank" rel="noopener noreferrer">GitHub</a>
       </div>
-      <button class="landing-nav__open" type="button" @click="openApp">打开网页版</button>
+      <button class="landing-nav__open" type="button" @click="openWebApp">体验网页版</button>
     </nav>
 
     <section class="landing-hero" aria-labelledby="landing-title">
@@ -122,12 +124,6 @@ function resetHeroPerspective() {
           <button class="landing-button landing-button--primary" type="button" @click="openApp">
             立即使用
             <svg aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
-          </button>
-          <button class="landing-button landing-button--secondary" type="button" :disabled="installing" @click="installApp">
-            <svg aria-hidden="true" viewBox="0 0 20 20">
-              <path d="M10 3v9M6.5 8.5 10 12l3.5-3.5M4 15.5h12" />
-            </svg>
-            {{ installing ? '请稍候' : '安装到桌面' }}
           </button>
         </div>
         <p class="landing-hero__note landing-hero__item">支持网页、PWA、Android 与 iPhone / iPad</p>
@@ -304,7 +300,7 @@ function resetHeroPerspective() {
         <p class="landing-eyebrow">随屏幕自然变化</p>
         <h2>手机、平板、网页，<br />依然像同一个 App。</h2>
         <p>竖屏快速查看，横屏高效浏览，大屏留出恰到好处的空间。无论在哪打开，操作方式始终熟悉。</p>
-        <button class="landing-button landing-button--primary" type="button" @click="openApp">打开网页版</button>
+        <button class="landing-button landing-button--primary" type="button" @click="openWebApp">体验网页版</button>
       </div>
       <div class="landing-platform__devices" aria-hidden="true">
         <div class="landing-browser-frame">
@@ -323,7 +319,6 @@ function resetHeroPerspective() {
       <h2>让校园生活，<br />从今天开始更顺手。</h2>
       <div class="landing-final-cta__actions">
         <button class="landing-button landing-button--primary" type="button" @click="openApp">立即使用</button>
-        <button class="landing-button landing-button--secondary" type="button" :disabled="installing" @click="installApp">安装到桌面</button>
       </div>
       <p>非官方学生项目，与学校及教务系统运营方无隶属或授权关系。</p>
     </section>
@@ -359,41 +354,41 @@ function resetHeroPerspective() {
               <svg aria-hidden="true" viewBox="0 0 20 20"><path d="m5 5 10 10M15 5 5 15" /></svg>
             </button>
             <p class="landing-eyebrow">选择你的使用方式</p>
-            <h2 id="landing-usage-title">打开成信友友</h2>
-            <p class="landing-usage-dialog__intro">根据你的设备，选择最顺手的入口。</p>
+            <h2 id="landing-usage-title">安装成信友友</h2>
+            <p class="landing-usage-dialog__intro">根据你的设备，选择对应的安装方式。</p>
             <div class="landing-usage-options">
-              <a class="landing-usage-option landing-usage-option--blue" :href="appWebURL" target="_blank" rel="noopener noreferrer">
+              <button class="landing-usage-option landing-usage-option--blue" type="button" @click="chooseInstallGuide('ios')">
+                <span class="landing-usage-option__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 14V3M8.5 6.5 12 3l3.5 3.5M6 12v9h12v-9" /></svg>
+                </span>
+                <span class="landing-usage-option__copy">
+                  <strong>iOS 安装</strong>
+                  <small>iPhone 与 iPad 添加到主屏幕的方法</small>
+                </span>
+                <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
+              </button>
+              <button class="landing-usage-option landing-usage-option--orange" type="button" @click="chooseInstallGuide('android-pwa')">
                 <span class="landing-usage-option__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M4 5.5h16v11H4zM8 20h8M12 16.5V20" /></svg>
                 </span>
                 <span class="landing-usage-option__copy">
-                  <strong>浏览器打开</strong>
-                  <small>iPhone、iPad 及其他设备推荐使用</small>
+                  <strong>安卓 PWA 安装</strong>
+                  <small>用 Chrome 或 Edge 添加到桌面</small>
                 </span>
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
-              </a>
-              <a class="landing-usage-option landing-usage-option--orange" :href="appWebURL" target="_blank" rel="noopener noreferrer">
+              </button>
+              <a class="landing-usage-option landing-usage-option--green" :href="androidAPKURL" rel="noopener noreferrer" download>
                 <span class="landing-usage-option__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" /><path d="M8.5 9.5 12 7l3.5 2.5v5L12 17l-3.5-2.5z" /></svg>
+                  <svg viewBox="0 0 24 24"><path d="M12 3v10M8.5 9.5 12 13l3.5-3.5M6 16v4h12v-4" /></svg>
                 </span>
                 <span class="landing-usage-option__copy">
-                  <strong>安卓浏览器安装</strong>
-                  <small>请先使用 Edge 或 Chrome，再添加到桌面</small>
-                </span>
-                <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
-              </a>
-              <a class="landing-usage-option landing-usage-option--green" :href="androidAPKURL" target="_blank" rel="noopener noreferrer" download>
-                <span class="landing-usage-option__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M7 8h10v11H7zM9 5l-1.5-2M15 5l1.5-2M5 10v6M19 10v6M10 12v3M14 12v3" /></svg>
-                </span>
-                <span class="landing-usage-option__copy">
-                  <strong>安卓原生应用</strong>
-                  <small>下载并安装 Android APK</small>
+                  <strong>安卓原生应用下载</strong>
+                  <small>直接下载 Android APK 安装包</small>
                 </span>
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
               </a>
             </div>
-            <p class="landing-usage-dialog__footnote">首次安装 Android 应用时，系统可能需要允许安装未知来源应用。</p>
+            <p class="landing-usage-dialog__footnote">安装原生应用时，系统可能需要允许“安装未知来源应用”。</p>
           </section>
         </div>
       </Transition>

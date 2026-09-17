@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { isInstalledDisplay, resolveInstallGuide, shouldOpenInitialInstallGuide } from './model'
+import {
+  isInstalledDisplay,
+  manualInstallGuide,
+  resolveInstallGuide,
+  shouldOpenInitialInstallGuide,
+} from './model'
 
 describe('PWA install guidance', () => {
   it('sends embedded browsers to a system browser first', () => {
@@ -33,6 +38,15 @@ describe('PWA install guidance', () => {
 
   it('falls back to generic menu instructions for unknown browsers', () => {
     expect(resolveInstallGuide('Unknown Mobile Browser').kind).toBe('generic')
+  })
+
+  it('builds a guide for a manually chosen install entry', () => {
+    expect(manualInstallGuide('ios')).toMatchObject({ kind: 'ios', browserName: 'iPhone / iPad' })
+    expect(manualInstallGuide('android-pwa')).toMatchObject({
+      kind: 'android-pwa',
+      browserName: 'Chrome / Edge',
+    })
+    expect(manualInstallGuide('android-pwa').steps).toContain('用 Chrome 或 Edge 打开本页面')
   })
 
   it('recognizes standalone, fullscreen, minimal UI, and Android TWA launches', () => {

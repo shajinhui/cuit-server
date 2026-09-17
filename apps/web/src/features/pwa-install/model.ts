@@ -1,5 +1,6 @@
 export type InstallGuideKind =
   | 'ios'
+  | 'android-pwa'
   | 'embedded'
   | 'firefox'
   | 'samsung'
@@ -35,17 +36,7 @@ export function shouldOpenInitialInstallGuide({
 
 export function resolveInstallGuide(userAgent: string): InstallGuide {
   if (isIOSBrowser(userAgent)) {
-    return {
-      kind: 'ios',
-      browserName: isSafari(userAgent) ? 'Safari' : 'iPhone / iPad 浏览器',
-      description: 'iPhone 和 iPad 不提供网页主动调用的系统安装弹窗，需要通过分享菜单添加。',
-      steps: [
-        '点击浏览器的“分享”按钮',
-        '向下滑动并选择“添加到主屏幕”',
-        '开启“打开为 Web App”',
-        '点击右上角“添加”',
-      ],
-    }
+    return manualInstallGuide('ios', isSafari(userAgent) ? 'Safari' : 'iPhone / iPad 浏览器')
   }
 
   if (isEmbeddedBrowser(userAgent)) {
@@ -89,6 +80,39 @@ export function resolveInstallGuide(userAgent: string): InstallGuide {
     browserName: '当前浏览器',
     description: '不同浏览器的菜单名称可能略有差异。',
     steps: ['打开浏览器菜单', '查找“安装应用”或“添加到主屏幕”', '如果没有该选项，请改用 Chrome、Edge 或 Firefox'],
+  }
+}
+
+export type ManualInstallGuideKind = 'ios' | 'android-pwa'
+
+export function manualInstallGuide(
+  kind: ManualInstallGuideKind,
+  browserName = kind === 'ios' ? 'iPhone / iPad' : 'Chrome / Edge',
+): InstallGuide {
+  if (kind === 'ios') {
+    return {
+      kind: 'ios',
+      browserName,
+      description: 'iPhone 和 iPad 不提供网页主动调用的系统安装弹窗，需要通过分享菜单添加。',
+      steps: [
+        '使用 Safari 打开本页面',
+        '点击浏览器的“分享”按钮',
+        '向下滑动并选择“添加到主屏幕”',
+        '开启“打开为 Web App”后点击“添加”',
+      ],
+    }
+  }
+
+  return {
+    kind: 'android-pwa',
+    browserName,
+    description: 'Android 浏览器可以把成信友友添加到桌面，之后像 App 一样打开。',
+    steps: [
+      '用 Chrome 或 Edge 打开本页面',
+      '点击浏览器右上角的菜单按钮',
+      '选择“安装应用”或“添加到主屏幕”',
+      '确认后从桌面图标打开',
+    ],
   }
 }
 
