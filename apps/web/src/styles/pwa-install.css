@@ -225,19 +225,46 @@
   line-height: 1.35;
 }
 
+.pwa-install-guide__actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.pwa-install-guide__browser,
 .pwa-install-guide__done {
+  display: flex;
   width: 100%;
   min-height: 50px;
-  margin-top: 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   color: #fff;
   font-size: 17px;
   font-weight: 600;
   background: #0088ff;
   border: 0;
   border-radius: 25px;
+  text-decoration: none;
   transition: transform 140ms var(--ease-out);
 }
 
+.pwa-install-guide__browser svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.pwa-install-guide__done.is-secondary {
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+}
+
+.pwa-install-guide__browser:active,
 .pwa-install-guide__done:active {
   transform: scale(0.97);
 }
@@ -317,6 +344,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pwa-install-promotion__install,
+  .pwa-install-guide__browser,
   .pwa-install-guide__done,
   .install-promotion-enter-active,
   .install-promotion-leave-active,
@@ -328,6 +356,7 @@
   }
 
   .pwa-install-promotion__install:active,
+  .pwa-install-guide__browser:active,
   .pwa-install-guide__done:active {
     transform: none;
   }
