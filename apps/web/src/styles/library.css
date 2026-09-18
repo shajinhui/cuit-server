@@ -22,8 +22,8 @@
   display: grid;
   grid-template-columns: 48px 1fr 48px;
   align-items: center;
-  min-height: calc(58px + env(safe-area-inset-top));
-  padding: env(safe-area-inset-top) 10px 0;
+  min-height: calc(58px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  padding: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) 10px 0;
   background: rgba(242, 242, 247, 0.9);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
@@ -80,7 +80,7 @@
 .library-tabs {
   position: sticky;
   z-index: 11;
-  top: calc(58px + env(safe-area-inset-top));
+  top: calc(58px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 3px;
