@@ -9,9 +9,11 @@ import router from './app/router'
 import { registerSessionLifecycle } from './app/sessionLifecycle'
 import { registerAndroidLiveUpdates } from './features/app-updates'
 import { registerPwaInstall } from './features/pwa-install'
+import { applyIosTopScrim } from './shared/device/iosTopScrim'
 import './styles/main.css'
 
 document.documentElement.dataset.platform = Capacitor.getPlatform()
+applyIosTopScrim()
 
 registerPwaInstall()
 registerNativeRuntime()

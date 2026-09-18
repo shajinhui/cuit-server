@@ -5,13 +5,23 @@ import Capacitor
 class AppViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
+        hideTopScrollEdgeEffect()
+    }
 
-        // iOS 26+ adds an automatic fade/blur at the leading edge of scroll
-        // views. The web app already owns its safe-area treatment, so the
-        // effect obscures the schedule header instead of separating content.
-        if #available(iOS 26.0, *) {
-            webView?.scrollView.topEdgeEffect.isHidden = true
-        }
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // WebKit recreates the edge effect while the page loads, so a single call
+        // during `capacitorDidLoad()` is not enough; re-apply it on every layout
+        // pass. Setting the same value again is a no-op.
+        hideTopScrollEdgeEffect()
+    }
+
+    /// iOS 26+ adds an automatic fade/blur at the leading edge of scroll views.
+    /// The web app already owns its safe-area treatment, so the effect obscures
+    /// the schedule header instead of separating content.
+    private func hideTopScrollEdgeEffect() {
+        guard #available(iOS 26.0, *) else { return }
+        webView?.scrollView.topEdgeEffect.isHidden = true
     }
 }
 

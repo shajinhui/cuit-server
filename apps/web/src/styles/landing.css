@@ -149,7 +149,7 @@
 .landing-nav {
   position: fixed;
   z-index: 80;
-  top: max(14px, env(safe-area-inset-top, 0px));
+  top: max(14px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
   right: 24px;
   left: 24px;
   display: grid;

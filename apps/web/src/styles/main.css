@@ -43,6 +43,19 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/*
+ * iOS 27 composites a ~80pt system blur across the top of the window for
+ * installed web apps and the native shell. It is drawn above the page, so it
+ * cannot be removed from CSS; the workaround is to guarantee that the first row
+ * of content starts below the band. Raising the shared safe-area override moves
+ * every page that already offsets itself by the top inset, and leaves the
+ * browser-tab, iOS 26 and Android layouts untouched.
+ * Revisit once Apple stops applying the effect.
+ */
+html[data-ios-top-scrim='true'] {
+  --safe-area-inset-top: max(env(safe-area-inset-top, 0px), 88px);
+}
+
 * {
   box-sizing: border-box;
 }
