@@ -7,10 +7,9 @@ import { Capacitor } from '@capacitor/core'
  * renders *above* the page: no DOM or CSS state can switch it off, and blurring a
  * flat background is invisible, so the only mitigation is to keep the first row of
  * content below the band. See https://github.com/vjt/grappa-irc/issues/1236 for the
- * measured luminance profile on iPadOS 27.
+ * measured luminance profile on iPadOS 27. The reserved space itself lives in
+ * `main.css` (`html[data-ios-top-scrim='true']`).
  */
-export const IOS_TOP_SCRIM_MIN_TOP_PX = 88
-
 export const IOS_TOP_SCRIM_DATA_KEY = 'iosTopScrim'
 
 const IOS_TOP_SCRIM_FIRST_MAJOR = 27
