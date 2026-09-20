@@ -2,14 +2,16 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import landingCalendar from '@/assets/landing/landing-calendar.webp'
 import landingClassrooms from '@/assets/landing/landing-classrooms.webp'
 import landingClub from '@/assets/landing/landing-club.webp'
 import landingExams from '@/assets/landing/landing-exams.webp'
+import landingGrades from '@/assets/landing/landing-grades.webp'
 import landingLibrary from '@/assets/landing/landing-library.webp'
+import landingProfile from '@/assets/landing/landing-profile.webp'
 import landingResources from '@/assets/landing/landing-resources.webp'
 import landingRun from '@/assets/landing/landing-run.webp'
 import landingSchedule from '@/assets/landing/landing-schedule.webp'
+import landingTools from '@/assets/landing/landing-tools.webp'
 import { usePwaInstall } from '@/features/pwa-install'
 import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -141,7 +143,7 @@ function resetHeroPerspective() {
 
         <div class="landing-phone landing-phone--left" aria-hidden="true">
           <div class="landing-phone__island" />
-          <img :src="landingLibrary" alt="" />
+          <img :src="landingProfile" alt="" />
         </div>
         <div class="landing-phone landing-phone--center">
           <div class="landing-phone__island" aria-hidden="true" />
@@ -149,7 +151,7 @@ function resetHeroPerspective() {
         </div>
         <div class="landing-phone landing-phone--right" aria-hidden="true">
           <div class="landing-phone__island" />
-          <img :src="landingRun" alt="" />
+          <img :src="landingTools" alt="" />
         </div>
 
         <div class="landing-float-card landing-float-card--schedule" aria-hidden="true">
@@ -199,16 +201,16 @@ function resetHeroPerspective() {
           </div>
         </article>
 
-        <article class="landing-bento-card landing-bento-card--calendar landing-reveal">
+        <article class="landing-bento-card landing-bento-card--grades landing-reveal">
           <div class="landing-bento-card__copy">
             <span class="landing-feature-icon landing-feature-icon--purple">
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3v3M18 3v3M4 8h16v12H4zM8 12h3M13 12h3M8 16h3" /></svg>
             </span>
-            <p>校历与考试</p>
-            <h3>重要日期，不再散落。</h3>
+            <p>成绩与考试</p>
+            <h3>学习结果与安排，不再散落。</h3>
           </div>
           <div class="landing-dual-preview">
-            <img :src="landingCalendar" alt="学校校历页面" loading="lazy" />
+            <img :src="landingGrades" alt="成绩查询页面" loading="lazy" />
             <img :src="landingExams" alt="考试安排页面" loading="lazy" />
           </div>
         </article>

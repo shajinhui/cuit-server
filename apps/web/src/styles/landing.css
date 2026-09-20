@@ -619,7 +619,7 @@
   background: linear-gradient(155deg, rgba(229, 241, 255, 0.96), rgba(255, 255, 255, 0.8) 62%);
 }
 
-.landing-bento-card--calendar { background: linear-gradient(150deg, #f1ebff, rgba(255, 255, 255, 0.86)); }
+.landing-bento-card--grades { background: linear-gradient(150deg, #f1ebff, rgba(255, 255, 255, 0.86)); }
 .landing-bento-card--classroom { background: linear-gradient(150deg, #fff1e4, rgba(255, 255, 255, 0.88)); }
 
 .landing-bento-card__copy {
