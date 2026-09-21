@@ -22,6 +22,7 @@
 @import './past-exams.css';
 @import './library.css';
 @import './landing.css';
+@import './ratings.css';
 
 :root {
   font-family:

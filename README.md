@@ -31,6 +31,7 @@
 - 最近课表、手动课程和教室占用数据的本机离线查看
 - PWA 安装及 Capacitor Android APK
 - 校园跑进度、前端轨迹生成、俱乐部报名/签到和本地定时签到签退
+- 校园评分板块、共同添加对象、打分、评论与举报
 
 ## 系统结构
 
@@ -47,6 +48,7 @@
 | Web | Vue 3、TypeScript、Vite、Pinia、Vue Router、vite-plugin-pwa |
 | Android | Capacitor 8、Gradle |
 | API | Go、Hertz |
+| 评分服务 | Cloudflare Workers、D1、R2、Images |
 | JWXT SDK | Resty v2、goquery、`net/http/cookiejar` |
 | 数据 | SQLite、Redis |
 | 部署 | Cloudflare Pages、Cloudflare Tunnel、systemd |
@@ -57,6 +59,7 @@
 .
 ├── apps/
 │   ├── api/          # HTTP 服务入口
+│   ├── ratings-worker/ # 评分 API、D1 migration 与 R2 图片链路
 │   ├── web/          # Vue PWA 与 Android 工程
 │   └── worker/       # EAMS/CAS 网络连通性探测
 ├── internal/         # 后端业务模块与基础能力
@@ -71,6 +74,7 @@
 
 - [JWXT SDK](pkg/jwxt/README.md)
 - [API 服务](apps/api/README.md)
+- [评分 Worker](apps/ratings-worker/README.md)
 - [Web 应用](apps/web/README.md)
 
 ## 本地开发

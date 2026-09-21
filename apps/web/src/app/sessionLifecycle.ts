@@ -16,6 +16,7 @@ import {
 } from '@/features/profile'
 import { clearScheduleCache, hasScheduleCache, useScheduleStore } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
+import { clearRatingAccessToken, logoutRatingsSession } from '@/features/ratings'
 
 let userDataReset: Promise<void> | undefined
 
@@ -51,6 +52,8 @@ export async function checkSession(force = false) {
 }
 
 export async function loginSession(username: string, password: string) {
+  // 切换账号前尽可能撤销旧评分凭证；失败也不能阻止原有登录流程。
+  await logoutRatingsSession()
   await useSessionStore().login(username, password)
   // 新账号登录成功后先移除上一会话的本机数据，避免共享设备上串用课表和个人信息。
   await clearUserData()
@@ -58,6 +61,7 @@ export async function loginSession(username: string, password: string) {
 
 export async function logoutSession() {
   try {
+    await logoutRatingsSession()
     await useSessionStore().logout()
   } finally {
     await clearUserData()
@@ -65,6 +69,7 @@ export async function logoutSession() {
 }
 
 async function clearUserData() {
+  clearRatingAccessToken(true)
   useClassroomsStore().clearData()
   useExamsStore().clearData()
   useLibraryStore().clearData()
