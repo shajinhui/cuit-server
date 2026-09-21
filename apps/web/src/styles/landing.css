@@ -525,7 +525,7 @@
 .landing-float-card__icon--blue { color: #0a84ff; background: #e1f0ff; }
 .landing-float-card__icon--green { color: #28a76b; background: #ddf5e9; }
 .landing-float-card__dot { width: 10px; height: 10px; background: #32c86e; border-radius: 50%; box-shadow: 0 0 0 6px rgba(50, 200, 110, 0.13); }
-.landing-float-card--schedule { top: 68px; left: -35px; }
+.landing-float-card--schedule { top: 8px; left: -35px; }
 .landing-float-card--library { right: -18px; bottom: 144px; animation-delay: -1.6s; }
 .landing-float-card--sync { bottom: 35px; left: 22px; animation-delay: -3.1s; }
 
@@ -924,7 +924,7 @@
   .landing-phone--left { left: -62px; }
   .landing-phone--right { right: -62px; }
   .landing-float-card { min-width: 155px; padding: 10px; }
-  .landing-float-card--schedule { top: 46px; left: -5px; }
+  .landing-float-card--schedule { top: 12px; left: -5px; }
   .landing-float-card--library { right: -7px; bottom: 75px; }
   .landing-float-card--sync { display: none; }
   .landing-trust,
