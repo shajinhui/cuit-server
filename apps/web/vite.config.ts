@@ -7,6 +7,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const isNativeBuild = mode === 'android' || mode === 'ios'
+  const enableDevPwa = env.VITE_PWA_DEV === 'true'
 
   return {
     base: isNativeBuild ? './' : '/',
@@ -44,7 +45,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         devOptions: {
-          enabled: true,
+          enabled: enableDevPwa,
         },
         workbox: {
           globPatterns: [

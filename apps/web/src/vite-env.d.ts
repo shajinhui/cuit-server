@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_AUTORUN_API_BASE_URL?: string
   readonly VITE_PAST_EXAMS_PROXY_BASE_URL?: string
   readonly VITE_RATINGS_API_BASE_URL?: string
+  readonly VITE_PWA_DEV?: string
 }
 
 interface ImportMeta {

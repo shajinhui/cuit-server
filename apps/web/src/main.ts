@@ -17,8 +17,16 @@ applyIosTopScrim()
 
 registerPwaInstall()
 registerNativeRuntime()
-if (!Capacitor.isNativePlatform()) {
+if (!Capacitor.isNativePlatform() && (import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true')) {
   registerSW({ immediate: true })
+} else if (!Capacitor.isNativePlatform() && import.meta.env.DEV && 'serviceWorker' in navigator) {
+  // A development service worker can reload the app while Vite is starting and make every
+  // protected route appear to load twice. Clear registrations left by earlier dev sessions;
+  // production PWA behavior is unchanged and can still be tested with VITE_PWA_DEV=true.
+  void navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+    .catch(() => undefined)
 }
 
 const pinia = createPinia()
