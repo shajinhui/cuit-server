@@ -1,5 +1,7 @@
 import { request } from '@/shared/api/client'
 
+import { clearRatingAssetCache } from './assetCache'
+
 interface RatingTokenResponse {
   access_token: string
   token_type: 'Bearer'
@@ -18,7 +20,10 @@ const tokenRefreshMargin = 30_000
 const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('ratings-auth')
 
 channel?.addEventListener('message', (event: MessageEvent<unknown>) => {
-  if (event.data === 'clear') clearRatingAccessToken()
+  if (event.data === 'clear') {
+    clearRatingAssetCache()
+    clearRatingAccessToken()
+  }
 })
 
 export async function getRatingAccessToken(force = false) {

@@ -16,7 +16,11 @@ import {
 } from '@/features/profile'
 import { clearScheduleCache, hasScheduleCache, useScheduleStore } from '@/features/schedule'
 import { useSessionStore } from '@/features/session'
-import { clearRatingAccessToken, logoutRatingsSession } from '@/features/ratings'
+import {
+  clearRatingAccessToken,
+  clearRatingAssetCache,
+  logoutRatingsSession,
+} from '@/features/ratings'
 
 let userDataReset: Promise<void> | undefined
 
@@ -69,6 +73,7 @@ export async function logoutSession() {
 }
 
 async function clearUserData() {
+  clearRatingAssetCache()
   clearRatingAccessToken(true)
   useClassroomsStore().clearData()
   useExamsStore().clearData()

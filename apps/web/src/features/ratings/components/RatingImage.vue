@@ -16,22 +16,19 @@ const props = withDefaults(
 
 const source = ref('')
 const failed = ref(false)
-let objectURL = ''
 let requestVersion = 0
 
 watch(
   () => props.asset?.id,
   async (assetID) => {
     const version = ++requestVersion
-    releaseURL()
     source.value = ''
     failed.value = false
     if (!assetID) return
     try {
-      const blob = await loadRatingAsset(assetID)
+      const cachedSource = await loadRatingAsset(assetID)
       if (version !== requestVersion) return
-      objectURL = URL.createObjectURL(blob)
-      source.value = objectURL
+      source.value = cachedSource
     } catch {
       if (version === requestVersion) failed.value = true
     }
@@ -41,13 +38,7 @@ watch(
 
 onBeforeUnmount(() => {
   requestVersion += 1
-  releaseURL()
 })
-
-function releaseURL() {
-  if (objectURL) URL.revokeObjectURL(objectURL)
-  objectURL = ''
-}
 </script>
 
 <template>

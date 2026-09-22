@@ -1,4 +1,5 @@
 import { currentRatingAccessToken, clearRatingAccessToken } from './auth'
+import { cachedRatingAssetSource, clearRatingAssetCache } from './assetCache'
 import { ratingsBlob, ratingsRequest, revokeRatingToken } from './client'
 import type {
   CursorPage,
@@ -152,7 +153,9 @@ export function uploadRatingAsset(file: File) {
 }
 
 export function loadRatingAsset(assetID: string) {
-  return ratingsBlob(`/api/v1/ratings/assets/${encodeURIComponent(assetID)}/content`)
+  return cachedRatingAssetSource(assetID, () =>
+    ratingsBlob(`/api/v1/ratings/assets/${encodeURIComponent(assetID)}/content`),
+  )
 }
 
 export function createRatingReport(input: {
@@ -211,5 +214,6 @@ export function updateRatingAdminReport(
 export async function logoutRatingsSession() {
   const token = currentRatingAccessToken()
   if (token) await revokeRatingToken(token).catch(() => undefined)
+  clearRatingAssetCache()
   clearRatingAccessToken(true)
 }
