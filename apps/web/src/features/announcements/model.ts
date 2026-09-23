@@ -12,10 +12,10 @@ export interface AnnouncementViewState {
 export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 1
 
 export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
-  id: 'community-group-capacity-2026-09-18',
-  title: '交流群已扩容，可以正常加入了',
+  id: 'ratings-launch-2026-09-23',
+  title: '友友评分上线，来给校园生活打个分',
   description:
-    '之前的交流群人数已达上限，不少同学加不进来，现已提升容量。遇到问题或想提建议，欢迎加入交流群反馈，群内也会同步最新进展。',
+    '现在可以在工具页打开“友友评分”：创建评分板块、添加评分对象，分享真实评分与评论。请友善表达、尊重他人；发现不当内容时可以直接举报，也欢迎加入交流群反馈建议。',
 }
 
 export function getAnnouncementViewCount(
