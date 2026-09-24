@@ -17,13 +17,21 @@ const IOS_TOP_SCRIM_FIRST_MAJOR = 27
 /**
  * Reads the iOS major version out of a Safari/WKWebView user agent, e.g.
  * `(iPhone; CPU iPhone OS 27_0 like Mac OS X)` or `(iPad; CPU OS 27_1 like Mac OS X)`.
- * iPads that request the desktop site report a macOS user agent and yield `undefined`.
+ * Safari 26+ freezes the OS part of its iOS user agent at 18.x, so the Safari
+ * `Version/26.0` (or later) token is also considered. iPads that request the
+ * desktop site report a macOS user agent and yield `undefined`.
  */
 export function detectIosMajorVersion(userAgent: string): number | undefined {
-  const match = /(?:iPhone|CPU) OS (\d+)[._]/i.exec(userAgent)
-  if (!match) return undefined
-  const major = Number(match[1])
-  return Number.isInteger(major) ? major : undefined
+  if (!/(?:iPhone|iPad|iPod)/i.test(userAgent)) return undefined
+
+  const versions = [
+    /(?:iPhone|CPU) OS (\d+)[._]/i.exec(userAgent)?.[1],
+    /(?:^|[\s(;])Version\/(\d+)(?:[._])/i.exec(userAgent)?.[1],
+  ]
+    .map((version) => Number(version))
+    .filter((version) => Number.isInteger(version))
+
+  return versions.length > 0 ? Math.max(...versions) : undefined
 }
 
 export interface IosTopScrimContext {
