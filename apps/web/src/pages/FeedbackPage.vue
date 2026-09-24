@@ -9,6 +9,7 @@ import {
   type FeedbackType,
 } from '@/features/feedback'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
 
 defineOptions({ name: 'FeedbackPage' })
 
@@ -68,6 +69,22 @@ function detectPlatform(): FeedbackPlatform {
     </header>
 
     <form class="feedback-content" @submit.prevent="submit">
+      <aside class="feedback-community-note" aria-labelledby="feedback-community-title">
+        <span class="feedback-community-note__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 5.5h11.5v8H9l-3.8 3v-3H4v-8Z" />
+            <path d="M10 15.5h5l3.8 3v-3H20v-8h-2" />
+          </svg>
+        </span>
+        <div>
+          <strong id="feedback-community-title">建议优先加群反馈</strong>
+          <p>这里的反馈开发者可能无法及时看到；需要尽快回复时，请直接加入交流群。</p>
+        </div>
+        <a :href="QQ_GROUP_URL" target="_blank" rel="noopener noreferrer">
+          加入群 {{ QQ_GROUP_NUMBER }}
+        </a>
+      </aside>
+
       <section class="feedback-section" aria-labelledby="feedback-type-title">
         <div class="feedback-section__heading">
           <h2 id="feedback-type-title">反馈类型</h2>

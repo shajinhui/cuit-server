@@ -18,6 +18,11 @@ import {
   type CourseTone,
   type ManualCourseInput,
 } from '@/features/schedule'
+import {
+  MAX_NON_CURRENT_WEEK_OPACITY,
+  MIN_NON_CURRENT_WEEK_OPACITY,
+  NON_CURRENT_WEEK_OPACITY_STEP,
+} from '@/features/schedule/model/displayPreferences'
 import { useProfileStore } from '@/features/profile'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -127,6 +132,12 @@ function toggleMoreMenu() {
 function toggleSemesterList() {
   if (store.loading || store.semesters.length === 0) return
   semesterListOpen.value = !semesterListOpen.value
+}
+
+function updateNonCurrentWeekOpacity(event: Event) {
+  const input = event.target
+  if (!(input instanceof HTMLInputElement)) return
+  store.setNonCurrentWeekOpacity(Number(input.value))
 }
 
 function openAddCourse() {
@@ -476,6 +487,27 @@ async function refreshSchedule() {
                   </button>
                 </div>
 
+                <div class="schedule-display-setting">
+                  <div class="schedule-display-setting__heading">
+                    <strong>非本周透明度</strong>
+                    <output>{{ Math.round(store.nonCurrentWeekOpacity * 100) }}%</output>
+                  </div>
+                  <input
+                    type="range"
+                    :min="MIN_NON_CURRENT_WEEK_OPACITY"
+                    :max="MAX_NON_CURRENT_WEEK_OPACITY"
+                    :step="NON_CURRENT_WEEK_OPACITY_STEP"
+                    :value="store.nonCurrentWeekOpacity"
+                    aria-label="非本周课程透明度"
+                    :aria-valuetext="`${Math.round(store.nonCurrentWeekOpacity * 100)}%`"
+                    @input="updateNonCurrentWeekOpacity"
+                  />
+                  <div class="schedule-display-setting__labels" aria-hidden="true">
+                    <span>更淡</span>
+                    <span>更清晰</span>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   class="schedule-semester-option schedule-calendar-export-option"
@@ -546,6 +578,7 @@ async function refreshSchedule() {
         <ScheduleGrid
           v-else
           :courses="courses"
+          :non-current-week-opacity="store.nonCurrentWeekOpacity"
           :selected-week="selectedWeek"
           :time-slots="timeSlots"
           @select="openCourseDetails"

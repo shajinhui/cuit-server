@@ -290,6 +290,50 @@
   border-radius: 0 0 13px 13px;
 }
 
+.schedule-display-setting {
+  margin-top: 3px;
+  padding: 11px 12px 9px;
+  border-top: 0.5px solid rgba(47, 60, 76, 0.1);
+}
+
+.schedule-display-setting__heading,
+.schedule-display-setting__labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-display-setting__heading {
+  margin-bottom: 7px;
+}
+
+.schedule-display-setting__heading strong {
+  color: #101722;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.schedule-display-setting__heading output {
+  color: #0878e8;
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.schedule-display-setting input[type='range'] {
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  accent-color: #0878e8;
+}
+
+.schedule-display-setting__labels {
+  margin-top: -2px;
+  color: rgba(16, 23, 34, 0.52);
+  font-size: 10px;
+}
+
 .schedule-header__actions .schedule-calendar-export-option svg {
   top: 50%;
   width: 19px;
@@ -781,7 +825,7 @@
 
 .course-block.is-muted {
   z-index: 1;
-  opacity: 0.48;
+  opacity: var(--schedule-muted-opacity, 0.48);
 }
 
 .course-block__status {

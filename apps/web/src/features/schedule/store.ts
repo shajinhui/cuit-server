@@ -22,6 +22,10 @@ import {
   writeScheduleCache,
 } from './cache'
 import type { CourseColorPreference, CourseTone } from './model/courseColor'
+import {
+  readNonCurrentWeekOpacity,
+  writeNonCurrentWeekOpacity,
+} from './model/displayPreferences'
 import { currentSchoolWeek } from './model/semesterCalendar'
 import {
   createCourseOverride,
@@ -50,6 +54,7 @@ export const useScheduleStore = defineStore('schedule', {
     courseOverridesLoaded: false,
     courseColorPreferences: [] as CourseColorPreference[],
     courseColorPreferencesLoaded: false,
+    nonCurrentWeekOpacity: readNonCurrentWeekOpacity(),
     currentWeek: 0,
     loading: false,
     error: '',
@@ -239,6 +244,9 @@ export const useScheduleStore = defineStore('schedule', {
       }
       await writeCourseColorPreferences(nextPreferences)
       this.courseColorPreferences = nextPreferences
+    },
+    setNonCurrentWeekOpacity(opacity: number) {
+      this.nonCurrentWeekOpacity = writeNonCurrentWeekOpacity(opacity)
     },
     async removeManualCourse(courseID: string) {
       const course = this.manualCourses.find((item) => item.id === courseID)

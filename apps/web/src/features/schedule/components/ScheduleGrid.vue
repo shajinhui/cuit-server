@@ -3,6 +3,7 @@ import type { CourseBlock, TimeSlot } from '../model/calendar'
 
 defineProps<{
   courses: CourseBlock[]
+  nonCurrentWeekOpacity: number
   selectedWeek: number
   timeSlots: TimeSlot[]
 }>()
@@ -17,6 +18,7 @@ const emit = defineEmits<{
     class="schedule-grid"
     :aria-label="`第 ${selectedWeek || 1} 周课表`"
     :style="{
+      '--schedule-muted-opacity': nonCurrentWeekOpacity,
       '--schedule-section-count': timeSlots.length,
       gridTemplateRows: `repeat(${timeSlots.length}, minmax(0, 1fr))`,
     }"
