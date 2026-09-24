@@ -11,7 +11,8 @@ describe('schedule display preferences', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('clamps non-current-week opacity to the supported range', () => {
-    expect(normalizeNonCurrentWeekOpacity(0.05)).toBe(0.2)
+    expect(normalizeNonCurrentWeekOpacity(-0.05)).toBe(0)
+    expect(normalizeNonCurrentWeekOpacity(0.05)).toBe(0.05)
     expect(normalizeNonCurrentWeekOpacity(0.65)).toBe(0.65)
     expect(normalizeNonCurrentWeekOpacity(1.5)).toBe(1)
     expect(normalizeNonCurrentWeekOpacity(Number.NaN)).toBe(DEFAULT_NON_CURRENT_WEEK_OPACITY)
