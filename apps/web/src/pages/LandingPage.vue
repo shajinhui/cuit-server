@@ -3,13 +3,11 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import landingClassrooms from '@/assets/landing/landing-classrooms.webp'
-import landingClub from '@/assets/landing/landing-club.webp'
 import landingExams from '@/assets/landing/landing-exams.webp'
 import landingGrades from '@/assets/landing/landing-grades.webp'
 import landingLibrary from '@/assets/landing/landing-library.webp'
 import landingProfile from '@/assets/landing/landing-profile.webp'
 import landingResources from '@/assets/landing/landing-resources.webp'
-import landingRun from '@/assets/landing/landing-run.webp'
 import landingSchedule from '@/assets/landing/landing-schedule.webp'
 import landingTools from '@/assets/landing/landing-tools.webp'
 import { usePwaInstall } from '@/features/pwa-install'
@@ -277,24 +275,6 @@ function resetHeroPerspective() {
           </ul>
         </div>
       </article>
-    </section>
-
-    <section class="landing-life">
-      <div class="landing-life__copy landing-reveal">
-        <p class="landing-eyebrow">不止教务</p>
-        <h2>校园生活，<br />也可以更简单。</h2>
-        <p>校园跑进度、俱乐部活动与签到状态，一起收进熟悉的 App 体验里。</p>
-      </div>
-      <div class="landing-life__visual landing-reveal">
-        <div class="landing-phone landing-phone--life landing-phone--life-left">
-          <div class="landing-phone__island" aria-hidden="true" />
-          <img :src="landingRun" alt="校园跑页面" loading="lazy" />
-        </div>
-        <div class="landing-phone landing-phone--life landing-phone--life-right">
-          <div class="landing-phone__island" aria-hidden="true" />
-          <img :src="landingClub" alt="俱乐部活动页面" loading="lazy" />
-        </div>
-      </div>
     </section>
 
     <section class="landing-platform landing-reveal">

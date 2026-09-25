@@ -138,12 +138,6 @@ const router = createRouter({
       component: () => import('@/pages/CampusMapPage.vue'),
     },
     {
-      path: '/campus-run',
-      name: 'autorun',
-      component: () => import('@/pages/AutoRunPage.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
       path: '/past-exams',
       name: 'past-exams',
       component: () => import('@/pages/PastExamsPage.vue'),
