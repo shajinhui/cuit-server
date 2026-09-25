@@ -12,7 +12,23 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="成信友友" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      (() => {
+        const userAgent = navigator.userAgent
+        const installed =
+          navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches
+        if (!installed || !/(?:iPhone|iPad|iPod)/i.test(userAgent)) return
+        const versions = [
+          /(?:iPhone|CPU) OS (\d+)[._]/i.exec(userAgent)?.[1],
+          /(?:^|[\s(;])Version\/(\d+)(?:[._])/i.exec(userAgent)?.[1],
+        ]
+          .map((version) => Number(version))
+          .filter((version) => Number.isInteger(version))
+        if (versions.length > 0 && Math.max(...versions) >= 27) {
+          document.documentElement.dataset.iosTopScrim = 'true'
+        }
+      })()
+    </script>
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/app-icon-192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/app-icon-192.png" />
     <title>成信友友</title>
@@ -137,6 +153,7 @@
     </style>
   </head>
   <body>
+    <div id="ios-pwa-status-strip" class="ios-pwa-status-strip" aria-hidden="true"></div>
     <div id="app">
       <div class="app-launch-screen" role="status" aria-label="成信友友正在启动">
         <div class="app-launch-content">

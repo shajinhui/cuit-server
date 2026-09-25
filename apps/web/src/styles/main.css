@@ -45,16 +45,28 @@
 }
 
 /*
- * iOS 27 composites a ~80pt system blur across the top of the window for
- * installed web apps and the native shell. It is drawn above the page, so it
- * cannot be removed from CSS; the workaround is to guarantee that the first row
- * of content starts below the band. Raising the shared safe-area override moves
- * every page that already offsets itself by the top inset, and leaves the
- * browser-tab, iOS 26 and Android layouts untouched.
- * Revisit once Apple stops applying the effect.
+ * iOS 26/27 may add a system scroll-pocket blur to standalone web apps. A
+ * fixed, non-painting color extension at the top gives WebKit a stable top
+ * edge to anchor against and removes the blur without changing page geometry.
+ * The element is only enabled by iosTopScrim.ts for affected standalone apps.
  */
-html[data-ios-top-scrim='true'] {
-  --safe-area-inset-top: max(env(safe-area-inset-top, 0px), 88px);
+.ios-pwa-status-strip {
+  display: none;
+}
+
+html[data-ios-top-scrim='true'] .ios-pwa-status-strip {
+  position: fixed;
+  z-index: 2147483647;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: block;
+  height: 11px;
+  pointer-events: none;
+  color: transparent;
+  background-color: #fbfcf9;
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 * {

@@ -1,14 +1,10 @@
 import { Capacitor } from '@capacitor/core'
 
 /**
- * iOS 27 composites a system top-edge scrim over web apps that are running as an
- * installed/standalone app or inside the native iOS shell. It is a progressive
- * blur roughly 72-80pt tall measured from the physical top of the display, and it
- * renders *above* the page: no DOM or CSS state can switch it off, and blurring a
- * flat background is invisible, so the only mitigation is to keep the first row of
- * content below the band. See https://github.com/vjt/grappa-irc/issues/1236 for the
- * measured luminance profile on iPadOS 27. The reserved space itself lives in
- * `main.css` (`html[data-ios-top-scrim='true']`).
+ * iOS 27 can composite a system scroll-pocket blur over installed web apps and
+ * native shells. Native shells disable the UIKit edge effect directly; standalone
+ * web apps use the fixed color extension in `main.css` to give WebKit a stable
+ * top edge without adding layout space.
  */
 export const IOS_TOP_SCRIM_DATA_KEY = 'iosTopScrim'
 
@@ -54,8 +50,8 @@ function isInstalledWebApp(): boolean {
 }
 
 /**
- * Marks the document so `main.css` can reserve room under the scrim. Called once
- * before the app mounts.
+ * Marks the document so `main.css` can enable the standalone-app workaround.
+ * Called once before the app mounts.
  */
 export function applyIosTopScrim(): boolean {
   if (typeof window === 'undefined') return false
