@@ -68,3 +68,16 @@ export function clearRatingAccessToken(broadcast = false) {
 export function currentRatingSessionGeneration() {
   return sessionGeneration
 }
+
+export function currentRatingAssetScope() {
+  const token = activeToken?.value ?? ''
+  const payload = token.split('.')[1]
+  if (!payload) return 'anonymous'
+  try {
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (payload.length % 4)) % 4)
+    const claims = JSON.parse(atob(normalized)) as { sub?: unknown }
+    return typeof claims.sub === 'string' && claims.sub ? claims.sub : 'anonymous'
+  } catch {
+    return 'anonymous'
+  }
+}

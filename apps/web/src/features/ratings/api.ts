@@ -1,4 +1,4 @@
-import { currentRatingAccessToken, clearRatingAccessToken } from './auth'
+import { currentRatingAccessToken, clearRatingAccessToken, currentRatingAssetScope } from './auth'
 import { cachedRatingAssetSource, clearRatingAssetCache } from './assetCache'
 import { ratingsBlob, ratingsRequest, revokeRatingToken } from './client'
 import type {
@@ -153,7 +153,7 @@ export function uploadRatingAsset(file: File) {
 }
 
 export function loadRatingAsset(assetID: string) {
-  return cachedRatingAssetSource(assetID, () =>
+  return cachedRatingAssetSource(currentRatingAssetScope(), assetID, () =>
     ratingsBlob(`/api/v1/ratings/assets/${encodeURIComponent(assetID)}/content`),
   )
 }

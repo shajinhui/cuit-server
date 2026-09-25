@@ -11,14 +11,14 @@ describe('rating asset cache', () => {
     const load = vi.fn().mockResolvedValue(new Blob(['rating-image'], { type: 'image/jpeg' }))
 
     const [first, concurrent] = await Promise.all([
-      cachedRatingAssetSource('asset-1', load),
-      cachedRatingAssetSource('asset-1', load),
+      cachedRatingAssetSource('scope', 'asset-1', load),
+      cachedRatingAssetSource('scope', 'asset-1', load),
     ])
-    const laterPage = await cachedRatingAssetSource('asset-1', load)
+    const laterPage = await cachedRatingAssetSource('scope', 'asset-1', load)
 
     expect(load).toHaveBeenCalledTimes(1)
-    expect(concurrent).toBe(first)
-    expect(laterPage).toBe(first)
+    expect(concurrent.source).toBe(first.source)
+    expect(laterPage.source).toBe(first.source)
   })
 
   it('removes failed requests so a later render can retry', async () => {
@@ -27,21 +27,21 @@ describe('rating asset cache', () => {
       .mockRejectedValueOnce(new Error('network error'))
       .mockResolvedValueOnce(new Blob(['recovered']))
 
-    await expect(cachedRatingAssetSource('asset-2', load)).rejects.toThrow('network error')
-    await expect(cachedRatingAssetSource('asset-2', load)).resolves.toMatch(/^blob:/)
+    await expect(cachedRatingAssetSource('scope', 'asset-2', load)).rejects.toThrow('network error')
+    await expect(cachedRatingAssetSource('scope', 'asset-2', load)).resolves.toMatchObject({ source: expect.stringMatching(/^blob:/) })
     expect(load).toHaveBeenCalledTimes(2)
   })
 
   it('drops cached object URLs when the rating session is cleared', async () => {
     const revoke = vi.spyOn(URL, 'revokeObjectURL')
     const load = vi.fn().mockResolvedValue(new Blob(['private-image']))
-    const first = await cachedRatingAssetSource('asset-3', load)
+    const first = await cachedRatingAssetSource('scope', 'asset-3', load)
 
     clearRatingAssetCache()
-    const second = await cachedRatingAssetSource('asset-3', load)
+    const second = await cachedRatingAssetSource('scope', 'asset-3', load)
 
-    expect(revoke).toHaveBeenCalledWith(first)
+    expect(revoke).toHaveBeenCalledWith(first.source)
     expect(load).toHaveBeenCalledTimes(2)
-    expect(second).not.toBe(first)
+    expect(second.source).not.toBe(first.source)
   })
 })

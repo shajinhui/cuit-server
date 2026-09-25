@@ -345,6 +345,53 @@
   object-fit: cover;
 }
 
+.rating-image.is-clickable {
+  cursor: zoom-in;
+}
+
+.rating-image-preview-backdrop {
+  position: fixed;
+  z-index: 220;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.rating-image-preview {
+  display: block;
+  width: min(92vw, 900px);
+  max-height: 86vh;
+  object-fit: contain;
+  border-radius: 14px;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+}
+
+.rating-image-preview-close {
+  position: absolute;
+  top: max(14px, var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
+  right: max(14px, var(--safe-area-inset-right, env(safe-area-inset-right, 0px)));
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.38);
+  border: 0;
+  border-radius: 50%;
+}
+
+.rating-image-preview-enter-active,
+.rating-image-preview-leave-active {
+  transition: opacity 160ms ease;
+}
+
+.rating-image-preview-enter-from,
+.rating-image-preview-leave-to {
+  opacity: 0;
+}
+
 .rating-image svg {
   width: 44%;
   max-width: 38px;

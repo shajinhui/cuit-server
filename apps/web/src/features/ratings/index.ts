@@ -7,4 +7,5 @@ export {
   getRatingAccessToken,
   hasUsableRatingAccessToken,
 } from './auth'
+export { currentRatingAssetScope } from './auth'
 export * from './model'
