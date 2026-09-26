@@ -34,7 +34,7 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/app-icon-192.png" />
     <title>成信友友</title>
     <script>
-      if (location.pathname === '/schedule') {
+      if (location.pathname === '/' || location.pathname === '/schedule') {
         document.documentElement.dataset.initialPage = 'schedule'
         document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#c9d5e7')
       }
