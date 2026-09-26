@@ -34,9 +34,18 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/app-icon-192.png" />
     <title>成信友友</title>
     <script>
+      const initialThemeColors = {
+        '/': '#c9d5e7',
+        '/schedule': '#c9d5e7',
+        '/official': '#f4f7fb',
+        '/calendar': '#e9ebee',
+        '/grades': '#f6f6f8',
+        '/admin/stats': '#f4f6fa',
+      }
+      const initialThemeColor = initialThemeColors[location.pathname] || '#f2f2f7'
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', initialThemeColor)
       if (location.pathname === '/' || location.pathname === '/schedule') {
         document.documentElement.dataset.initialPage = 'schedule'
-        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#c9d5e7')
       }
     </script>
     <style>
