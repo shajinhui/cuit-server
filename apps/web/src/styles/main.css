@@ -18,6 +18,7 @@
 @import './pwa-install.css';
 @import './app-announcement.css';
 @import './app-update.css';
+@import './autorun.css';
 @import './past-exams.css';
 @import './library.css';
 @import './landing.css';
@@ -273,6 +274,13 @@ html[data-platform='android'] .bottom-navigation {
 
 .bottom-navigation__icon--profile {
   --nav-icon-size: 117%;
+  --nav-icon-offset-y: 0px;
+}
+
+/* These custom icons already fill their canvas; the default PNG overscan would crop them. */
+.bottom-navigation__icon--campus-run,
+.bottom-navigation__icon--club {
+  --nav-icon-size: 100%;
   --nav-icon-offset-y: 0px;
 }
 

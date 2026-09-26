@@ -9,6 +9,7 @@ import gradesIcon from '@/assets/icons/tool-grades.png'
 import libraryIcon from '@/assets/icons/tool-library.png'
 import mapIcon from '@/assets/icons/tool-campus-map.png'
 import ratingsIcon from '@/assets/icons/tool-ratings.svg'
+import autoRunIcon from '@/assets/icons/tool-campus-run.svg'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
 import {
   ACTIVE_ANNOUNCEMENT,
@@ -39,6 +40,7 @@ const tools: ToolItem[] = [
   { label: '校历', icon: calendarIcon, route: 'calendar' },
   { label: '考场查询', icon: examRoomIcon, route: 'exams' },
   { label: '校园地图', icon: mapIcon, route: 'campus-map' },
+  { label: '校园跑与俱乐部', icon: autoRunIcon, route: 'autorun' },
   { label: '历年试卷', icon: pastExamsIcon, route: 'past-exams' },
   { label: '图书馆', icon: libraryIcon, route: 'library' },
   // 评分 Worker 未接入时隐藏入口，避免线上出现无法使用的工具。
