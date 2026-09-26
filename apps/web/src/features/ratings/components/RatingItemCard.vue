@@ -16,9 +16,9 @@ defineProps<{ item: RatingItem }>()
       <small>由 {{ item.creator.display_name }} 添加</small>
     </span>
     <span class="rating-item-card__score" :class="{ 'is-empty': item.rating.score === null }">
-      <span aria-hidden="true">★</span>
+      <span class="rating-item-card__stars" aria-hidden="true">★★★★★</span>
       <b>{{ scoreLabel(item.rating.score) }}</b>
-      <small>{{ item.rating.count }} 人</small>
+      <small>{{ item.rating.count }} 人评分</small>
     </span>
   </RouterLink>
 </template>
