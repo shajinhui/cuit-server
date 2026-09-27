@@ -1,4 +1,5 @@
 import rawMap from './map.json'
+import longquanMap from './map-longquan.json'
 
 const EARTH_RADIUS_METERS = 6_371_000
 const MAX_TRACK_HOPS = 10_000
@@ -9,6 +10,8 @@ export interface TrackLocation {
   location: string
   edge: number[]
 }
+
+export type AutoRunCampus = 'airport' | 'longquan'
 
 export type RandomSource = () => number
 
@@ -24,11 +27,12 @@ function randomInt(maxExclusive: number, random: RandomSource): number {
 }
 
 /** Load the campus path bundled with the feature and validate its graph indices. */
-export function loadTrackMap(): TrackLocation[] {
-  return parseTrackMap(rawMap)
+export function loadTrackMap(campus: AutoRunCampus = 'airport'): TrackLocation[] {
+  return parseTrackMap(campus === 'longquan' ? longquanMap : rawMap)
 }
 
 export function parseTrackMap(value: unknown): TrackLocation[] {
+  if (isPolylineMap(value)) return parsePolylineMap(value.mapData)
   if (!Array.isArray(value) || value.length === 0) throw new Error('map.json 为空或格式无效')
 
   const locations: TrackLocation[] = []
@@ -61,6 +65,27 @@ export function parseTrackMap(value: unknown): TrackLocation[] {
     }
   }
   return locations
+}
+
+interface PolylineMap {
+  mapData: unknown
+}
+
+function isPolylineMap(value: unknown): value is PolylineMap {
+  return typeof value === 'object' && value !== null && 'mapData' in value
+}
+
+function parsePolylineMap(value: unknown): TrackLocation[] {
+  if (!Array.isArray(value) || value.length < 2) throw new Error('地图路径为空或格式无效')
+
+  const locations = value.map((location, id) => {
+    if (typeof location !== 'string' || !/^[-+]?\d+(?:\.\d+)?\s*,\s*[-+]?\d+(?:\.\d+)?$/.test(location)) {
+      throw new Error('地图路径坐标无效')
+    }
+    return { id, location, edge: [(id + 1) % value.length] }
+  })
+
+  return parseTrackMap(locations)
 }
 
 /**

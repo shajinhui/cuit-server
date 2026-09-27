@@ -13,6 +13,7 @@ import {
   cancelAutoRunClub,
   clearAutoRunSessionKey,
   createAutoRunWeekDates,
+  detectAutoRunCampus,
   describeAutoRunClubSignTask,
   formatAutoRunNumber,
   formatLocalDate,
@@ -32,6 +33,7 @@ import {
   setAutoRunClubSchedule,
   signAutoRunClub,
   submitAutoRun,
+  loadTrackMap,
   type AutoRunClubActivityView,
   type AutoRunClubSignTaskView,
   type AutoRunProgressCard,
@@ -231,10 +233,12 @@ async function runOnce() {
   try {
     const preparation = await withManualLoading(true, () => prepareAutoRun(sessionKey.value))
     adoptRotatedSession(preparation.data)
+    const campus = detectAutoRunCampus(preparation.data.bounds, preparation.data.runStandard)
     const record = buildAutoRunRecordBody({
       identity: { userId: preparation.data.userId, schoolId: preparation.data.schoolId },
       standard: preparation.data.runStandard,
       bounds: preparation.data.bounds,
+      locations: loadTrackMap(campus),
     })
     const result = await withManualLoading(true, () => submitAutoRun(sessionKey.value, record))
     adoptRotatedSession(result.data)

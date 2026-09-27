@@ -5,7 +5,14 @@ import {
   AUTORUN_MOBILE_TYPE,
   AUTORUN_SYS_VERSION,
 } from './request'
-import { calculateDistance, generateTrack, loadTrackMap, type RandomSource, type TrackLocation } from './track'
+import {
+  calculateDistance,
+  generateTrack,
+  loadTrackMap,
+  type AutoRunCampus,
+  type RandomSource,
+  type TrackLocation,
+} from './track'
 
 export interface AutoRunRunIdentity {
   userId: number
@@ -48,6 +55,42 @@ export interface BuildAutoRunRecordBodyOptions {
   locations?: readonly TrackLocation[]
   runDistance?: number
   runTime?: number
+}
+
+const LONGQUAN_CAMPUS_CENTER = { longitude: 104.306, latitude: 30.607 }
+const LONGQUAN_CAMPUS_TOLERANCE = 0.02
+
+/** Detect the campus represented by the upstream run-preparation response. */
+export function detectAutoRunCampus(
+  bounds: readonly AutoRunSchoolBound[] = [],
+  standard: AutoRunRunStandard = {},
+): AutoRunCampus {
+  const explicitCampus = [
+    standard.campus,
+    standard.campusName,
+    standard.schoolCampus,
+    standard.schoolName,
+  ]
+    .map(readString)
+    .find(Boolean)
+  if (explicitCampus && /龙泉|longquan|lqy/i.test(explicitCampus)) return 'longquan'
+
+  const explicitCampusId = readString(standard.campusId ?? standard.campusID ?? standard.campus_id)
+  if (explicitCampusId === '2') return 'longquan'
+
+  for (const bound of bounds) {
+    const values = readCoordinateValues(bound.siteBound)
+    for (const [longitude, latitude] of values) {
+      if (
+        Math.abs(longitude - LONGQUAN_CAMPUS_CENTER.longitude) <= LONGQUAN_CAMPUS_TOLERANCE &&
+        Math.abs(latitude - LONGQUAN_CAMPUS_CENTER.latitude) <= LONGQUAN_CAMPUS_TOLERANCE
+      ) {
+        return 'longquan'
+      }
+    }
+  }
+
+  return 'airport'
 }
 
 function secureRandom(): number {
@@ -109,4 +152,17 @@ export { calculateDistance }
 
 function readString(value: unknown): string {
   return value === null || value === undefined ? '' : String(value).trim()
+}
+
+function readCoordinateValues(value: unknown): Array<[number, number]> {
+  const numbers = readString(value)
+    .match(/[+-]?\d+(?:\.\d+)?/g)
+    ?.slice(0, 2)
+    .map(Number)
+    .filter(Number.isFinite)
+  if (!numbers || numbers.length < 2) return []
+  return [
+    [numbers[0] ?? 0, numbers[1] ?? 0],
+    [numbers[1] ?? 0, numbers[0] ?? 0],
+  ]
 }

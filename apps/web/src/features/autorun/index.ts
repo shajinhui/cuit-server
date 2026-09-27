@@ -42,4 +42,5 @@ export {
   loadAutoRunSessionKey,
   saveAutoRunSessionKey,
 } from './session-storage'
-export { buildAutoRunRecordBody } from './run'
+export { buildAutoRunRecordBody, detectAutoRunCampus } from './run'
+export { loadTrackMap } from './track'

@@ -14,6 +14,13 @@ describe('校园跑轨迹计算', () => {
     expect(locations[0]).toMatchObject({ id: 0, edge: [1] })
   })
 
+  it('加载龙泉校区闭环轨迹地图', () => {
+    const locations = loadTrackMap('longquan')
+    expect(locations).toHaveLength(180)
+    expect(locations[0]).toMatchObject({ id: 0, location: '104.306217,30.606409', edge: [1] })
+    expect(locations.at(-1)).toMatchObject({ id: 179, edge: [0] })
+  })
+
   it('生成格式正确且时间单调递增的轨迹点', () => {
     let counter = 0
     const random = (): number => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildAutoRunRecordBody, randomRange } from './run'
+import { buildAutoRunRecordBody, detectAutoRunCampus, randomRange } from './run'
 import { parseTrackMap } from './track'
 
 describe('校园跑请求体计算', () => {
@@ -8,6 +8,13 @@ describe('校园跑请求体计算', () => {
     { id: 0, location: '103.000000,30.000000', edge: [1] },
     { id: 1, location: '103.001000,30.000000', edge: [0] },
   ])
+
+  it('根据龙泉围栏坐标识别校区', () => {
+    expect(detectAutoRunCampus([{ siteBound: '30.606409,104.306217' }])).toBe('longquan')
+    expect(detectAutoRunCampus([{ siteBound: '103.9,30.6' }])).toBe('airport')
+    expect(detectAutoRunCampus([], { campusId: 2 })).toBe('longquan')
+    expect(detectAutoRunCampus([], { campusName: '龙泉校区' })).toBe('longquan')
+  })
 
   it('在前端生成轨迹、距离和设备字段', () => {
     const body = buildAutoRunRecordBody({
