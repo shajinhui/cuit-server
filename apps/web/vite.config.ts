@@ -62,7 +62,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      host: '127.0.0.1',
+      // Allow testing the dev build from a phone on the same Wi-Fi network.
+      host: true,
       port: 5173,
       fs: {
         allow: [

@@ -170,6 +170,13 @@ router.beforeEach(async (to) => {
   if (!needsSession) return true
   if (to.meta.ratingAuth && hasUsableRatingAccessToken()) return true
 
+  // Local-only layout preview for testing the app from a phone without a campus account.
+  // Vite replaces DEV with false in production builds, so this cannot bypass production auth.
+  if (import.meta.env.DEV && to.query.preview === '1') {
+    session.markOffline()
+    return true
+  }
+
   if (session.status === 'unknown') {
     const canStartOffline =
       to.name === 'schedule' ? await restoreScheduleOfflineAccess() : await restoreOfflineAccess()

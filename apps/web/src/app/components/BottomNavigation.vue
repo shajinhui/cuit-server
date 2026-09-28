@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, type RouteLocationRaw } from 'vue-router'
+import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
 
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
 import scheduleIcon from '@/assets/icons/nav-schedule.png'
@@ -51,51 +52,68 @@ const activeIndex = computed(() => {
 </script>
 
 <template>
-  <nav
+  <div
     class="bottom-navigation"
     :class="{
       'bottom-navigation--inline': inline,
       'bottom-navigation--compact': compact,
     }"
-    :style="{ '--navigation-item-count': resolvedItems.length }"
-    :aria-label="ariaLabel"
   >
-    <span
-      class="bottom-navigation__selection"
-      :style="{ '--active-index': activeIndex }"
-      aria-hidden="true"
-    />
-    <template v-for="item in resolvedItems" :key="item.name">
-      <RouterLink
-        v-if="item.to"
-        :to="item.to"
-        class="bottom-navigation__item"
-        :class="{ 'is-active': resolvedActiveName === item.name }"
+    <LiquidGlass
+      class="bottom-navigation__glass"
+      :mode="GlassMode.standard"
+      :displacement-scale="64"
+      :blur-amount="0.1"
+      :saturation="135"
+      :aberration-intensity="1.6"
+      :elasticity="0.08"
+      :corner-radius="32"
+      padding="0"
+      :style="{ position: 'absolute', width: '100%', height: '100%' }"
+    >
+      <nav
+        class="bottom-navigation__content"
+        :style="{ '--navigation-item-count': resolvedItems.length }"
+        :aria-label="ariaLabel"
       >
         <span
-          class="bottom-navigation__icon"
-          :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
-          :style="{ '--nav-icon': `url(${item.icon})` }"
+          class="bottom-navigation__selection"
+          :style="{ '--active-index': activeIndex }"
           aria-hidden="true"
         />
-        <span>{{ item.label }}</span>
-      </RouterLink>
-      <button
-        v-else
-        type="button"
-        class="bottom-navigation__item"
-        :class="{ 'is-active': resolvedActiveName === item.name }"
-        :aria-current="resolvedActiveName === item.name ? 'page' : undefined"
-        @click="emit('select', item.name)"
-      >
-        <span
-          class="bottom-navigation__icon"
-          :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
-          :style="{ '--nav-icon': `url(${item.icon})` }"
-          aria-hidden="true"
-        />
-        <span>{{ item.label }}</span>
-      </button>
-    </template>
-  </nav>
+        <template v-for="item in resolvedItems" :key="item.name">
+          <RouterLink
+            v-if="item.to"
+            :to="item.to"
+            class="bottom-navigation__item"
+            :class="{ 'is-active': resolvedActiveName === item.name }"
+          >
+            <span
+              class="bottom-navigation__icon"
+              :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
+              :style="{ '--nav-icon': `url(${item.icon})` }"
+              aria-hidden="true"
+            />
+            <span>{{ item.label }}</span>
+          </RouterLink>
+          <button
+            v-else
+            type="button"
+            class="bottom-navigation__item"
+            :class="{ 'is-active': resolvedActiveName === item.name }"
+            :aria-current="resolvedActiveName === item.name ? 'page' : undefined"
+            @click="emit('select', item.name)"
+          >
+            <span
+              class="bottom-navigation__icon"
+              :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
+              :style="{ '--nav-icon': `url(${item.icon})` }"
+              aria-hidden="true"
+            />
+            <span>{{ item.label }}</span>
+          </button>
+        </template>
+      </nav>
+    </LiquidGlass>
+  </div>
 </template>

@@ -35,6 +35,7 @@
     "@capacitor/ios": "8.4.2",
     "@capacitor/share": "8.0.1",
     "@capgo/capacitor-updater": "8.51.2",
+    "@wxperia/liquid-glass-vue": "^1.0.9",
     "pinia": "4.0.2",
     "vue": "3.5.40",
     "vue-router": "5.2.0"

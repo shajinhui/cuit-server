@@ -175,7 +175,7 @@ select:focus-visible {
 
 .bottom-navigation {
   --bottom-navigation-outer-radius: 32px;
-  --bottom-navigation-inner-radius: 27px;
+  --bottom-navigation-inner-radius: 26px;
   --bottom-navigation-min-gap: 0px;
 
   position: fixed;
@@ -185,22 +185,52 @@ select:focus-visible {
     calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) - 12px)
   );
   left: 50%;
+  width: calc(100% - 40px);
+  max-width: 396px;
+  height: 64px;
+  transform: translateX(-50%);
+}
+
+.bottom-navigation__glass {
+  position: absolute !important;
+  z-index: 1;
+  top: 50% !important;
+  left: 50% !important;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--bottom-navigation-outer-radius);
+}
+
+.bottom-navigation__glass > .glass {
+  display: block !important;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+  border-radius: inherit !important;
+}
+
+.bottom-navigation__glass > .glass > .glass__warp {
+  border-radius: inherit;
+}
+
+.bottom-navigation__glass > .glass > div:last-child {
+  width: 100%;
+  height: 100%;
+}
+
+.bottom-navigation__content {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
   display: grid;
   grid-template-columns: repeat(var(--navigation-item-count, 3), 1fr);
-  width: calc(100% - 56px);
-  max-width: 396px;
   min-height: 64px;
   padding: 5px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.44);
-  border: 0;
   border-radius: var(--bottom-navigation-outer-radius);
-  box-shadow:
-    0 20px 46px rgba(28, 28, 30, 0.13),
-    0 3px 10px rgba(28, 28, 30, 0.06);
-  transform: translateX(-50%);
-  -webkit-backdrop-filter: blur(18px) saturate(165%);
-  backdrop-filter: blur(18px) saturate(165%);
+  isolation: isolate;
 }
 
 html[data-platform='android'] .bottom-navigation {
@@ -209,15 +239,15 @@ html[data-platform='android'] .bottom-navigation {
 
 .bottom-navigation__item {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   padding: 0;
-  color: #1c1c1e;
+  color: rgba(28, 28, 30, 0.76);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -241,16 +271,38 @@ html[data-platform='android'] .bottom-navigation {
   position: absolute;
   top: 5px;
   bottom: 5px;
-  left: 7px;
-  width: calc((100% - 10px) / var(--navigation-item-count, 3) - 4px);
+  left: 5px;
+  z-index: 1;
+  width: calc((100% - 10px) / var(--navigation-item-count, 3));
   pointer-events: none;
-  background: rgba(116, 116, 128, 0.12);
-  border: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2)),
+    rgba(116, 116, 128, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: var(--bottom-navigation-inner-radius);
-  box-shadow: 0 2px 8px rgba(28, 28, 30, 0.05);
-  transform: translateX(calc(var(--active-index) * (100% + 4px)));
-  transition: transform 180ms var(--ease-out);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 4px 12px rgba(28, 28, 30, 0.08);
+  transform: translate3d(calc(var(--active-index) * 100%), 0, 0);
+  transition: transform 420ms cubic-bezier(0.22, 0.9, 0.24, 1.08);
   will-change: transform;
+}
+
+.bottom-navigation__selection::before {
+  position: absolute;
+  inset: 1px 12% auto;
+  height: 1px;
+  content: '';
+  background: rgba(255, 255, 255, 0.58);
+  border-radius: 999px;
+}
+
+.bottom-navigation__selection::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgba(28, 28, 30, 0.06);
 }
 
 .bottom-navigation__icon {
@@ -259,8 +311,8 @@ html[data-platform='android'] .bottom-navigation {
   --nav-icon-offset-y: 0.5px;
 
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
   flex: 0 0 auto;
   color: inherit;
   background: currentcolor;
@@ -290,11 +342,16 @@ html[data-platform='android'] .bottom-navigation {
   box-shadow: none;
 }
 
+.bottom-navigation__item:not(.is-active) .bottom-navigation__icon {
+  opacity: 0.9;
+}
+
 .bottom-navigation--inline {
   position: relative;
   inset: auto;
   width: 100%;
   max-width: none;
+  height: 56px;
   transform: none;
 }
 
@@ -302,7 +359,7 @@ html[data-platform='android'] .bottom-navigation {
   --bottom-navigation-outer-radius: 28px;
   --bottom-navigation-inner-radius: 23px;
 
-  min-height: 56px;
+  height: 56px;
 }
 
 .bottom-navigation--compact .bottom-navigation__item {
@@ -311,8 +368,8 @@ html[data-platform='android'] .bottom-navigation {
 }
 
 .bottom-navigation--compact .bottom-navigation__icon {
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
 }
 
 .bottom-navigation__item:focus-visible {
@@ -328,18 +385,56 @@ html[data-platform='android'] .bottom-navigation {
   .bottom-navigation__selection {
     transition: none;
   }
+
+  .bottom-navigation__item:active {
+    transform: none;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .bottom-navigation {
+    background: transparent;
+  }
+
+  .bottom-navigation__glass {
+    display: block !important;
+  }
+
+  .bottom-navigation__glass > .glass {
     background: #fff;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    box-shadow: 0 8px 24px rgba(28, 28, 30, 0.1) !important;
+  }
+
+  .bottom-navigation__glass > .glass > .glass__warp {
+    display: none;
+  }
+
+  .bottom-navigation__content {
+    background: #fff;
+    border: 1px solid rgba(28, 28, 30, 0.14);
+    box-shadow: 0 8px 24px rgba(28, 28, 30, 0.1);
   }
 }
 
 @media (prefers-contrast: more) {
   .bottom-navigation {
+    background: transparent;
+  }
+
+  .bottom-navigation__glass {
+    display: block !important;
+  }
+
+  .bottom-navigation__glass > .glass {
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(28, 28, 30, 0.14) !important;
+  }
+
+  .bottom-navigation__glass > .glass > .glass__warp {
+    display: none;
+  }
+
+  .bottom-navigation__content {
     background: #fff;
     border: 1px solid rgba(28, 28, 30, 0.28);
   }
@@ -365,10 +460,15 @@ html[data-platform='android'] .bottom-navigation {
   }
 
   .bottom-navigation {
-    --bottom-navigation-outer-radius: 29px;
-    --bottom-navigation-inner-radius: 24px;
+    --bottom-navigation-outer-radius: 32px;
+    --bottom-navigation-inner-radius: 26px;
 
-    min-height: 58px;
+    height: 64px;
+  }
+
+  .bottom-navigation__content {
+    min-height: 64px;
+    padding: 5px;
   }
 
   .bottom-navigation__item {
@@ -519,11 +619,14 @@ html[data-platform='android'] .bottom-navigation {
     left: auto;
     width: 64px;
     max-width: none;
-    min-height: 0;
-    padding: 5px;
+    height: 174px;
+    transform: translateY(-50%);
+  }
+
+  .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__content {
     grid-template-columns: 1fr;
     grid-auto-rows: 54px;
-    transform: translateY(-50%);
+    min-height: 174px;
   }
 
   .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__item {
@@ -1168,11 +1271,14 @@ html[data-platform='android'] .bottom-navigation {
     left: max(18px, var(--safe-area-inset-left, env(safe-area-inset-left, 0px)));
     width: 72px;
     max-width: none;
-    min-height: 0;
-    padding: 6px;
+    height: 210px;
+    transform: translateY(-50%);
+  }
+
+  .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__content {
     grid-template-columns: 1fr;
     grid-auto-rows: 66px;
-    transform: translateY(-50%);
+    min-height: 210px;
   }
 
   .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__item {

@@ -67,6 +67,10 @@ export const useSessionStore = defineStore('session', {
       this.status = 'authenticated'
       this.error = ''
     },
+    markOffline() {
+      this.status = 'offline'
+      this.error = ''
+    },
     markAnonymous() {
       this.status = 'anonymous'
       this.error = ''
