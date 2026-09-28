@@ -41,7 +41,7 @@ const adminNavigationItems = [
   { name: 'devices', label: '用户设备', icon: devicesIcon, iconClass: 'profile' },
 ] as const
 
-usePageTheme('#f4f6fa')
+usePageTheme('bg-page-deep')
 
 const serverErrorRate = computed(() =>
   percentage(stats.value?.summary.server_errors_period ?? 0, stats.value?.summary.requests_period ?? 0),
@@ -72,41 +72,41 @@ const cacheStatus = computed(() => {
 const requestSeries = computed<ChartSeries[]>(() => [
   {
     label: '请求量',
-    color: '#1677ff',
+    color: 'var(--chart-blue)',
     values: stats.value?.timeline.map((item) => item.request_count) ?? [],
   },
   {
     label: '4xx',
-    color: '#f59e0b',
+    color: 'var(--chart-amber)',
     values: stats.value?.timeline.map((item) => item.client_error_count) ?? [],
   },
   {
     label: '5xx',
-    color: '#e05260',
+    color: 'var(--chart-rose)',
     values: stats.value?.timeline.map((item) => item.server_error_count) ?? [],
   },
 ])
 const latencySeries = computed<ChartSeries[]>(() => [
   {
     label: '平均耗时',
-    color: '#64748b',
+    color: 'var(--chart-slate)',
     values: stats.value?.timeline.map((item) => item.average_latency_ms) ?? [],
   },
   {
     label: '最大耗时',
-    color: '#8b5cf6',
+    color: 'var(--chart-violet)',
     values: stats.value?.timeline.map((item) => item.max_latency_ms) ?? [],
   },
 ])
 const userSeries = computed<ChartSeries[]>(() => [
   {
     label: '活跃用户',
-    color: '#34a853',
+    color: 'var(--chart-green)',
     values: stats.value?.daily.map((item) => item.active_users) ?? [],
   },
   {
     label: '新增用户',
-    color: '#8b5cf6',
+    color: 'var(--chart-violet)',
     values: stats.value?.daily.map((item) => item.new_users) ?? [],
   },
 ])

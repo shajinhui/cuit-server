@@ -7,12 +7,50 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#fbfcf9" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="application-name" content="成信友友" />
     <meta name="description" content="成信友友，面向成都信息工程大学学生的课表、成绩与校园生活助手。" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="成信友友" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      /*
+       * 主题必须在首帧之前定下来，否则会先渲染浅色再翻成深色（闪白）。
+       *
+       * 这里只处理"用户显式选择"的情况：
+       *   显式 light/dark → 写 data-theme，让 theme.css 的令牌块直接生效；
+       *   未选择（跟随系统）→ 不写 data-theme，交给 CSS 的 prefers-color-scheme 分支，
+       *                       这样系统切换时无需 JS 参与，也不会出现属性与系统不一致。
+       * 规则必须与 src/shared/theme/colorScheme.ts 保持一致（storage key 与取值）。
+       * 下面几组色值必须与 styles/theme.css 的 --app-canvas / --bg-page / --bg-page-schedule
+       * 以及对应深色值对应，它们只用于首帧的启动屏，随后由 usePageTheme 接管。
+       */
+      (() => {
+        const stored = (() => {
+          try {
+            return window.localStorage.getItem('color-scheme-preference')
+          } catch {
+            return null
+          }
+        })()
+        const explicit = stored === 'dark' || stored === 'light' ? stored : null
+        const dark =
+          explicit === 'dark' ||
+          (!explicit && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        const root = document.documentElement
+        if (explicit) root.dataset.theme = explicit
+        const schedule = location.pathname === '/' || location.pathname === '/schedule'
+        if (schedule) root.dataset.initialPage = 'schedule'
+        const canvas = dark ? '#000000' : '#fbfcf9'
+        // 与 usePageTheme 的基调一致：课表首屏用课表底色，其余页面用分组底色。
+        const page = dark ? (schedule ? '#0f141c' : '#1c1c1e') : schedule ? '#c9d5e7' : '#f2f2f7'
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', page)
+        // 启动屏与首屏画布共用同一组变量，避免中间出现第三种颜色。
+        root.style.setProperty('--launch-canvas', canvas)
+        root.style.setProperty('--launch-page', page)
+      })()
+    </script>
     <script>
       (() => {
         const userAgent = navigator.userAgent
@@ -33,28 +71,69 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/app-icon-192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/app-icon-192.png" />
     <title>成信友友</title>
-    <script>
-      const initialThemeColors = {
-        '/': '#c9d5e7',
-        '/schedule': '#c9d5e7',
-        '/official': '#f4f7fb',
-        '/calendar': '#e9ebee',
-        '/grades': '#f6f6f8',
-        '/admin/stats': '#f4f6fa',
-      }
-      const initialThemeColor = initialThemeColors[location.pathname] || '#f2f2f7'
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', initialThemeColor)
-      if (location.pathname === '/' || location.pathname === '/schedule') {
-        document.documentElement.dataset.initialPage = 'schedule'
-      }
-    </script>
     <style>
+      /* 启动屏内联样式只允许使用这两组变量，主题切换逻辑见上方脚本。 */
+      :root {
+        --launch-canvas: #fbfcf9;
+        --launch-page: #f2f2f7;
+        --launch-text: #1c1c1e;
+        --launch-muted: #8e8e93;
+        --launch-mark-top: rgba(255, 255, 255, 0.96);
+        --launch-mark-bottom: rgba(242, 242, 247, 0.72);
+        --launch-mark-edge: rgba(255, 255, 255, 0.9);
+        --launch-mark-shadow: rgba(28, 28, 30, 0.11);
+        --launch-mark-inset: rgba(255, 255, 255, 0.95);
+        --launch-sheen: rgba(255, 255, 255, 0.58);
+      }
+
+      /*
+       * 深色启动屏。与 styles/theme.css 的暗色令牌同源：
+       * 画布 #000、分组底 #1c1c1e、课表底 #0f141c，玻璃高光收敛到 12% 以内。
+       * data-theme='dark' 与 prefers-color-scheme 都要覆盖，显式浅色主题优先。
+       */
+      @media (prefers-color-scheme: dark) {
+        /* 跟随系统时 data-theme 不存在；显式浅色主题优先。 */
+        :root:not([data-theme='light']) {
+          --launch-canvas: #000000;
+          --launch-page: #1c1c1e;
+          --launch-text: #f2f2f7;
+          --launch-muted: #98989d;
+          --launch-mark-top: #2c2c2e;
+          --launch-mark-bottom: #232325;
+          --launch-mark-edge: rgba(255, 255, 255, 0.12);
+          --launch-mark-shadow: rgba(0, 0, 0, 0.5);
+          --launch-mark-inset: rgba(255, 255, 255, 0.12);
+          --launch-sheen: rgba(255, 255, 255, 0.06);
+        }
+
+        :root:not([data-theme='light'])[data-initial-page='schedule'] {
+          --launch-page: #0f141c;
+        }
+      }
+
+      :root[data-theme='dark'] {
+        --launch-canvas: #000000;
+        --launch-page: #1c1c1e;
+        --launch-text: #f2f2f7;
+        --launch-muted: #98989d;
+        --launch-mark-top: #2c2c2e;
+        --launch-mark-bottom: #232325;
+        --launch-mark-edge: rgba(255, 255, 255, 0.12);
+        --launch-mark-shadow: rgba(0, 0, 0, 0.5);
+        --launch-mark-inset: rgba(255, 255, 255, 0.12);
+        --launch-sheen: rgba(255, 255, 255, 0.06);
+      }
+
+      :root[data-theme='dark'][data-initial-page='schedule'] {
+        --launch-page: #0f141c;
+      }
+
       html,
       body,
       #app {
         min-height: 100%;
         margin: 0;
-        background: #f2f2f7;
+        background: var(--launch-canvas);
       }
 
       .app-launch-screen {
@@ -66,10 +145,10 @@
           24px
           max(24px, env(safe-area-inset-bottom, 0px));
         place-items: center;
-        color: #1c1c1e;
+        color: var(--launch-text);
         background:
-          linear-gradient(158deg, rgba(255, 255, 255, 0.58), transparent 46%),
-          #f2f2f7;
+          linear-gradient(158deg, var(--launch-sheen), transparent 46%),
+          var(--launch-page);
         box-sizing: border-box;
         font-family:
           system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC",
@@ -80,7 +159,7 @@
       html[data-initial-page='schedule'] body,
       html[data-initial-page='schedule'] #app,
       html[data-initial-page='schedule'] .app-launch-screen {
-        background: #c9d5e7;
+        background: var(--launch-page);
       }
 
       .app-launch-content {
@@ -95,13 +174,13 @@
         width: 72px;
         height: 72px;
         place-items: center;
-        color: #1c1c1e;
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(242, 242, 247, 0.72));
-        border: 1px solid rgba(255, 255, 255, 0.9);
+        color: var(--launch-text);
+        background: linear-gradient(145deg, var(--launch-mark-top), var(--launch-mark-bottom));
+        border: 1px solid var(--launch-mark-edge);
         border-radius: 23px;
         box-shadow:
-          0 18px 42px rgba(28, 28, 30, 0.11),
-          inset 0 1px 0 rgba(255, 255, 255, 0.95),
+          0 18px 42px var(--launch-mark-shadow),
+          inset 0 1px 0 var(--launch-mark-inset),
           inset 0 -1px 0 rgba(60, 60, 67, 0.07);
       }
 
@@ -135,7 +214,7 @@
 
       .app-launch-status {
         margin: 9px 0 0;
-        color: #8e8e93;
+        color: var(--launch-muted);
         font-size: 13px;
         line-height: 1.4;
       }

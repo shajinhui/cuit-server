@@ -39,7 +39,7 @@ const notice = ref('')
 let requestVersion = 0
 let noticeTimer: number | undefined
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 onMounted(() => void loadPage())
 onBeforeUnmount(() => window.clearTimeout(noticeTimer))
 

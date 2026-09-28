@@ -17,7 +17,7 @@ const loadFailed = ref(false)
 const zoomed = ref(false)
 const imageKey = ref(0)
 
-usePageTheme('#e9ebee')
+usePageTheme('bg-page-cool')
 
 function imageLoaded() {
   loading.value = false

@@ -62,7 +62,7 @@ const seatViewMode = ref<SeatViewMode>('list')
 let seatMapRequestVersion = 0
 let toastTimer: number | undefined
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 const areaOptions = computed(() =>
   store.areaOptions.map((area) => ({

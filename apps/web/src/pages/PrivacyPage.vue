@@ -8,7 +8,7 @@ defineOptions({ name: 'PrivacyPage' })
 const router = useRouter()
 const repositoryIssuesURL = 'https://github.com/shajinhui/cuit-server/issues'
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 function goBack() {
   if (window.history.state?.back) {

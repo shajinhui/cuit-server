@@ -1,9 +1,14 @@
 .grade-page {
   padding-bottom: calc(30px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  color: #1c1c1e;
+  color: var(--text-primary);
   background:
-    radial-gradient(circle at 88% 3%, rgba(255, 255, 255, 0.86), transparent 27%),
-    linear-gradient(155deg, #f6f6f8 0%, #f0f1f4 48%, #f4f4f6 100%);
+    radial-gradient(circle at 88% 3%, var(--bg-surface-glass), transparent 27%),
+    linear-gradient(
+      155deg,
+      rgb(var(--bg-page-warm-rgb)) 0%,
+      rgb(var(--bg-page-warm-rgb) / 0.93) 48%,
+      rgb(var(--bg-page-warm-rgb) / 0.97) 100%
+    );
 }
 
 .grade-results {
@@ -27,12 +32,12 @@
   height: 44px;
   padding: 0;
   place-items: center;
-  color: #34343a;
-  background: rgba(255, 255, 255, 0.68);
-  border: 0.5px solid rgba(255, 255, 255, 0.94);
+  color: var(--text-tertiary);
+  background: var(--bg-glass);
+  border: 0.5px solid var(--edge-highlight);
   border-radius: 50%;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.08),
+    0 0.5px 0 var(--hairline),
     0 5px 16px rgba(35, 39, 45, 0.055);
   -webkit-backdrop-filter: blur(22px) saturate(145%);
   backdrop-filter: blur(22px) saturate(145%);
@@ -72,7 +77,7 @@
 .semester-select > span {
   display: block;
   margin: 0 0 8px 3px;
-  color: #7b838b;
+  color: var(--card-ink-soft);
   font-size: 12px;
   letter-spacing: 0.4px;
 }
@@ -81,21 +86,21 @@
   width: 100%;
   height: 52px;
   padding: 0 17px;
-  color: #25252a;
+  color: var(--card-ink);
   font-size: 16px;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.7);
-  border: 0.5px solid rgba(255, 255, 255, 0.96);
+  background: var(--bg-nav);
+  border: 0.5px solid var(--edge-highlight-strong);
   border-radius: 18px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.1),
+    0 0.5px 0 var(--hairline),
     0 8px 24px rgba(40, 43, 49, 0.055);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
 }
 
 .semester-select .app-select__chevron {
-  color: #5e6066;
+  color: var(--card-ink-soft);
 }
 
 .grade-summary {
@@ -103,12 +108,12 @@
   grid-template-columns: repeat(2, 1fr);
   margin-top: 18px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.7);
-  border: 0.5px solid rgba(255, 255, 255, 0.96);
+  background: var(--bg-nav);
+  border: 0.5px solid var(--edge-highlight-strong);
   border-radius: 22px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.1),
-    0 12px 32px rgba(38, 42, 48, 0.065);
+    0 0.5px 0 var(--hairline),
+    0 12px 32px var(--map-tint-faint);
   -webkit-backdrop-filter: blur(26px) saturate(155%);
   backdrop-filter: blur(26px) saturate(155%);
 }
@@ -125,11 +130,11 @@
   left: 0;
   width: 1px;
   content: '';
-  background: rgba(60, 60, 67, 0.13);
+  background: var(--line-medium);
 }
 
 .grade-summary article > span {
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 13px;
 }
 
@@ -141,24 +146,24 @@
 }
 
 .grade-summary strong {
-  color: #26262b;
+  color: var(--card-ink);
   font-size: 32px;
   font-weight: 600;
   line-height: 1;
 }
 
 .grade-summary small {
-  color: #98989d;
+  color: var(--text-faint);
   font-size: 12px;
 }
 
 .grade-summary .has-failed strong {
-  color: #c4413d;
+  color: var(--danger-deep);
 }
 
 .result-error {
   margin: 14px 2px 0;
-  color: #85494c;
+  color: var(--danger-deep);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -178,7 +183,7 @@
 }
 
 .grade-section-heading span {
-  color: #8a9197;
+  color: var(--card-ink-soft);
   font-size: 12px;
 }
 
@@ -188,7 +193,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
-  color: #7d858b;
+  color: var(--card-ink-soft);
 }
 
 .grade-loading--inline {
@@ -201,7 +206,7 @@
 }
 
 .grade-unavailable strong {
-  color: #3e4852;
+  color: var(--text-slate);
   font-size: 18px;
 }
 
@@ -215,10 +220,10 @@
   min-height: 40px;
   margin-top: 18px;
   padding: 0 18px;
-  color: #34343a;
+  color: var(--text-tertiary);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.72);
-  border: 0.5px solid rgba(255, 255, 255, 0.96);
+  background: var(--bg-nav);
+  border: 0.5px solid var(--edge-highlight-strong);
   border-radius: 20px;
   box-shadow: 0 6px 18px rgba(38, 42, 48, 0.08);
 }
@@ -226,12 +231,12 @@
 .grade-list {
   margin-top: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.72);
-  border: 0.5px solid rgba(255, 255, 255, 0.96);
+  background: var(--bg-nav);
+  border: 0.5px solid var(--edge-highlight-strong);
   border-radius: 22px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.1),
-    0 14px 36px rgba(38, 42, 48, 0.065);
+    0 0.5px 0 var(--hairline),
+    0 14px 36px var(--map-tint-faint);
   -webkit-backdrop-filter: blur(26px) saturate(155%);
   backdrop-filter: blur(26px) saturate(155%);
 }
@@ -255,11 +260,11 @@
   left: 17px;
   height: 0.5px;
   content: '';
-  background: rgba(60, 60, 67, 0.14);
+  background: var(--line-medium);
 }
 
 .grade-row.is-failed {
-  background: linear-gradient(90deg, rgba(217, 75, 69, 0.055), transparent 58%);
+  background: linear-gradient(90deg, var(--danger-soft), transparent 58%);
 }
 
 .grade-row__main {
@@ -270,7 +275,7 @@
 .grade-row__main > span {
   display: block;
   overflow: hidden;
-  color: #a0a0a6;
+  color: var(--text-placeholder);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -279,7 +284,7 @@
 .grade-row h3 {
   margin: 3px 0 5px;
   overflow: hidden;
-  color: #232328;
+  color: var(--card-ink);
   font-size: 16px;
   font-weight: 600;
   text-overflow: ellipsis;
@@ -290,7 +295,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px 11px;
-  color: #85858b;
+  color: var(--card-ink-soft);
   font-size: 10px;
 }
 
@@ -303,22 +308,22 @@
 }
 
 .score--normal {
-  color: #333338;
+  color: var(--card-ink);
 }
 
 .score--failed {
-  color: #d94b45;
+  color: var(--danger-deep);
 }
 
 .empty-grade {
   margin-top: 14px;
   padding: 52px 20px;
-  color: #7e858b;
+  color: var(--card-ink-soft);
   text-align: center;
-  background: rgba(255, 255, 255, 0.68);
-  border: 0.5px solid rgba(255, 255, 255, 0.95);
+  background: var(--bg-glass);
+  border: 0.5px solid var(--edge-highlight-strong);
   border-radius: 22px;
-  box-shadow: 0 12px 32px rgba(38, 42, 48, 0.055);
+  box-shadow: 0 12px 32px var(--map-tint-weak);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
 }
@@ -330,7 +335,7 @@
 
 .empty-grade h2 {
   margin: 8px 0 5px;
-  color: #3e4852;
+  color: var(--text-slate);
   font-size: 18px;
 }
 

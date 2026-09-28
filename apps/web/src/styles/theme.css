@@ -1,0 +1,552 @@
+/*
+ * 主题令牌层 —— 全站颜色的唯一来源。
+ *
+ * 规则：组件与页面样式一律写 var(<令牌名>)，不得出现颜色字面量。
+ * 换主题 = 换令牌，组件代码零改动。
+ *
+ * 主题由 <html data-theme> 决定：
+ *   - 'dark'  → 强制深色（同时可用 .theme-dark 类限定局部作用域）
+ *   - 'light' → 强制浅色
+ *   - 无属性  → 跟随系统 prefers-color-scheme
+ * 由于 dark 选择器写在 light 之后，同特异性下后者胜出。
+ *
+ * 首帧时机：index.html 的内联脚本必须在渲染前写入 data-theme，
+ * 规则与 src/shared/theme/colorScheme.ts 保持一致，否则会闪白。
+ *
+ * 深色定调：对齐 iOS 系统深色（纯黑灰底 + 绿色提亮），不改变品牌色相。
+ *
+ * 新增颜色的步骤：
+ *   1. 在本文件的 light 与 dark 两处各加一个语义变量（缺一不可，否则深色下会露白）；
+ *   2. 在 scripts/color-map.mjs 里登记 旧色值 → 令牌名；
+ *   3. 跑 node scripts/migrate-colors.mjs --write 完成替换。
+ *
+ * 令牌分类约定（注意：注释里不要写通配符星号加斜杠，会提前结束注释）：
+ *   bg 前缀         背景与表面（玻璃层用 bg-glass / bg-nav，高光边用 edge-highlight）
+ *   text 前缀       文字
+ *   line 前缀       描边与分隔线
+ *   control 前缀    中性控件（分段控件、开关、进度槽、禁用图标）
+ *   shadow 前缀     整条阴影，只能用于 box-shadow 属性
+ *   shadow-color / scrim / hairline   阴影与蒙层的纯色，用于模糊半径、背景、描边
+ */
+
+/* ------------------------------------------------------------------ *
+ * 浅色（默认）：色值与改造前一致，保证迁移零视觉回归
+ * ------------------------------------------------------------------ */
+:root,
+.theme-light {
+  --sheen-accent: rgba(198, 230, 159, 0.12);
+  --focus-ring-soft: rgba(47, 111, 31, 0.18);
+  --focus-ring: #2f6f1f;
+  --glow-accent: rgba(33, 45, 28, 0.11);
+  --card-ink-soft: #7b838b;
+  --card-ink: #242428;
+  --ink-deep: #334058;
+  color-scheme: light;
+  /* 画布与页面底色 */
+  --app-canvas: #fbfcf9;
+  --page-bg: var(--app-canvas);
+  --bg-page: #f2f2f7;
+  --bg-page-cool: #e9ebee;
+  --bg-page-blue: #f4f7fb;
+  --bg-page-warm: #f6f6f8;
+  --bg-page-warm-rgb: 246 246 248;
+  --bg-page-deep: #f4f6fa;
+  --bg-page-schedule: #c9d5e7;
+  --bg-subtle: #f8f8fa;
+  --bg-cell: #f7f9fc;
+
+  /* 表面与玻璃 */
+  --bg-surface: #ffffff;
+  --bg-surface-raised: rgba(255, 255, 255, 0.96);
+  --bg-surface-glass: rgba(255, 255, 255, 0.86);
+  --bg-surface-soft: rgba(255, 255, 255, 0.78);
+  --bg-glass: rgba(255, 255, 255, 0.62);
+  --bg-glass-faint: rgba(255, 255, 255, 0.42);
+  --bg-glass-bright: rgba(255, 255, 255, 0.92);
+  --bg-surface-overlay: rgba(242, 242, 247, 0.86);
+  --bg-nav: rgba(255, 255, 255, 0.72);
+  --overlay-toast: rgba(30, 34, 30, 0.88);
+
+  /* 中性控件（分段控件、开关、进度槽） */
+  --control-bg: #e5e5ea;
+  --control-pressed-bg: #d1d1d6;
+  --control-track: rgba(120, 120, 128, 0.16);
+  --control-track-soft: rgba(120, 120, 128, 0.12);
+  --control-icon-muted: #8e8e93;
+
+  /* 文字 */
+  --text-primary: #1c1c1e;
+  --text-strong: #101722;
+  --text-secondary: #3a3a3c;
+  --text-tertiary: #34343a;
+  --text-slate: #3e4852;
+  --text-label: #48484a;
+  --text-muted: #636366;
+  --text-faint: #8e8e93;
+  --text-placeholder: #a2a2a7;
+  --text-placeholder-soft: #c7c7cc;
+  --text-cool: #8b95a8;
+  --text-on-accent: #ffffff;
+
+  /* 分隔线与描边 */
+  --line: #e8ebe7;
+  --line-strong: #d1d1d6;
+  --line-faint: rgba(60, 60, 67, 0.1);
+  --line-soft: rgba(60, 60, 67, 0.12);
+  --line-medium: rgba(60, 60, 67, 0.16);
+  --line-strong-alpha: rgba(60, 60, 67, 0.18);
+  --line-heavy: rgba(60, 60, 67, 0.28);
+
+  /* 高光与内描边（玻璃拟态的关键：深色下必须大幅收敛） */
+  --edge-highlight: rgba(255, 255, 255, 0.94);
+  --edge-highlight-soft: rgba(255, 255, 255, 0.72);
+  --edge-highlight-faint: rgba(255, 255, 255, 0.42);
+  --edge-highlight-strong: rgba(255, 255, 255, 0.96);
+  --shadow-sm: 0 2px 6px rgba(28, 28, 30, 0.06);
+  --shadow-md: 0 8px 24px rgba(28, 28, 30, 0.1);
+  --shadow-lg: 0 16px 36px rgba(28, 28, 30, 0.12);
+  --shadow-card: 0 10px 30px rgba(29, 40, 25, 0.09);
+  --shadow-ambient: 0 5px 16px rgba(35, 39, 45, 0.055);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-color-soft: rgba(28, 28, 30, 0.06);
+  --shadow-color: rgba(28, 28, 30, 0.14);
+  --shadow-color-strong: rgba(0, 0, 0, 0.24);
+  --scrim: rgba(0, 0, 0, 0.2);
+  --scrim-strong: rgba(0, 0, 0, 0.34);
+
+  /* 发丝描边：0 0.5px 0 这类细边，深色下需要提亮而不是压暗 */
+  --hairline: rgba(0, 0, 0, 0.08);
+
+  /* 品牌绿 */
+  --accent: #72b629;
+
+  /* 蓝色系（通用强调 / 课表 / 校园跑） */
+  --blue: #0088ff;
+  --blue-strong: #0088ff;
+  --blue-link: #007aff;
+  --blue-schedule: #0878e8;
+  --blue-autorun: #0a84ff;
+  --blue-deep: #167fdb;
+  --blue-bright: #1687e8;
+  --blue-ink: #1b2538;
+  --blue-ink-deep: #172033;
+  --blue-slate: #4f6f8f;
+  --blue-slate-soft: #526078;
+  --blue-slate-deep: #4d5972;
+  --blue-soft: #dceeff;
+  --blue-chip: #edf5ff;
+  --blue-count: #edf0f5;
+  --blue-muted: #7b869b;
+  --blue-muted-soft: #7b869a;
+  --blue-slate-muted: #697384;
+  --blue-row: #e9edf4;
+  --blue-tint: rgba(0, 122, 255, 0.1);
+  --blue-ring: rgba(0, 122, 255, 0.48);
+  --blue-tint-weak: rgba(0, 136, 255, 0.09);
+  --blue-tint-strong: rgba(0, 136, 255, 0.15);
+
+  /* 语义色 */
+  --danger: #ff383c;
+  --danger-strong: #b42318;
+  --danger-deep: #a6232b;
+  --danger-soft: rgba(255, 56, 60, 0.09);
+  --danger-tint: rgba(255, 56, 60, 0.08);
+  --warning: #ff9f43;
+  --warning-deep: #d86b20;
+  --warning-soft: #fff5df;
+  --success: #34c759;
+  --success-strong: #278b47;
+  --success-deep: #177a3f;
+  --success-tint: rgba(52, 168, 83, 0.1);
+
+  /* 数据可视化（图表、指标卡） */
+  --chart-blue: #1677ff;
+  --chart-amber: #f59e0b;
+  --chart-rose: #e05260;
+  --chart-slate: #64748b;
+  --chart-violet: #8b5cf6;
+  --chart-green: #34a853;
+  --chart-blue-soft: rgba(22, 119, 255, 0.09);
+  --chart-grid: rgba(91, 105, 135, 0.08);
+  --chart-grid-strong: rgba(91, 105, 135, 0.1);
+  --chart-grid-soft: rgba(92, 105, 133, 0.13);
+  --chart-axis: rgba(32, 48, 78, 0.04);
+  --chart-line: rgba(91, 105, 135, 0.11);
+  --chart-line-soft: rgba(31, 48, 78, 0.1);
+  --chart-line-faint: rgba(31, 48, 78, 0.045);
+  --chart-bar: rgba(23, 32, 51, 0.1);
+  --metric-danger: #d64552;
+  --metric-rose-soft: rgba(240, 68, 82, 0.09);
+
+  /* 地图 */
+  --map-ink: #090a0c;
+  --map-tint: rgba(47, 60, 76, 0.1);
+  --map-tint-soft: rgba(38, 42, 48, 0.07);
+  --map-tint-faint: rgba(38, 42, 48, 0.065);
+  --map-tint-weak: rgba(38, 42, 48, 0.055);
+  --map-tint-mist: rgba(38, 42, 48, 0.04);
+  --map-border: rgba(222, 226, 232, 0.9);
+  --map-border-soft: rgba(229, 232, 237, 0.9);
+  --map-surface: rgba(245, 247, 250, 0.82);
+
+  /* 深色专属文本（浅色主题下不使用） */
+  --schedule-ink: #101722;
+  --schedule-ink-soft: #26343d;
+  --schedule-muted: rgba(38, 52, 61, 0.58);
+  --ink-deepest: #0f151f;
+
+}
+
+/* ------------------------------------------------------------------ *
+ * 深色
+ * ------------------------------------------------------------------ */
+.theme-dark,
+:root[data-theme='dark'] {
+  --sheen-accent: rgba(142, 207, 63, 0.08);
+  --focus-ring-soft: rgba(165, 221, 95, 0.24);
+  --focus-ring: #a5dd5f;
+  --glow-accent: rgba(0, 0, 0, 0.5);
+  --card-ink-soft: #aeaeb2;
+  --card-ink: #f2f2f7;
+  --ink-deep: #d1d1d6;
+  color-scheme: dark;
+  /* 画布与页面底色 */
+  --app-canvas: #000000;
+  --page-bg: var(--app-canvas);
+  --bg-page: #1c1c1e;
+  --bg-page-cool: #1c1c1e;
+  --bg-page-blue: #1c1c1e;
+  --bg-page-warm: #1c1c1e;
+  --bg-page-warm-rgb: 28 28 30;
+  --bg-page-deep: #1c1c1e;
+  --bg-page-schedule: #0f141c;
+  --bg-subtle: #2c2c2e;
+  --bg-cell: #232325;
+
+  /* 表面与玻璃 */
+  --bg-surface: #1c1c1e;
+  --bg-surface-raised: #2c2c2e;
+  --bg-surface-glass: rgba(28, 28, 30, 0.86);
+  --bg-surface-soft: rgba(44, 44, 46, 0.78);
+  --bg-glass: rgba(28, 28, 30, 0.62);
+  --bg-glass-faint: rgba(28, 28, 30, 0.42);
+  --bg-glass-bright: rgba(44, 44, 46, 0.9);
+  --bg-surface-overlay: rgba(28, 28, 30, 0.88);
+  --bg-nav: rgba(28, 28, 30, 0.72);
+  --overlay-toast: rgba(58, 58, 60, 0.94);
+
+  /* 中性控件（分段控件、开关、进度槽） */
+  --control-bg: #2c2c2e;
+  --control-pressed-bg: #3a3a3c;
+  --control-track: rgba(120, 120, 128, 0.32);
+  --control-track-soft: rgba(120, 120, 128, 0.24);
+  --control-icon-muted: #8e8e93;
+
+  /* 文字 */
+  --text-primary: #f2f2f7;
+  --text-strong: #f2f2f7;
+  --text-secondary: #ebebf5;
+  --text-tertiary: #e5e5ea;
+  --text-slate: #d1d1d6;
+  --text-label: #d1d1d6;
+  --text-muted: #aeaeb2;
+  --text-faint: #98989d;
+  --text-placeholder: #8e8e93;
+  --text-placeholder-soft: #636366;
+  --text-cool: #9aa3b3;
+  --text-on-accent: #ffffff;
+
+  /* 分隔线与描边 */
+  --line: #2c2c2e;
+  --line-strong: #3a3a3c;
+  --line-faint: rgba(255, 255, 255, 0.08);
+  --line-soft: rgba(255, 255, 255, 0.12);
+  --line-medium: rgba(255, 255, 255, 0.16);
+  --line-strong-alpha: rgba(255, 255, 255, 0.2);
+  --line-heavy: rgba(255, 255, 255, 0.28);
+
+  /* 高光与内描边（玻璃拟态的关键：深色下必须大幅收敛） */
+  --edge-highlight: rgba(255, 255, 255, 0.12);
+  --edge-highlight-soft: rgba(255, 255, 255, 0.08);
+  --edge-highlight-faint: rgba(255, 255, 255, 0.06);
+  --edge-highlight-strong: rgba(255, 255, 255, 0.16);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.58);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-ambient: 0 5px 16px rgba(0, 0, 0, 0.45);
+  --shadow-popover: 0 10px 28px rgba(0, 0, 0, 0.6);
+  --shadow-color-soft: rgba(0, 0, 0, 0.42);
+  --shadow-color: rgba(0, 0, 0, 0.52);
+  --shadow-color-strong: rgba(0, 0, 0, 0.62);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --scrim-strong: rgba(0, 0, 0, 0.68);
+
+  /* 发丝描边：0 0.5px 0 这类细边，深色下需要提亮而不是压暗 */
+  --hairline: rgba(255, 255, 255, 0.14);
+
+  /* 品牌绿 */
+  --accent: #8ecf3f;
+
+  /* 蓝色系（通用强调 / 课表 / 校园跑） */
+  --blue: #0a84ff;
+  --blue-strong: #409cff;
+  --blue-link: #0a84ff;
+  --blue-schedule: #409cff;
+  --blue-autorun: #409cff;
+  --blue-deep: #409cff;
+  --blue-bright: #409cff;
+  --blue-ink: #cfe2ff;
+  --blue-ink-deep: #cfe2ff;
+  --blue-slate: #9fb6d1;
+  --blue-slate-soft: #a8b8cc;
+  --blue-slate-deep: #a8b8cc;
+  --blue-soft: #10304d;
+  --blue-chip: #12283d;
+  --blue-count: #232a33;
+  --blue-muted: #9aa8bd;
+  --blue-muted-soft: #9aa8bd;
+  --blue-slate-muted: #9aa3b3;
+  --blue-row: #1b2733;
+  --blue-tint: rgba(10, 132, 255, 0.18);
+  --blue-ring: rgba(10, 132, 255, 0.6);
+  --blue-tint-weak: rgba(64, 156, 255, 0.16);
+  --blue-tint-strong: rgba(64, 156, 255, 0.24);
+
+  /* 语义色 */
+  --danger: #ff453a;
+  --danger-strong: #ff6961;
+  --danger-deep: #ff6961;
+  --danger-soft: rgba(255, 69, 58, 0.18);
+  --danger-tint: rgba(255, 69, 58, 0.14);
+  --warning: #ff9f0a;
+  --warning-deep: #ffb340;
+  --warning-soft: #3a2a10;
+  --success: #30d158;
+  --success-strong: #5fdd80;
+  --success-deep: #5fdd80;
+  --success-tint: rgba(48, 209, 88, 0.18);
+
+  /* 数据可视化（图表、指标卡） */
+  --chart-blue: #409cff;
+  --chart-amber: #ffb340;
+  --chart-rose: #ff7b85;
+  --chart-slate: #9aa8bd;
+  --chart-violet: #b39dff;
+  --chart-green: #5fdd80;
+  --chart-blue-soft: rgba(64, 156, 255, 0.18);
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-grid-strong: rgba(255, 255, 255, 0.1);
+  --chart-grid-soft: rgba(255, 255, 255, 0.12);
+  --chart-axis: rgba(255, 255, 255, 0.06);
+  --chart-line: rgba(255, 255, 255, 0.12);
+  --chart-line-soft: rgba(255, 255, 255, 0.1);
+  --chart-line-faint: rgba(255, 255, 255, 0.06);
+  --chart-bar: rgba(255, 255, 255, 0.12);
+  --metric-danger: #ff7b85;
+  --metric-rose-soft: rgba(255, 123, 133, 0.16);
+
+  /* 地图 */
+  --map-ink: #f2f2f7;
+  --map-tint: rgba(255, 255, 255, 0.1);
+  --map-tint-soft: rgba(255, 255, 255, 0.08);
+  --map-tint-faint: rgba(255, 255, 255, 0.07);
+  --map-tint-weak: rgba(255, 255, 255, 0.06);
+  --map-tint-mist: rgba(255, 255, 255, 0.05);
+  --map-border: rgba(255, 255, 255, 0.14);
+  --map-border-soft: rgba(255, 255, 255, 0.12);
+  --map-surface: rgba(44, 44, 46, 0.82);
+
+  /* 深色专属文本（浅色主题下不使用） */
+  --schedule-ink: #f2f2f7;
+  --schedule-ink-soft: #d1d1d6;
+  --schedule-muted: rgba(209, 209, 214, 0.72);
+  --ink-deepest: #f2f2f7;
+
+}
+
+/* 跟随系统：用户没有显式选择时生效 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    color-scheme: dark;
+    /* 画布与页面底色 */
+    --app-canvas: #000000;
+
+    --page-bg: var(--app-canvas);
+    --bg-page: #1c1c1e;
+    --bg-page-cool: #1c1c1e;
+    --bg-page-blue: #1c1c1e;
+    --bg-page-warm: #1c1c1e;
+    --bg-page-warm-rgb: 28 28 30;
+    --bg-page-deep: #1c1c1e;
+    --bg-page-schedule: #0f141c;
+    --bg-subtle: #2c2c2e;
+    --bg-cell: #232325;
+
+    /* 表面与玻璃 */
+    --bg-surface: #1c1c1e;
+    --bg-surface-raised: #2c2c2e;
+    --bg-surface-glass: rgba(28, 28, 30, 0.86);
+    --bg-surface-soft: rgba(44, 44, 46, 0.78);
+    --bg-glass: rgba(28, 28, 30, 0.62);
+    --bg-glass-faint: rgba(28, 28, 30, 0.42);
+    --bg-glass-bright: rgba(44, 44, 46, 0.9);
+    --bg-surface-overlay: rgba(28, 28, 30, 0.88);
+    --bg-nav: rgba(28, 28, 30, 0.72);
+    --overlay-toast: rgba(58, 58, 60, 0.94);
+
+    /* 中性控件（分段控件、开关、进度槽） */
+    --control-bg: #2c2c2e;
+    --control-pressed-bg: #3a3a3c;
+    --control-track: rgba(120, 120, 128, 0.32);
+    --control-track-soft: rgba(120, 120, 128, 0.24);
+    --control-icon-muted: #8e8e93;
+
+    /* 文字 */
+    --text-primary: #f2f2f7;
+    --text-strong: #f2f2f7;
+    --text-secondary: #ebebf5;
+    --text-tertiary: #e5e5ea;
+    --text-slate: #d1d1d6;
+    --text-label: #d1d1d6;
+    --text-muted: #aeaeb2;
+    --text-faint: #98989d;
+    --text-placeholder: #8e8e93;
+    --text-placeholder-soft: #636366;
+    --text-cool: #9aa3b3;
+    --text-on-accent: #ffffff;
+
+    /* 分隔线与描边 */
+    --line: #2c2c2e;
+    --line-strong: #3a3a3c;
+    --line-faint: rgba(255, 255, 255, 0.08);
+    --line-soft: rgba(255, 255, 255, 0.12);
+    --line-medium: rgba(255, 255, 255, 0.16);
+    --line-strong-alpha: rgba(255, 255, 255, 0.2);
+    --line-heavy: rgba(255, 255, 255, 0.28);
+
+    /* 高光与内描边（玻璃拟态的关键：深色下必须大幅收敛） */
+    --edge-highlight: rgba(255, 255, 255, 0.12);
+    --edge-highlight-soft: rgba(255, 255, 255, 0.08);
+    --edge-highlight-faint: rgba(255, 255, 255, 0.06);
+    --edge-highlight-strong: rgba(255, 255, 255, 0.16);
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.58);
+    --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --shadow-ambient: 0 5px 16px rgba(0, 0, 0, 0.45);
+    --shadow-popover: 0 10px 28px rgba(0, 0, 0, 0.6);
+    --shadow-color-soft: rgba(0, 0, 0, 0.42);
+    --shadow-color: rgba(0, 0, 0, 0.52);
+    --shadow-color-strong: rgba(0, 0, 0, 0.62);
+    --scrim: rgba(0, 0, 0, 0.55);
+    --scrim-strong: rgba(0, 0, 0, 0.68);
+
+    /* 发丝描边：0 0.5px 0 这类细边，深色下需要提亮而不是压暗 */
+    --hairline: rgba(255, 255, 255, 0.14);
+
+    /* 品牌绿 */
+    --accent: #8ecf3f;
+
+    /* 蓝色系（通用强调 / 课表 / 校园跑） */
+    --blue: #0a84ff;
+    --blue-strong: #409cff;
+    --blue-link: #0a84ff;
+    --blue-schedule: #409cff;
+    --blue-autorun: #409cff;
+    --blue-deep: #409cff;
+    --blue-bright: #409cff;
+    --blue-ink: #cfe2ff;
+    --blue-ink-deep: #cfe2ff;
+    --blue-slate: #9fb6d1;
+    --blue-slate-soft: #a8b8cc;
+    --blue-slate-deep: #a8b8cc;
+    --blue-soft: #10304d;
+    --blue-chip: #12283d;
+    --blue-count: #232a33;
+    --blue-muted: #9aa8bd;
+    --blue-muted-soft: #9aa8bd;
+    --blue-slate-muted: #9aa3b3;
+    --blue-row: #1b2733;
+    --blue-tint: rgba(10, 132, 255, 0.18);
+    --blue-ring: rgba(10, 132, 255, 0.6);
+    --blue-tint-weak: rgba(64, 156, 255, 0.16);
+    --blue-tint-strong: rgba(64, 156, 255, 0.24);
+
+    /* 语义色 */
+    --danger: #ff453a;
+    --danger-strong: #ff6961;
+    --danger-deep: #ff6961;
+    --danger-soft: rgba(255, 69, 58, 0.18);
+    --danger-tint: rgba(255, 69, 58, 0.14);
+    --warning: #ff9f0a;
+    --warning-deep: #ffb340;
+    --warning-soft: #3a2a10;
+    --success: #30d158;
+    --success-strong: #5fdd80;
+    --success-deep: #5fdd80;
+    --success-tint: rgba(48, 209, 88, 0.18);
+
+    /* 数据可视化（图表、指标卡） */
+    --chart-blue: #409cff;
+    --chart-amber: #ffb340;
+    --chart-rose: #ff7b85;
+    --chart-slate: #9aa8bd;
+    --chart-violet: #b39dff;
+    --chart-green: #5fdd80;
+    --chart-blue-soft: rgba(64, 156, 255, 0.18);
+    --chart-grid: rgba(255, 255, 255, 0.08);
+    --chart-grid-strong: rgba(255, 255, 255, 0.1);
+    --chart-grid-soft: rgba(255, 255, 255, 0.12);
+    --chart-axis: rgba(255, 255, 255, 0.06);
+    --chart-line: rgba(255, 255, 255, 0.12);
+    --chart-line-soft: rgba(255, 255, 255, 0.1);
+    --chart-line-faint: rgba(255, 255, 255, 0.06);
+    --chart-bar: rgba(255, 255, 255, 0.12);
+    --metric-danger: #ff7b85;
+    --metric-rose-soft: rgba(255, 123, 133, 0.16);
+
+    /* 地图 */
+    --map-ink: #f2f2f7;
+    --map-tint: rgba(255, 255, 255, 0.1);
+    --map-tint-soft: rgba(255, 255, 255, 0.08);
+    --map-tint-faint: rgba(255, 255, 255, 0.07);
+    --map-tint-weak: rgba(255, 255, 255, 0.06);
+    --map-tint-mist: rgba(255, 255, 255, 0.05);
+    --map-border: rgba(255, 255, 255, 0.14);
+    --map-border-soft: rgba(255, 255, 255, 0.12);
+    --map-surface: rgba(44, 44, 46, 0.82);
+
+    /* 深色专属文本（浅色主题下不使用） */
+    --schedule-ink: #f2f2f7;
+    --schedule-ink-soft: #d1d1d6;
+    --schedule-muted: rgba(209, 209, 214, 0.72);
+    --sheen-accent: rgba(142, 207, 63, 0.08);
+    --focus-ring-soft: rgba(165, 221, 95, 0.24);
+    --focus-ring: #a5dd5f;
+    --glow-accent: rgba(0, 0, 0, 0.5);
+    --card-ink-soft: #aeaeb2;
+    --card-ink: #f2f2f7;
+    --ink-deep: #d1d1d6;
+    --ink-deepest: #f2f2f7;
+
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * 基础层：画布与页面底色跟随主题，页面自绘的背景仍然优先
+ * ------------------------------------------------------------------ */
+html,
+body {
+  background: var(--page-bg);
+}
+
+.ios-pwa-status-strip {
+  background-color: var(--page-bg);
+}
+
+/* 深色下浅阴影几乎不可见，玻璃卡片补一层极浅内描边来维持层次 */
+.theme-dark .surface-card,
+:root[data-theme='dark'] .surface-card {
+  border-color: var(--line-soft);
+}

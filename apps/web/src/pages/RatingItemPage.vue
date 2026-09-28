@@ -63,7 +63,7 @@ const activeRating = computed(() =>
 )
 const ratingChanged = computed(() => selectedStars.value !== (activeRating.value?.stars ?? 0))
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 onMounted(() => void loadPage())
 onBeforeUnmount(() => window.clearTimeout(noticeTimer))
 

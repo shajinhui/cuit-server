@@ -5,8 +5,8 @@
   min-height: 100dvh;
   margin: 0 auto;
   padding-bottom: calc(34px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  color: #1c1c1e;
-  background: #f2f2f7;
+  color: var(--text-primary);
+  background: var(--bg-page);
 }
 
 .privacy-topbar {
@@ -18,7 +18,7 @@
   padding: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 22px 8px;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
-  background: rgba(242, 242, 247, 0.86);
+  background: var(--bg-surface-overlay);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
   backdrop-filter: blur(18px) saturate(150%);
 }
@@ -40,11 +40,11 @@
   height: 44px;
   padding: 0;
   place-items: center;
-  color: #1c1c1e;
-  background: rgba(255, 255, 255, 0.86);
+  color: var(--text-primary);
+  background: var(--bg-surface-glass);
   border: 0;
   border-radius: 50%;
-  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.06);
+  box-shadow: 0 0.5px 1px var(--hairline);
   transition: transform 140ms var(--ease-out);
 }
 
@@ -72,7 +72,7 @@
 
 .privacy-eyebrow {
   margin: 0 0 7px;
-  color: #4f6f8f;
+  color: var(--blue-slate);
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -88,7 +88,7 @@
 
 .privacy-introduction > p:not(.privacy-eyebrow) {
   margin: 12px 0 0;
-  color: #636366;
+  color: var(--text-muted);
   font-size: 15px;
   line-height: 1.65;
 }
@@ -98,16 +98,16 @@
   margin-top: 15px;
   flex-wrap: wrap;
   gap: 5px 14px;
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 12px;
   line-height: 1.4;
 }
 
 .privacy-notice,
 .privacy-section {
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--edge-highlight);
   border-radius: 22px;
-  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.025);
+  box-shadow: 0 0.5px 1px var(--hairline);
 }
 
 .privacy-notice {
@@ -115,13 +115,13 @@
   padding: 18px;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 13px;
-  background: rgba(226, 235, 244, 0.88);
+  background: var(--bg-surface-overlay);
 }
 
 .privacy-notice > svg {
   width: 30px;
   height: 30px;
-  color: #4f6f8f;
+  color: var(--blue-slate);
   fill: none;
   stroke: currentcolor;
   stroke-linecap: round;
@@ -140,7 +140,7 @@
 .privacy-notice p,
 .privacy-section p {
   margin: 8px 0 0;
-  color: #48484a;
+  color: var(--text-label);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -162,15 +162,15 @@
   height: 25px;
   flex: 0 0 auto;
   place-items: center;
-  color: #4f6f8f;
+  color: var(--blue-slate);
   font-size: 12px;
   font-weight: 700;
-  background: rgba(79, 111, 143, 0.11);
+  background: var(--blue-tint);
   border-radius: 8px;
 }
 
 .privacy-section a {
-  color: #315d87;
+  color: var(--blue-slate);
   font-weight: 550;
   text-decoration: none;
 }
@@ -188,7 +188,7 @@
 }
 
 .privacy-data-list > div + div {
-  border-top: 1px solid rgba(60, 60, 67, 0.1);
+  border-top: 1px solid var(--line-faint);
 }
 
 .privacy-data-list dt {
@@ -199,7 +199,7 @@
 
 .privacy-data-list dd {
   margin: 5px 0 0;
-  color: #636366;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.62;
 }
@@ -213,7 +213,7 @@
 .privacy-bullet-list li {
   position: relative;
   padding-left: 17px;
-  color: #48484a;
+  color: var(--text-label);
   font-size: 14px;
   line-height: 1.68;
 }
@@ -229,18 +229,18 @@
   width: 5px;
   height: 5px;
   content: '';
-  background: #6f879e;
+  background: var(--blue-slate);
   border-radius: 50%;
 }
 
 .privacy-bullet-list strong {
-  color: #1c1c1e;
+  color: var(--text-primary);
   font-weight: 650;
 }
 
 .privacy-footer {
   margin: 22px 0 0;
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 12px;
   line-height: 1.6;
   text-align: center;
@@ -248,7 +248,7 @@
 
 .privacy-back-button:focus-visible,
 .privacy-section a:focus-visible {
-  outline-color: rgba(0, 122, 255, 0.48);
+  outline-color: var(--blue-ring);
 }
 
 @media (max-width: 370px) {
@@ -267,7 +267,7 @@
   .privacy-back-button,
   .privacy-notice,
   .privacy-section {
-    background: #fff;
+    background: var(--bg-surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

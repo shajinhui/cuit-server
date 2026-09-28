@@ -72,7 +72,7 @@ const {
   weekOptions,
 } = useScheduleCalendar(store, computed(() => profileStore.profile?.Campus))
 
-usePageTheme('#c9d5e7')
+usePageTheme('bg-page-schedule')
 
 onMounted(() => {
   document.addEventListener('pointerdown', closeMoreMenuFromOutside)

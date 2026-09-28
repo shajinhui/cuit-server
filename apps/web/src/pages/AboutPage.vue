@@ -9,7 +9,7 @@ defineOptions({ name: 'AboutPage' })
 const router = useRouter()
 const repositoryURL = 'https://github.com/shajinhui/cuit-server'
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 </script>
 
 <template>

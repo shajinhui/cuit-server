@@ -22,7 +22,7 @@
 }
 
 .app-select__trigger:focus-visible {
-  outline: 3px solid rgba(0, 136, 255, 0.34);
+  outline: 3px solid var(--blue-ring);
   outline-offset: 2px;
 }
 
@@ -49,13 +49,13 @@
   z-index: 200;
   padding: 5px;
   overflow: hidden;
-  color: #1c1c1e;
-  background: rgba(250, 250, 252, 0.97);
-  border: 0.5px solid rgba(60, 60, 67, 0.18);
+  color: var(--text-primary);
+  background: var(--bg-surface-raised);
+  border: 0.5px solid var(--line-strong-alpha);
   border-radius: 15px;
   box-shadow:
     0 14px 38px rgba(16, 23, 34, 0.18),
-    0 1px 0 rgba(255, 255, 255, 0.86) inset;
+    0 1px 0 var(--bg-surface-glass) inset;
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
   transform-origin: top center;
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: #24282d;
+  color: var(--card-ink);
   font-size: 15px;
   font-weight: 500;
   line-height: 1.3;
@@ -97,11 +97,11 @@
 }
 
 .app-select-popover__list > button + button {
-  box-shadow: 0 -0.5px rgba(60, 60, 67, 0.12);
+  box-shadow: 0 -0.5px var(--line-soft);
 }
 
 .app-select-popover__list > button:active {
-  background: rgba(118, 118, 128, 0.12);
+  background: var(--control-track-soft);
   transform: none;
 }
 
@@ -110,9 +110,9 @@
 }
 
 .app-select-popover__list > button.is-selected {
-  color: #0088ff;
+  color: var(--blue-strong);
   font-weight: 600;
-  background: rgba(0, 136, 255, 0.09);
+  background: var(--blue-tint-weak);
   box-shadow: none;
 }
 
@@ -155,7 +155,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .app-select-popover {
-    background: #fafafc;
+    background: var(--bg-subtle);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -163,10 +163,10 @@
 
 @media (prefers-contrast: more) {
   .app-select-popover {
-    border-color: rgba(28, 28, 30, 0.46);
+    border-color: var(--line-soft);
   }
 
   .app-select-popover__list > button + button {
-    box-shadow: 0 -1px rgba(60, 60, 67, 0.32);
+    box-shadow: 0 -1px var(--line-heavy);
   }
 }

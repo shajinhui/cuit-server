@@ -32,7 +32,7 @@ const nextCursor = ref<string | null>(null)
 const hasMore = ref(false)
 let requestVersion = 0
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 onMounted(() => void loadReports(true))
 
 async function loadReports(reset: boolean) {

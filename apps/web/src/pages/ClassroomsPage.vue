@@ -35,7 +35,7 @@ const weekdays = [
 ]
 const sectionPairs = [1, 3, 5, 7, 9, 11]
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 const groupedRooms = computed(() => groupClassroomsByBuilding(store.rooms))
 const semesterOptions = computed(() =>

@@ -27,7 +27,7 @@ const androidAPKURL =
 let revealObserver: IntersectionObserver | undefined
 let previousTitle = ''
 
-usePageTheme('#f4f7fb')
+usePageTheme('bg-page-blue')
 
 onMounted(() => {
   previousTitle = document.title

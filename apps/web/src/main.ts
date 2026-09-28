@@ -10,10 +10,15 @@ import { registerSessionLifecycle } from './app/sessionLifecycle'
 import { registerAndroidLiveUpdates } from './features/app-updates'
 import { registerPwaInstall } from './features/pwa-install'
 import { applyIosTopScrim } from './shared/device/iosTopScrim'
+import { registerColorSchemeRuntime } from './shared/theme/useColorScheme'
 import './styles/main.css'
 
 document.documentElement.dataset.platform = Capacitor.getPlatform()
 applyIosTopScrim()
+
+// 主题状态在应用根上初始化一次：负责兜底同步 data-theme 并监听系统配色变化。
+// 首帧之前的状态由 index.html 的内联脚本写入，避免闪白。
+registerColorSchemeRuntime()
 
 registerPwaInstall()
 registerNativeRuntime()

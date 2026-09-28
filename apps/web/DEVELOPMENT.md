@@ -75,6 +75,7 @@ features/schedule/
 - `shared/api/`：通用请求客户端以及确实被多个功能共用的接口。
 - `shared/models/`：被多个功能共同使用的领域类型。
 - `shared/composables/`：不包含具体业务含义的组合逻辑。
+- `shared/theme/`：主题状态与颜色令牌解析（`data-theme`、系统配色监听、`theme-color` 与系统栏取色）。
 - `shared/ui/`：不依赖具体业务和路由的基础 UI。
 
 禁止把暂时不知道放哪里的代码丢进 `shared/`。只有至少两个明确调用方、且没有单一业务归属时，才考虑提升到这里。
@@ -178,13 +179,24 @@ Pinia store 应：
 
 1. 默认移动端优先，并验证窄屏、高屏、刘海屏安全区。
 2. 使用现有页面前缀命名 class，避免无范围的通用名称污染其他页面。
-3. 公共颜色、间距或尺寸重复出现后再提取变量，不提前建立庞大 Design Token 系统。
+3. 颜色只允许来自 `styles/theme.css` 的主题令牌，写法是 `var(<令牌名>)`。
+   新增颜色的流程：在 theme.css 的浅色与深色两处各加一个语义变量（必须成对，
+   否则深色下会露白），登记到 `scripts/color-map.mjs`，再跑
+   `node scripts/migrate-colors.mjs --write` 完成替换；`node scripts/theme-tokens.mjs --check`
+   用来校验三处令牌块一致。`src/styles/theme.test.ts` 会在字面量超标或令牌缺失时失败。
+   课程分类色、评分色板、插画与图标色属于内容色，允许保留字面量，不随主题变化。
 4. 交互元素使用语义化 `button`、`a`、`label`，不能用普通 `div` 模拟按钮。
 5. 图标按钮必须提供 `aria-label`；状态变化使用适当的 `role` 或 `aria-live`。
 6. 触摸目标尽量保持至少 44×44 CSS 像素。
 7. 动画不得影响任务完成，并适配 `prefers-reduced-motion`。
-8. 页面主题色和根背景使用 `usePageTheme`，不要重复手写 DOM 恢复逻辑。
+8. 页面底色用 `usePageTheme` 声明，并传语义令牌名（例如 `usePageTheme('bg-page')`），
+   不要传色值；页面专属色板（如校园跑、落地页）在自己的样式表里用作用域内的变量覆盖，
+   并同时提供深色值。不要重复手写 DOM 恢复逻辑。
 9. 当前全局样式仍从 `styles/main.css` 进入；重构样式时按功能逐步迁移，不一次性重写全部 CSS。
+10. 深色模式有三档：浅色、深色、跟随系统，由 `<html data-theme>` 与
+    `src/shared/theme/` 管理。首帧主题由 `index.html` 的内联脚本写入，
+    改动存储键或取值时必须同步该脚本与 `colorScheme.ts`。新增页面时检查
+    `prefers-color-scheme` 下的表现，以及 Android 系统栏与 PWA `theme-color` 是否跟随。
 
 ## 9. PWA、缓存与安全
 

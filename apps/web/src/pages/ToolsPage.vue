@@ -56,7 +56,7 @@ const filteredTools = computed(() => {
   return keyword ? tools.filter((tool) => tool.label.includes(keyword)) : tools
 })
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 onMounted(() => {
   syncAnnouncementViewState()

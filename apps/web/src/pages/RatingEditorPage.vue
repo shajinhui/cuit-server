@@ -37,7 +37,7 @@ const canSubmit = computed(() => {
   return titleValid && descriptionValid && !submitting.value && !imageError.value
 })
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 onBeforeUnmount(releasePreview)
 
 function selectImage(event: Event) {

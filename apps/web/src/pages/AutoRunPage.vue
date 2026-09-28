@@ -116,7 +116,7 @@ const signBackCountdown = computed(() => {
   return remaining > 0 ? `距签退窗口 ${formatCountdown(remaining)}` : '已进入签退试探窗口'
 })
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 onMounted(() => {
   clockTimer = window.setInterval(() => (now.value = Date.now()), 1000)

@@ -19,7 +19,7 @@ const router = useRouter()
 const store = usePlanCompletionStore()
 const session = useSessionStore()
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 const summary = computed(() => store.data?.Summary)
 const groups = computed(() => groupPlanCompletionItems(store.data?.Items ?? []))

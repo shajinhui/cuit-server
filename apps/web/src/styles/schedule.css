@@ -2,8 +2,8 @@
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
-  color: #101722;
-  background: #c9d5e7;
+  color: var(--schedule-ink);
+  background: var(--bg-page-schedule);
 }
 
 .app-shell--schedule .app-shell__content {
@@ -61,19 +61,19 @@
 .schedule-current-week {
   flex: 0 0 auto;
   padding: 4px 7px;
-  color: rgba(16, 23, 34, 0.7);
+  color: var(--schedule-muted);
   font-size: 11px;
   font-weight: 650;
   line-height: 1;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.32);
+  background: var(--edge-highlight-faint);
   border-radius: 8px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 0 0 0.5px var(--edge-highlight-faint);
 }
 
 .schedule-current-week.is-browsing {
-  color: #086fcf;
-  background: rgba(231, 243, 255, 0.5);
+  color: var(--blue-deep);
+  background: var(--blue-soft);
 }
 
 .schedule-header p {
@@ -138,7 +138,7 @@
   height: 44px;
   padding: 0;
   place-items: center;
-  color: #080d13;
+  color: var(--ink-deepest);
   font-size: 31px;
   line-height: 1;
   background: transparent;
@@ -213,12 +213,12 @@
   right: 0;
   width: min(238px, calc(100vw - 44px));
   padding: 6px;
-  background: rgba(235, 241, 248, 0.88);
+  background: var(--bg-surface-glass);
   border: 0;
   border-radius: 18px;
   box-shadow:
-    0 18px 44px rgba(31, 44, 61, 0.2),
-    0 2px 8px rgba(31, 44, 61, 0.08);
+    0 18px 44px var(--chart-line-soft),
+    0 2px 8px var(--chart-line-faint);
   transform-origin: calc(100% - 22px) 0;
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   backdrop-filter: blur(22px) saturate(150%);
@@ -243,7 +243,7 @@
 }
 
 .schedule-header__actions .schedule-semester-option:active {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--bg-glass-faint);
   transform: none;
 }
 
@@ -255,7 +255,7 @@
 }
 
 .schedule-semester-option strong {
-  color: #101722;
+  color: var(--schedule-ink);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.2;
@@ -263,7 +263,7 @@
 
 .schedule-semester-option small {
   overflow: hidden;
-  color: rgba(16, 23, 34, 0.62);
+  color: var(--schedule-muted);
   font-size: 12px;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -286,14 +286,14 @@
 
 .schedule-header__actions .schedule-calendar-export-option {
   margin-top: 3px;
-  border-top: 0.5px solid rgba(47, 60, 76, 0.1);
+  border-top: 0.5px solid var(--map-tint);
   border-radius: 0 0 13px 13px;
 }
 
 .schedule-display-setting {
   margin-top: 3px;
   padding: 11px 12px 9px;
-  border-top: 0.5px solid rgba(47, 60, 76, 0.1);
+  border-top: 0.5px solid var(--map-tint);
 }
 
 .schedule-display-setting__heading,
@@ -308,13 +308,13 @@
 }
 
 .schedule-display-setting__heading strong {
-  color: #101722;
+  color: var(--schedule-ink);
   font-size: 15px;
   font-weight: 600;
 }
 
 .schedule-display-setting__heading output {
-  color: #0878e8;
+  color: var(--blue-schedule);
   font-size: 12px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -325,12 +325,12 @@
   width: 100%;
   height: 24px;
   margin: 0;
-  accent-color: #0878e8;
+  accent-color: var(--blue-schedule);
 }
 
 .schedule-display-setting__labels {
   margin-top: -2px;
-  color: rgba(16, 23, 34, 0.52);
+  color: var(--schedule-muted);
   font-size: 10px;
 }
 
@@ -352,7 +352,7 @@
   max-height: min(52dvh, 330px);
   padding: 4px;
   overflow-y: auto;
-  border-top: 1px solid rgba(47, 60, 76, 0.1);
+  border-top: 1px solid var(--map-tint);
   overscroll-behavior: contain;
   scrollbar-width: none;
 }
@@ -369,7 +369,7 @@
   height: auto;
   min-height: 42px;
   padding: 9px 10px;
-  color: rgba(16, 23, 34, 0.72);
+  color: var(--schedule-muted);
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
@@ -387,14 +387,14 @@
 }
 
 .schedule-header__actions .schedule-semester-list__item:active {
-  background: rgba(255, 255, 255, 0.52);
+  background: var(--bg-glass-faint);
   transform: none;
 }
 
 .schedule-header__actions .schedule-semester-list__item.is-selected {
-  color: #0088ff;
+  color: var(--blue-strong);
   font-weight: 600;
-  background: rgba(0, 136, 255, 0.09);
+  background: var(--blue-tint-weak);
 }
 
 .schedule-header__actions .schedule-semester-list__item svg {
@@ -402,7 +402,7 @@
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  color: #0088ff;
+  color: var(--blue-strong);
   stroke-width: 2;
 }
 
@@ -437,13 +437,13 @@
   gap: 4px;
   min-width: 0;
   padding: 0;
-  color: #68717e;
+  color: var(--card-ink-soft);
   background: transparent;
   border: 0;
 }
 
 .week-strip__month {
-  color: #0b1119;
+  color: var(--ink-deepest);
   font-size: 13px;
   font-weight: 600;
 }
@@ -469,7 +469,7 @@
 }
 
 .week-strip button.is-active {
-  color: #111925;
+  color: var(--schedule-ink);
   font-weight: 600;
 }
 
@@ -507,7 +507,7 @@
   display: grid;
   padding: 20px;
   place-items: center;
-  background: rgba(45, 58, 76, 0.2);
+  background: var(--scrim-strong);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
@@ -541,12 +541,12 @@
   align-items: center;
   justify-content: center;
   padding: 28px;
-  color: rgba(16, 23, 34, 0.68);
+  color: var(--schedule-muted);
   text-align: center;
 }
 
 .schedule-state strong {
-  color: #101722;
+  color: var(--schedule-ink);
   font-size: 17px;
 }
 
@@ -561,16 +561,16 @@
   min-height: 36px;
   margin-top: 16px;
   padding: 0 17px;
-  color: #101722;
+  color: var(--schedule-ink);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--bg-glass-faint);
   border: 0;
   border-radius: 18px;
-  box-shadow: 0 5px 16px rgba(39, 54, 74, 0.12);
+  box-shadow: 0 5px 16px var(--chart-grid);
 }
 
 .schedule-state--error p {
-  color: rgba(93, 38, 38, 0.72);
+  color: var(--danger-deep);
 }
 
 .schedule-grid {
@@ -589,7 +589,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #111925;
+  color: var(--schedule-ink);
   background: transparent;
 }
 
@@ -621,12 +621,12 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  color: #26343d;
+  color: var(--schedule-ink-soft);
   font: inherit;
   text-align: center;
-  border: 2px solid rgba(255, 255, 255, 0.62);
+  border: 2px solid var(--bg-glass);
   border-radius: 7px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 1px var(--edge-highlight-faint);
   -webkit-tap-highlight-color: transparent;
   transition:
     transform 120ms ease-out,
@@ -757,7 +757,7 @@
 .course-detail-card__swatch--blue-gray,
 .course-color-setting__preview--blue-gray,
 .course-color-picker__swatch--blue-gray {
-  background: #60999a;
+  background: var(--success-strong);
 }
 
 .course-block--rose-brown,
@@ -778,7 +778,7 @@
 .course-detail-card__swatch--seafoam,
 .course-color-setting__preview--seafoam,
 .course-color-picker__swatch--seafoam {
-  background: #6f9d86;
+  background: var(--success-strong);
 }
 
 .course-block--slate-blue,
@@ -834,19 +834,19 @@
   bottom: 2px;
   left: 3px;
   overflow: hidden;
-  color: #26343d;
+  color: var(--schedule-ink-soft);
   font-size: 8px;
   font-weight: 600;
   line-height: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.52);
+  background: var(--bg-glass-faint);
   border-radius: 4px;
 }
 
 .course-block__status--conflict {
-  color: #8f3038;
-  background: rgba(255, 244, 244, 0.74);
+  color: var(--danger-deep);
+  background: var(--bg-surface-soft);
 }
 
 .course-detail-backdrop {
@@ -857,7 +857,7 @@
   align-items: flex-end;
   justify-content: center;
   padding-bottom: calc(12px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  background: rgba(18, 27, 39, 0.26);
+  background: var(--chart-line);
   -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
 }
@@ -866,12 +866,12 @@
   width: min(calc(100% - 24px), 456px);
   max-height: calc(100dvh - 48px - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)));
   overflow: hidden auto;
-  color: #16212d;
-  background: rgba(239, 244, 250, 0.96);
+  color: var(--ink-deepest);
+  background: var(--bg-surface-raised);
   border-radius: 26px;
   box-shadow:
-    0 28px 70px rgba(24, 35, 50, 0.26),
-    0 3px 14px rgba(24, 35, 50, 0.1);
+    0 28px 70px var(--chart-line),
+    0 3px 14px var(--chart-line-faint);
   -webkit-backdrop-filter: blur(24px) saturate(155%);
   backdrop-filter: blur(24px) saturate(155%);
 }
@@ -893,7 +893,7 @@
   height: 42px;
   margin-top: 2px;
   border-radius: 6px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 0 0 0.5px var(--edge-highlight-faint);
 }
 
 .course-detail-card__header p {
@@ -901,7 +901,7 @@
   align-items: center;
   gap: 7px;
   margin: 0 0 5px;
-  color: rgba(38, 52, 61, 0.58);
+  color: var(--schedule-muted);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -909,8 +909,8 @@
 
 .course-detail-card__header p span {
   padding: 3px 7px;
-  color: rgba(38, 52, 61, 0.74);
-  background: rgba(116, 116, 128, 0.12);
+  color: var(--schedule-muted);
+  background: var(--control-track-soft);
   border-radius: 8px;
 }
 
@@ -928,8 +928,8 @@
   height: 34px;
   padding: 0;
   place-items: center;
-  color: rgba(38, 52, 61, 0.68);
-  background: rgba(116, 116, 128, 0.12);
+  color: var(--schedule-muted);
+  background: var(--control-track-soft);
   border: 0;
   border-radius: 50%;
   transition:
@@ -938,7 +938,7 @@
 }
 
 .course-detail-card__header button:active {
-  background: rgba(116, 116, 128, 0.2);
+  background: var(--control-track);
   transform: scale(0.94);
 }
 
@@ -954,9 +954,9 @@
 .course-detail-card__details {
   margin: 0 12px 12px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 18px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.76);
+  box-shadow: inset 0 0 0 0.5px var(--edge-highlight-soft);
 }
 
 .course-detail-card__details div {
@@ -976,11 +976,11 @@
   left: 14px;
   height: 0.5px;
   content: '';
-  background: rgba(60, 60, 67, 0.13);
+  background: var(--line-medium);
 }
 
 .course-detail-card__details dt {
-  color: rgba(38, 52, 61, 0.58);
+  color: var(--schedule-muted);
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
@@ -990,7 +990,7 @@
   margin: 0;
   overflow-wrap: anywhere;
   white-space: pre-line;
-  color: #26343d;
+  color: var(--schedule-ink-soft);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -1000,13 +1000,13 @@
 .course-color-settings {
   margin: 0 12px 12px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 18px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.76);
+  box-shadow: inset 0 0 0 0.5px var(--edge-highlight-soft);
 }
 
 .course-color-setting + .course-color-setting {
-  border-top: 0.5px solid rgba(60, 60, 67, 0.13);
+  border-top: 0.5px solid var(--line-medium);
 }
 
 .course-color-setting__trigger {
@@ -1017,7 +1017,7 @@
   grid-template-columns: minmax(0, 1fr) 24px 16px;
   align-items: center;
   gap: 10px;
-  color: #26343d;
+  color: var(--schedule-ink-soft);
   text-align: left;
   background: transparent;
   border: 0;
@@ -1039,7 +1039,7 @@
 
 .course-color-setting__trigger small {
   overflow: hidden;
-  color: rgba(38, 52, 61, 0.58);
+  color: var(--schedule-muted);
   font-size: 11px;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -1050,16 +1050,16 @@
   display: block;
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.82);
+  border: 2px solid var(--bg-surface-soft);
   border-radius: 50%;
-  box-shadow: 0 0 0 0.5px rgba(38, 52, 61, 0.2);
+  box-shadow: 0 0 0 0.5px var(--map-tint);
 }
 
 .course-color-setting__trigger > svg {
   width: 16px;
   height: 16px;
   fill: none;
-  stroke: rgba(38, 52, 61, 0.48);
+  stroke: var(--map-tint);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.7;
@@ -1071,7 +1071,7 @@
 }
 
 .course-color-setting__trigger:active:not(:disabled) {
-  background: rgba(116, 116, 128, 0.08);
+  background: var(--control-track-soft);
 }
 
 .course-color-setting__trigger:disabled {
@@ -1100,9 +1100,9 @@
   display: block;
   width: 28px;
   height: 28px;
-  border: 2px solid rgba(255, 255, 255, 0.78);
+  border: 2px solid var(--bg-surface-soft);
   border-radius: 50%;
-  box-shadow: 0 0 0 0.5px rgba(38, 52, 61, 0.18);
+  box-shadow: 0 0 0 0.5px var(--map-tint-weak);
   transition:
     transform 100ms ease-out,
     box-shadow 140ms ease;
@@ -1114,8 +1114,8 @@
 
 .course-color-picker__option.is-selected > span {
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.94),
-    0 0 0 4px #0878e8;
+    0 0 0 2px var(--edge-highlight),
+    0 0 0 4px var(--blue-schedule);
   transform: scale(0.92);
 }
 
@@ -1131,10 +1131,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: rgba(38, 52, 61, 0.72);
+  color: var(--schedule-muted);
   font-size: 13px;
   font-weight: 600;
-  background: rgba(116, 116, 128, 0.1);
+  background: var(--control-track-soft);
   border: 0;
   border-radius: 12px;
 }
@@ -1151,8 +1151,8 @@
 }
 
 .course-color-picker__automatic.is-selected {
-  color: #0878e8;
-  background: rgba(8, 120, 232, 0.1);
+  color: var(--blue-schedule);
+  background: var(--blue-tint-weak);
 }
 
 .course-color-picker__automatic.is-selected svg {
@@ -1161,7 +1161,7 @@
 
 .course-color-settings__error {
   margin: -2px 14px 12px;
-  color: #b33431;
+  color: var(--danger-deep);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1169,14 +1169,14 @@
 .course-detail-card__actions {
   margin: 0 12px 12px;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 18px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.76);
+  box-shadow: inset 0 0 0 0.5px var(--edge-highlight-soft);
 }
 
 .course-detail-card__actions > p {
   margin: 3px 6px 10px;
-  color: #26343d;
+  color: var(--schedule-ink-soft);
   font-size: 14px;
   font-weight: 600;
   line-height: 1.4;
@@ -1185,7 +1185,7 @@
 .course-detail-card__actions > p small {
   display: block;
   margin-top: 2px;
-  color: rgba(38, 52, 61, 0.58);
+  color: var(--schedule-muted);
   font-size: 12px;
   font-weight: 500;
 }
@@ -1199,10 +1199,10 @@
 .course-detail-card__actions button {
   min-height: 44px;
   padding: 0 14px;
-  color: #26343d;
+  color: var(--schedule-ink-soft);
   font-size: 14px;
   font-weight: 600;
-  background: rgba(116, 116, 128, 0.12);
+  background: var(--control-track-soft);
   border: 0;
   border-radius: 13px;
   transition:
@@ -1220,8 +1220,8 @@
 
 .course-detail-card__actions button.is-destructive,
 .course-detail-card__delete {
-  color: #c73a36;
-  background: rgba(199, 58, 54, 0.09);
+  color: var(--danger-deep);
+  background: var(--danger-soft);
 }
 
 .course-detail-card__delete {
@@ -1230,8 +1230,8 @@
 
 .course-detail-card__edit {
   width: 100%;
-  color: #0878e8;
-  background: rgba(8, 120, 232, 0.09);
+  color: var(--blue-schedule);
+  background: var(--blue-tint-weak);
 }
 
 .course-detail-card__edit + .course-detail-card__edit,
@@ -1243,7 +1243,7 @@
 .course-detail-card__actions > p.course-detail-card__remove-error {
   margin-top: 8px;
   margin-bottom: 2px;
-  color: #b33431;
+  color: var(--danger-deep);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1279,7 +1279,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(20, 29, 41, 0.28);
+  background: var(--chart-line);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
@@ -1290,12 +1290,12 @@
   max-height: calc(100dvh - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - 12px);
   flex-direction: column;
   overflow: hidden;
-  color: #101722;
-  background: rgba(235, 241, 248, 0.98);
+  color: var(--schedule-ink);
+  background: var(--bg-surface-raised);
   border-radius: 24px 24px 0 0;
   box-shadow:
-    0 -20px 60px rgba(24, 35, 50, 0.22),
-    0 -2px 12px rgba(24, 35, 50, 0.08);
+    0 -20px 60px var(--chart-line-soft),
+    0 -2px 12px var(--chart-axis);
 }
 
 .add-course-sheet__grabber {
@@ -1304,7 +1304,7 @@
   flex: 0 0 auto;
   align-self: center;
   margin-top: 7px;
-  background: rgba(60, 60, 67, 0.28);
+  background: var(--line-heavy);
   border-radius: 3px;
 }
 
@@ -1333,7 +1333,7 @@
   min-height: 44px;
   padding: 0 10px;
   overflow: hidden;
-  color: rgba(16, 23, 34, 0.7);
+  color: var(--schedule-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
   background: transparent;
@@ -1350,7 +1350,7 @@
 }
 
 .add-course-sheet__header button.is-primary {
-  color: #0878e8;
+  color: var(--blue-schedule);
   font-weight: 600;
 }
 
@@ -1372,11 +1372,11 @@
 .add-course-form__group {
   margin-bottom: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 16px;
   box-shadow:
-    0 7px 22px rgba(40, 54, 72, 0.05),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.72);
+    0 7px 22px var(--shadow-color-soft),
+    inset 0 0 0 0.5px var(--bg-nav);
 }
 
 .add-course-form__group > label {
@@ -1395,7 +1395,7 @@
   left: 12px;
   height: 0.5px;
   content: '';
-  background: rgba(60, 60, 67, 0.16);
+  background: var(--line-medium);
 }
 
 .add-course-form label > span {
@@ -1412,7 +1412,7 @@
   min-width: 0;
   min-height: 44px;
   padding: 0;
-  color: #101722;
+  color: var(--schedule-ink);
   text-align: right;
   background: transparent;
   border: 0;
@@ -1425,7 +1425,7 @@
 }
 
 .add-course-form input::placeholder {
-  color: rgba(60, 60, 67, 0.44);
+  color: var(--line-heavy);
 }
 
 .add-course-form input:focus {
@@ -1434,7 +1434,7 @@
 }
 
 .add-course-form .app-select__chevron {
-  color: rgba(60, 60, 67, 0.46);
+  color: var(--line-heavy);
 }
 
 .add-course-form__split-row {
@@ -1455,7 +1455,7 @@
   left: 12px;
   height: 0.5px;
   content: '';
-  background: rgba(60, 60, 67, 0.16);
+  background: var(--line-medium);
 }
 
 .add-course-form__split-row label {
@@ -1468,7 +1468,7 @@
 }
 
 .add-course-form__split-row label + label {
-  box-shadow: inset 0.5px 0 rgba(60, 60, 67, 0.13);
+  box-shadow: inset 0.5px 0 var(--line-medium);
 }
 
 .add-course-form__split-row .app-select__trigger {
@@ -1487,22 +1487,22 @@
   min-width: 0;
   min-height: 34px;
   padding: 0 10px;
-  color: rgba(16, 23, 34, 0.62);
+  color: var(--schedule-muted);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.25;
   overflow-wrap: anywhere;
-  background: rgba(118, 118, 128, 0.12);
+  background: var(--control-track-soft);
   border: 0;
   border-radius: 9px;
 }
 
 .add-course-form__repeat button.is-active {
-  color: #101722;
-  background: rgba(255, 255, 255, 0.94);
+  color: var(--schedule-ink);
+  background: var(--edge-highlight);
   box-shadow:
-    0 2px 7px rgba(30, 40, 54, 0.12),
-    0 0 0 0.5px rgba(60, 60, 67, 0.07);
+    0 2px 7px var(--map-tint),
+    0 0 0 0.5px var(--line-faint);
 }
 
 .add-course-form__error,
@@ -1514,11 +1514,11 @@
 
 .add-course-form__error {
   margin-bottom: 8px;
-  color: #b4232a;
+  color: var(--danger-deep);
 }
 
 .add-course-form__note {
-  color: rgba(16, 23, 34, 0.54);
+  color: var(--schedule-muted);
   text-align: center;
 }
 
@@ -1534,11 +1534,11 @@
   padding: 16px;
   align-items: center;
   gap: 14px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 18px;
   box-shadow:
-    0 7px 22px rgba(40, 54, 72, 0.05),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.72);
+    0 7px 22px var(--shadow-color-soft),
+    inset 0 0 0 0.5px var(--bg-nav);
 }
 
 .calendar-export-sheet__icon {
@@ -1546,9 +1546,9 @@
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
-  color: #0878e8;
+  color: var(--blue-schedule);
   place-items: center;
-  background: rgba(8, 120, 232, 0.1);
+  background: var(--blue-tint-weak);
   border-radius: 15px;
 }
 
@@ -1578,7 +1578,7 @@
 
 .calendar-export-sheet__summary p {
   margin: 5px 0 0;
-  color: rgba(16, 23, 34, 0.58);
+  color: var(--schedule-muted);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -1589,9 +1589,9 @@
   padding: 4px 12px;
   grid-template-columns: minmax(min-content, 0.42fr) minmax(0, 1fr);
   align-items: center;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 16px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 0.5px var(--bg-nav);
 }
 
 .calendar-export-sheet__setting > span {
@@ -1617,11 +1617,11 @@
 }
 
 .calendar-export-sheet__note {
-  color: rgba(16, 23, 34, 0.54);
+  color: var(--schedule-muted);
 }
 
 .calendar-export-sheet__error {
-  color: #b4232a;
+  color: var(--danger-deep);
 }
 
 .calendar-export-sheet__submit {
@@ -1631,13 +1631,13 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 16px;
   font-weight: 650;
-  background: #0878e8;
+  background: var(--blue-schedule);
   border: 0;
   border-radius: 15px;
-  box-shadow: 0 7px 18px rgba(8, 120, 232, 0.2);
+  box-shadow: 0 7px 18px var(--blue-tint-strong);
 }
 
 .calendar-export-sheet__submit:active {
@@ -1651,8 +1651,8 @@
 .calendar-export-sheet__spinner {
   width: 17px;
   height: 17px;
-  border: 2px solid rgba(255, 255, 255, 0.38);
-  border-top-color: #fff;
+  border: 2px solid var(--edge-highlight-faint);
+  border-top-color: var(--edge-highlight);
   border-radius: 50%;
   animation: schedule-spin 700ms linear infinite;
 }
@@ -1736,21 +1736,21 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .schedule-more-menu {
-    background: #eaf0f7;
+    background: var(--blue-soft);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 
   .add-course-sheet-backdrop,
   .course-detail-backdrop {
-    background: rgba(20, 29, 41, 0.46);
+    background: var(--chart-grid-soft);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 
   .add-course-sheet,
   .course-detail-card {
-    background: #ebf1f8;
+    background: var(--blue-soft);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

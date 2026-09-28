@@ -18,7 +18,7 @@ defineOptions({ name: 'GradesPage' })
 const router = useRouter()
 const store = useGradesStore()
 
-usePageTheme('#f6f6f8')
+usePageTheme('bg-page-warm')
 
 const publishedCount = computed(() => countPublishedGrades(store.grades))
 const failedCount = computed(() => countFailedGrades(store.grades))

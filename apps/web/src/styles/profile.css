@@ -1,12 +1,10 @@
 .app-shell.app-shell--profile {
-  --profile-background: #f2f2f7;
-  --profile-surface: rgba(255, 255, 255, 0.82);
-  --profile-label: #1c1c1e;
-  --profile-secondary-label: #636366;
-  --profile-tertiary-label: #8e8e93;
-  --profile-control: #e5e5ea;
-  --profile-accent: #007aff;
-  --profile-danger: #ff383c;
+  --profile-background: var(--bg-page);
+  --profile-label: var(--text-primary);
+  --profile-tertiary-label: var(--text-faint);
+  --profile-control: var(--control-bg);
+  --profile-accent: var(--blue-link);
+  --profile-danger: var(--danger);
 
   color: var(--profile-label);
   background: var(--profile-background);
@@ -14,10 +12,10 @@
 
 .app-shell--profile .surface-card {
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--edge-highlight);
   border: 0;
   border-radius: 22px;
-  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.025);
+  box-shadow: 0 0.5px 1px var(--hairline);
 }
 
 .profile-page {
@@ -44,9 +42,9 @@
   overflow: hidden;
   cursor: pointer;
   background: var(--profile-control);
-  border: 1px solid rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--bg-glass-bright);
   border-radius: 50%;
-  box-shadow: 0 0 0 0.5px rgba(60, 60, 67, 0.12);
+  box-shadow: 0 0 0 0.5px var(--line-soft);
 }
 
 .profile-avatar img {
@@ -67,11 +65,11 @@
   width: 28px;
   height: 28px;
   place-items: center;
-  color: #1c1c1e;
-  background: rgba(242, 242, 247, 0.96);
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  color: var(--text-primary);
+  background: var(--bg-surface-raised);
+  border: 1.5px solid var(--edge-highlight-strong);
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(28, 28, 30, 0.18);
+  box-shadow: 0 1px 4px var(--shadow-color);
 }
 
 .profile-avatar__edit svg {
@@ -131,7 +129,7 @@
   left: 71px;
   height: 0.5px;
   content: '';
-  background: rgba(60, 60, 67, 0.18);
+  background: var(--line-strong-alpha);
 }
 
 .student-card__icon {
@@ -139,10 +137,10 @@
   width: 36px;
   height: 36px;
   place-items: center;
-  color: #5f6065;
-  background: linear-gradient(180deg, #d1d1d6, #aeaeb2);
+  color: var(--card-ink-soft);
+  background: linear-gradient(180deg, var(--control-pressed-bg), var(--control-bg));
   border-radius: 10px;
-  box-shadow: inset 0 0 0 0.5px rgba(60, 60, 67, 0.12);
+  box-shadow: inset 0 0 0 0.5px var(--line-soft);
 }
 
 .student-card__icon img {
@@ -234,7 +232,7 @@
   padding: 0;
 }
 
-.profile-menu button {
+.profile-menu > button {
   display: grid;
   grid-template-columns: 40px 1fr 18px;
   align-items: center;
@@ -245,21 +243,21 @@
   text-align: left;
   background: transparent;
   border: 0;
-  border-bottom: 0.5px solid rgba(60, 60, 67, 0.16);
+  border-bottom: 0.5px solid var(--line-medium);
   transition:
     background-color 120ms ease,
     opacity 120ms ease;
 }
 
-.profile-menu button:active {
-  background: rgba(116, 116, 128, 0.1);
+.profile-menu > button:active {
+  background: var(--control-track-soft);
 }
 
-.profile-menu button:last-child {
+.profile-menu > button:last-child {
   border-bottom: 0;
 }
 
-.profile-menu button:disabled {
+.profile-menu > button:disabled {
   cursor: wait;
   opacity: 0.55;
 }
@@ -276,8 +274,10 @@
   width: 34px;
   height: 34px;
   padding: 7px;
-  color: #fff;
-  background: linear-gradient(180deg, #d1d1d6, #aeaeb2);
+  color: var(--text-on-accent);
+  /* 白描边图标配深色渐变底，末端必须用 --control-icon-muted：
+     --text-muted 在深色下会变浅，白图标会糊在底色上。 */
+  background: linear-gradient(180deg, var(--control-pressed-bg), var(--control-icon-muted));
   border-radius: 10px;
   fill: none;
   stroke: currentcolor;
@@ -302,6 +302,29 @@
   stroke-width: 1.8;
 }
 
+/* 外观设置行：图标 + 文字 + 分段控件，与菜单其它行的栅格保持一致 */
+.profile-menu__row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 13px;
+  min-height: 64px;
+  padding: 0 18px;
+  border-bottom: 0.5px solid var(--line-medium);
+}
+
+.profile-menu__row span {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* 外观开关：尺寸与环境跟随 profile 菜单的栅格（高度与文字行一致） */
+.profile-menu__theme-switch {
+  width: 174px;
+  height: 32px;
+}
+
+
 .profile-logout {
   margin-top: 24px;
 }
@@ -323,7 +346,7 @@
 }
 
 .profile-logout button:active {
-  background: rgba(255, 56, 60, 0.08);
+  background: var(--danger-tint);
 }
 
 .profile-logout button:disabled {
@@ -332,7 +355,7 @@
 }
 
 .profile-page button:focus-visible {
-  outline-color: rgba(0, 122, 255, 0.48);
+  outline-color: var(--blue-ring);
 }
 
 @media (max-width: 370px) {
@@ -346,7 +369,7 @@
   }
 
   .student-card__row,
-  .profile-menu button {
+  .profile-menu > button {
     padding-right: 16px;
     padding-left: 16px;
   }
@@ -429,7 +452,7 @@
     font-size: 13px;
   }
 
-  .profile-menu button {
+  .profile-menu > button {
     min-height: 54px;
     padding: 0 14px;
     grid-template-columns: 36px minmax(0, 1fr) 16px;
@@ -462,9 +485,24 @@
   }
 }
 
+/* 窄屏下分段控件会和文字挤在一起，退化成两行：文字一行、控件整行 */
+@media (max-width: 360px) {
+  .profile-menu__row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding-top: 10px;
+    padding-bottom: 10px;
+    row-gap: 8px;
+  }
+
+  .profile-menu__theme-switch {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .app-shell--profile .surface-card {
-    background: #fff;
+    background: var(--bg-surface);
   }
 }
 

@@ -23,7 +23,7 @@ const router = useRouter()
 const store = useExamsStore()
 const session = useSessionStore()
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 const selectedSemester = computed(() =>
   store.semesters.find((semester) => semester.ID === store.selectedSemesterID),

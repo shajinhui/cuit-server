@@ -9,10 +9,10 @@
   padding-bottom: calc(10px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   flex-direction: column;
   overflow: hidden;
-  color: #1c1c1e;
+  color: var(--text-primary);
   background:
-    radial-gradient(circle at 88% 1%, rgba(255, 255, 255, 0.72), transparent 27%),
-    linear-gradient(180deg, #e9ebee 0%, #e6e8eb 58%, #eceef0 100%);
+    radial-gradient(circle at 88% 1%, var(--bg-nav), transparent 27%),
+    linear-gradient(180deg, var(--bg-page-cool) 0%, var(--bg-cell) 58%, var(--bg-cell) 100%);
 }
 
 .calendar-topbar {
@@ -37,7 +37,7 @@
 
 .calendar-topbar p {
   margin: 2px 0 0;
-  color: #777a80;
+  color: var(--text-muted);
   font-size: 11px;
   line-height: 1.2;
 }
@@ -48,14 +48,14 @@
   height: 44px;
   padding: 0;
   place-items: center;
-  color: #34343a;
+  color: var(--text-tertiary);
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border: 0;
   border-radius: 50%;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.07),
-    0 5px 16px rgba(35, 39, 45, 0.05);
+    0 0.5px 0 var(--hairline),
+    0 5px 16px var(--shadow-color-soft);
   -webkit-backdrop-filter: blur(20px) saturate(145%);
   backdrop-filter: blur(20px) saturate(145%);
   transition: transform 140ms var(--ease-out);
@@ -92,11 +92,11 @@
   min-height: 0;
   margin-top: 12px;
   overflow: auto;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-glass);
   border-radius: 18px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.08),
-    0 14px 36px rgba(38, 42, 48, 0.07);
+    0 0.5px 0 var(--hairline),
+    0 14px 36px var(--map-tint-soft);
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
@@ -106,14 +106,14 @@
   min-width: 100%;
   min-height: 100%;
   place-items: center;
-  background: rgba(118, 118, 128, 0.08);
+  background: var(--control-track-soft);
 }
 
 .calendar-image-stage img {
   display: block;
   width: 100%;
   height: auto;
-  background: #fff;
+  background: var(--bg-surface);
   box-shadow: 0 3px 14px rgba(30, 34, 42, 0.08);
   user-select: none;
   -webkit-user-drag: none;
@@ -134,9 +134,9 @@
   align-items: center;
   justify-content: center;
   padding: 30px;
-  color: #777a80;
+  color: var(--text-muted);
   text-align: center;
-  background: rgba(236, 238, 241, 0.88);
+  background: var(--bg-surface-overlay);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
@@ -149,7 +149,7 @@
 }
 
 .calendar-state strong {
-  color: #2d2e33;
+  color: var(--text-tertiary);
   font-size: 16px;
 }
 
@@ -157,12 +157,12 @@
   min-height: 38px;
   margin-top: 16px;
   padding: 0 18px;
-  color: #0878e8;
+  color: var(--blue-schedule);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.86);
+  background: var(--bg-surface-glass);
   border: 0;
   border-radius: 19px;
-  box-shadow: 0 5px 16px rgba(35, 39, 45, 0.07);
+  box-shadow: 0 5px 16px var(--shadow-color-soft);
 }
 
 .calendar-toolbar {
@@ -171,11 +171,11 @@
   margin-top: 12px;
   padding: 4px;
   grid-template-columns: repeat(2, 1fr);
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--bg-glass);
   border-radius: 27px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.08),
-    0 9px 24px rgba(38, 42, 48, 0.055);
+    0 0.5px 0 var(--hairline),
+    0 9px 24px var(--map-tint-weak);
   -webkit-backdrop-filter: blur(20px) saturate(145%);
   backdrop-filter: blur(20px) saturate(145%);
 }
@@ -189,7 +189,7 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  color: #34343a;
+  color: var(--text-tertiary);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -199,13 +199,13 @@
 }
 
 .calendar-toolbar button[aria-pressed='true'] {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--bg-glass-bright);
   box-shadow: 0 2px 8px rgba(30, 34, 42, 0.1);
 }
 
 .calendar-toolbar button:active,
 .calendar-toolbar a:active {
-  background: rgba(118, 118, 128, 0.1);
+  background: var(--control-track-soft);
 }
 
 .calendar-toolbar svg {
@@ -221,7 +221,7 @@
 
 .calendar-source {
   margin: 8px 0 0;
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 10px;
   text-align: center;
 }
@@ -236,13 +236,13 @@
 @media (prefers-reduced-transparency: reduce) {
   .calendar-icon-button,
   .calendar-toolbar {
-    background: #f8f8fa;
+    background: var(--bg-subtle);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 
   .calendar-state {
-    background: #eceef1;
+    background: var(--bg-cell);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

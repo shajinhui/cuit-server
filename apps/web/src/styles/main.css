@@ -1,3 +1,4 @@
+@import './theme.css';
 @import './app-select.css';
 @import './app-date-time-picker.css';
 @import './schedule.css';
@@ -13,6 +14,7 @@
 @import './feedback.css';
 @import './admin-stats.css';
 @import './plan-completion.css';
+@import './glass-segmented.css';
 @import './grades.css';
 @import './login.css';
 @import './pwa-install.css';
@@ -28,21 +30,15 @@
   font-family:
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC",
     "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #191b1b;
-  background: #fbfcf9;
+  color: var(--text-primary);
+  background: var(--app-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --green: #72b629;
-  --green-deep: #54a714;
-  --green-soft: #f3f9e9;
-  --muted: #777a7c;
-  --line: #e8ebe7;
-  --surface: rgba(255, 255, 255, 0.93);
-  --shadow: 0 10px 30px rgba(29, 40, 25, 0.09);
-  --focus-ring: #2f6f1f;
-  --focus-ring-soft: rgba(47, 111, 31, 0.18);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
+
+/* 颜色令牌统一在 theme.css 维护；旧令牌（--green/--muted/--surface/--shadow 等）由它提供别名，
+   焦点环、蒙层、高光等语义令牌也都在那里，深浅两套值由 data-theme 切换。 */
 
 /*
  * iOS 26/27 may add a system scroll-pocket blur to standalone web apps. A
@@ -64,7 +60,7 @@ html[data-ios-top-scrim='true'] .ios-pwa-status-strip {
   height: 11px;
   pointer-events: none;
   color: transparent;
-  background-color: #fbfcf9;
+  background-color: var(--app-canvas);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -80,7 +76,7 @@ body,
 }
 
 html {
-  background: #fbfcf9;
+  background: var(--app-canvas);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -90,7 +86,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   min-height: 100dvh;
-  background: #fbfcf9;
+  background: var(--app-canvas);
   overscroll-behavior-x: none;
 }
 
@@ -152,8 +148,8 @@ select:focus-visible {
 
 .app-shell {
   background:
-    radial-gradient(circle at 93% 0%, rgba(198, 230, 159, 0.12), transparent 25%),
-    #fbfcf9;
+    radial-gradient(circle at 93% 0%, var(--sheen-accent), transparent 25%),
+    var(--app-canvas);
 }
 
 .app-shell__content {
@@ -167,10 +163,10 @@ select:focus-visible {
 }
 
 .surface-card {
-  background: var(--surface);
-  border: 1px solid rgba(232, 235, 231, 0.8);
+  background: var(--bg-surface);
+  border: 1px solid var(--line);
   border-radius: 24px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-card);
 }
 
 .bottom-navigation {
@@ -191,8 +187,8 @@ select:focus-visible {
   overflow: hidden;
   border-radius: var(--bottom-navigation-outer-radius);
   box-shadow:
-    0 16px 36px rgba(28, 28, 30, 0.12),
-    0 3px 9px rgba(28, 28, 30, 0.05);
+    0 16px 36px var(--shadow-color),
+    0 3px 9px var(--shadow-color-soft);
   transform: translateX(-50%);
 }
 
@@ -252,7 +248,7 @@ html[data-platform='android'] .bottom-navigation {
   gap: 3px;
   min-width: 0;
   padding: 0;
-  color: rgba(28, 28, 30, 0.76);
+  color: color-mix(in srgb, var(--text-primary) 76%, transparent);
   font: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -281,13 +277,13 @@ html[data-platform='android'] .bottom-navigation {
   width: calc((100% - 10px) / var(--navigation-item-count, 3));
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2)),
-    rgba(116, 116, 128, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.42);
+    linear-gradient(180deg, var(--bg-glass-faint), var(--edge-highlight-faint)),
+    var(--control-track);
+  border: 1px solid var(--edge-highlight-faint);
   border-radius: var(--bottom-navigation-inner-radius);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.42),
-    0 4px 12px rgba(28, 28, 30, 0.08);
+    inset 0 1px 0 var(--edge-highlight-faint),
+    0 4px 12px var(--shadow-color-soft);
   transform: translate3d(calc(var(--active-index) * 100%), 0, 0);
   transition: transform 420ms cubic-bezier(0.22, 0.9, 0.24, 1.08);
   will-change: transform;
@@ -298,7 +294,7 @@ html[data-platform='android'] .bottom-navigation {
   inset: 0;
   content: '';
   border-radius: inherit;
-  box-shadow: inset 0 0 0 0.5px rgba(28, 28, 30, 0.06);
+  box-shadow: inset 0 0 0 0.5px var(--hairline);
 }
 
 .bottom-navigation__icon {
@@ -333,7 +329,7 @@ html[data-platform='android'] .bottom-navigation {
 }
 
 .bottom-navigation__item.is-active {
-  color: #007aff;
+  color: var(--blue-link);
   background: transparent;
   box-shadow: none;
 }
@@ -369,12 +365,12 @@ html[data-platform='android'] .bottom-navigation {
 }
 
 .bottom-navigation__item:focus-visible {
-  outline-color: rgba(0, 122, 255, 0.46);
+  outline-color: var(--blue-ring);
   outline-offset: -3px;
 }
 
 .bottom-navigation__item:focus-visible:not(.is-active) {
-  background: rgba(0, 122, 255, 0.07);
+  background: var(--blue-tint);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -397,8 +393,8 @@ html[data-platform='android'] .bottom-navigation {
   }
 
   .bottom-navigation__glass > .glass {
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(28, 28, 30, 0.1) !important;
+    background: var(--bg-surface);
+    box-shadow: 0 8px 24px var(--shadow-color) !important;
   }
 
   .bottom-navigation__glass > .glass > .glass__warp {
@@ -406,9 +402,9 @@ html[data-platform='android'] .bottom-navigation {
   }
 
   .bottom-navigation__content {
-    background: #fff;
-    border: 1px solid rgba(28, 28, 30, 0.14);
-    box-shadow: 0 8px 24px rgba(28, 28, 30, 0.1);
+    background: var(--bg-surface);
+    border: 1px solid var(--line-soft);
+    box-shadow: 0 8px 24px var(--shadow-color);
   }
 }
 
@@ -422,8 +418,8 @@ html[data-platform='android'] .bottom-navigation {
   }
 
   .bottom-navigation__glass > .glass {
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(28, 28, 30, 0.14) !important;
+    background: var(--bg-surface);
+    box-shadow: 0 8px 24px var(--shadow-color) !important;
   }
 
   .bottom-navigation__glass > .glass > .glass__warp {
@@ -431,17 +427,17 @@ html[data-platform='android'] .bottom-navigation {
   }
 
   .bottom-navigation__content {
-    background: #fff;
-    border: 1px solid rgba(28, 28, 30, 0.28);
+    background: var(--bg-surface);
+    border: 1px solid var(--line-soft);
   }
 
   .bottom-navigation__selection {
-    background: #e5e5ea;
-    border: 1px solid rgba(28, 28, 30, 0.18);
+    background: var(--control-bg);
+    border: 1px solid var(--line-soft);
   }
 
   .bottom-navigation__item.is-active {
-    color: #0066cc;
+    color: var(--blue-deep);
   }
 }
 
@@ -483,12 +479,12 @@ html[data-platform='android'] .bottom-navigation {
   bottom: calc(80px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   left: 50%;
   padding: 11px 18px;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 14px;
   white-space: nowrap;
-  background: rgba(30, 34, 30, 0.88);
+  background: var(--overlay-toast);
   border-radius: 24px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 24px var(--shadow-color-strong);
   transform: translateX(-50%);
 }
 
@@ -512,14 +508,14 @@ html[data-platform='android'] .bottom-navigation {
 
 .empty-message {
   padding: 40px 0;
-  color: var(--muted);
+  color: var(--text-faint);
   text-align: center;
 }
 
 @media (min-width: 560px) {
   .app-shell,
   .grade-page {
-    box-shadow: 0 0 50px rgba(33, 45, 28, 0.11);
+    box-shadow: 0 0 50px var(--glow-accent);
   }
 }
 
@@ -879,18 +875,18 @@ html[data-platform='android'] .bottom-navigation {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .profile-menu button {
+  .profile-menu > button {
     min-height: 52px;
     padding: 0 13px;
     grid-template-columns: 32px minmax(0, 1fr) 15px;
     gap: 9px;
   }
 
-  .profile-menu button:nth-child(odd) {
-    border-right: 0.5px solid rgba(60, 60, 67, 0.16);
+  .profile-menu > button:nth-child(odd) {
+    border-right: 0.5px solid var(--line-medium);
   }
 
-  .profile-menu button:nth-last-child(-n + 2) {
+  .profile-menu > button:nth-last-child(-n + 2) {
     border-bottom: 0;
   }
 
@@ -1227,7 +1223,7 @@ html[data-platform='android'] .bottom-navigation {
  */
 @media (min-width: 768px) {
   body {
-    background: #eef0ed;
+    background: var(--chart-grid);
   }
 
   .app-shell,
@@ -1403,11 +1399,11 @@ html[data-platform='android'] .bottom-navigation {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .profile-menu button:nth-child(odd) {
-    border-right: 0.5px solid rgba(60, 60, 67, 0.16);
+  .profile-menu > button:nth-child(odd) {
+    border-right: 0.5px solid var(--line-medium);
   }
 
-  .profile-menu button:nth-last-child(-n + 2) {
+  .profile-menu > button:nth-last-child(-n + 2) {
     border-bottom: 0;
   }
 
@@ -1625,13 +1621,13 @@ html[data-platform='android'] .bottom-navigation {
 
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__item:not(.is-active):hover {
-    background: rgba(0, 122, 255, 0.065);
+    background: var(--blue-tint);
   }
 
   .tools-announcement-card:hover,
   .tools-grid button:not(:disabled):hover,
-  .profile-menu button:not(:disabled):hover,
+  .profile-menu > button:not(:disabled):hover,
   .profile-logout button:not(:disabled):hover {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: var(--bg-glass-bright);
   }
 }

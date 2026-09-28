@@ -5,7 +5,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(28, 28, 30, 0.3);
+  background: var(--shadow-color);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
@@ -16,12 +16,12 @@
   max-height: calc(100dvh - var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) - 12px);
   flex-direction: column;
   overflow: hidden;
-  color: #1c1c1e;
-  background: rgba(242, 242, 247, 0.98);
+  color: var(--text-primary);
+  background: var(--bg-surface-glass);
   border-radius: 24px 24px 0 0;
   box-shadow:
-    0 -20px 60px rgba(28, 28, 30, 0.22),
-    0 -2px 12px rgba(28, 28, 30, 0.08);
+    0 -20px 60px var(--shadow-color),
+    0 -2px 12px var(--shadow-color-soft);
 }
 
 .avatar-sheet__grabber {
@@ -30,7 +30,7 @@
   flex: 0 0 auto;
   align-self: center;
   margin-top: 7px;
-  background: rgba(60, 60, 67, 0.28);
+  background: var(--line-heavy);
   border-radius: 3px;
 }
 
@@ -57,7 +57,7 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0 10px;
-  color: #007aff;
+  color: var(--blue-link);
   font-size: 16px;
   background: transparent;
   border: 0;
@@ -88,7 +88,7 @@
   aspect-ratio: 1;
   padding: 0;
   overflow: visible;
-  background: #e5e5ea;
+  background: var(--control-bg);
   border: 0;
   border-radius: 50%;
   outline: 0;
@@ -107,8 +107,8 @@
 
 .avatar-grid__item.is-active {
   box-shadow:
-    0 0 0 2px #f2f2f7,
-    0 0 0 4px #007aff;
+    0 0 0 2px var(--bg-page),
+    0 0 0 4px var(--blue-link);
 }
 
 .avatar-grid__item:active {
@@ -127,11 +127,11 @@
   width: 20px;
   height: 20px;
   place-items: center;
-  color: #fff;
-  background: #007aff;
-  border: 2px solid #f2f2f7;
+  color: var(--text-on-accent);
+  background: var(--blue-link);
+  border: 2px solid var(--bg-page);
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(28, 28, 30, 0.18);
+  box-shadow: 0 1px 3px var(--shadow-color);
 }
 
 .avatar-grid__check svg {
@@ -151,13 +151,13 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #1c1c1e;
+  color: var(--text-primary);
   font-size: 15px;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--bg-surface-soft);
   border: 0;
   border-radius: 14px;
-  box-shadow: 0 0.5px 1px rgba(28, 28, 30, 0.06);
+  box-shadow: 0 0.5px 1px var(--hairline);
 }
 
 .avatar-upload-button svg {
@@ -180,7 +180,7 @@
 
 .avatar-sheet__note {
   margin: 10px 20px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 12px;
   line-height: 1.4;
   text-align: center;

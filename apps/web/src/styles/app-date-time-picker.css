@@ -11,11 +11,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  color: var(--library-label, #1c1c1e);
+  color: var(--library-label, var(--text-primary));
   font: inherit;
   font-size: 16px;
   text-align: left;
-  background: #f2f2f7;
+  background: var(--bg-page);
   border: 1px solid transparent;
   border-radius: 14px;
 }
@@ -32,20 +32,20 @@
   height: 16px;
   flex: 0 0 auto;
   fill: none;
-  stroke: #636366;
+  stroke: var(--text-muted);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
 }
 
 .app-date-time-picker__trigger:active:not(:disabled) {
-  background: #e5e5ea;
+  background: var(--control-bg);
 }
 
 .app-date-time-picker__trigger:focus-visible {
-  border-color: #0088ff;
+  border-color: var(--blue-strong);
   outline: 0;
-  box-shadow: 0 0 0 3px rgba(0, 136, 255, 0.15);
+  box-shadow: 0 0 0 3px var(--blue-tint-strong);
 }
 
 .app-date-time-picker__trigger:disabled {
@@ -62,7 +62,7 @@
     14px
     max(14px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
   place-items: center;
-  background: rgba(220, 222, 228, 0.36);
+  background: var(--line-faint);
   -webkit-backdrop-filter: blur(4px) saturate(110%);
   backdrop-filter: blur(4px) saturate(110%);
 }
@@ -72,15 +72,15 @@
   max-height: 100%;
   padding: 22px 18px 18px;
   overflow: hidden auto;
-  color: #090a0c;
-  background: rgba(249, 250, 251, 0.97);
-  border: 0.5px solid rgba(255, 255, 255, 0.94);
+  color: var(--map-ink);
+  background: var(--bg-surface-raised);
+  border: 0.5px solid var(--edge-highlight);
   border-radius: 34px;
   outline: 0;
   box-shadow:
-    0 34px 90px rgba(28, 28, 30, 0.22),
-    0 4px 20px rgba(28, 28, 30, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+    0 34px 90px var(--shadow-color),
+    0 4px 20px var(--shadow-color-soft),
+    inset 0 1px 0 var(--edge-highlight-strong);
 }
 
 .app-date-time-picker__calendar-header {
@@ -112,7 +112,7 @@
   width: 10px;
   height: 16px;
   fill: none;
-  stroke: #007aff;
+  stroke: var(--blue-link);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3;
@@ -131,14 +131,14 @@
   height: 44px;
   padding: 0;
   place-items: center;
-  color: #007aff;
+  color: var(--blue-link);
   background: transparent;
   border: 0;
   border-radius: 50%;
 }
 
 .app-date-time-picker__month-actions button:active:not(:disabled) {
-  background: rgba(0, 122, 255, 0.1);
+  background: var(--blue-tint);
   transform: scale(0.94);
 }
 
@@ -167,7 +167,7 @@
 }
 
 .app-date-time-picker__weekdays span {
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 12px;
   font-weight: 600;
   line-height: 28px;
@@ -185,7 +185,7 @@
   min-height: 43px;
   padding: 0;
   place-items: center;
-  color: #090a0c;
+  color: var(--map-ink);
   font-size: 19px;
   font-weight: 480;
   background: transparent;
@@ -203,18 +203,18 @@
 }
 
 .app-date-time-picker__calendar button.is-today:not(.is-selected)::before {
-  box-shadow: inset 0 0 0 1.5px rgba(0, 122, 255, 0.58);
+  box-shadow: inset 0 0 0 1.5px var(--blue-ring);
 }
 
 .app-date-time-picker__calendar button.is-selected {
   z-index: 1;
-  color: #fff;
+  color: var(--text-on-accent);
   font-weight: 700;
 }
 
 .app-date-time-picker__calendar button.is-selected::before {
-  background: #007aff;
-  box-shadow: 0 5px 14px rgba(0, 122, 255, 0.22);
+  background: var(--blue-link);
+  box-shadow: 0 5px 14px var(--blue-tint-strong);
 }
 
 .app-date-time-picker__calendar button.is-outside {
@@ -222,7 +222,7 @@
 }
 
 .app-date-time-picker__calendar button:disabled:not(.is-outside) {
-  color: #c7c7cc;
+  color: var(--text-placeholder-soft);
 }
 
 .app-date-time-picker__time {
@@ -242,7 +242,7 @@
   left: 0;
   height: 48px;
   pointer-events: none;
-  background: rgba(0, 122, 255, 0.08);
+  background: var(--blue-tint);
   border-radius: 24px;
 }
 
@@ -286,7 +286,7 @@
   padding: 0;
   scroll-snap-align: center;
   place-items: center;
-  color: #7b7c80;
+  color: var(--card-ink-soft);
   font-size: 24px;
   font-weight: 430;
   font-variant-numeric: tabular-nums;
@@ -295,14 +295,14 @@
 }
 
 .app-date-time-picker__wheel button.is-selected {
-  color: #090a0c;
+  color: var(--map-ink);
   font-size: 30px;
   font-weight: 520;
 }
 
 .app-date-time-picker__time-separator {
   z-index: 2;
-  color: #090a0c;
+  color: var(--map-ink);
   font-size: 29px;
   font-weight: 600;
   text-align: center;
@@ -335,12 +335,12 @@
 .app-date-time-picker__restore {
   min-width: 116px;
   padding: 0 24px;
-  color: #1c1c1e;
-  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
+  background: var(--bg-glass-bright);
   border-radius: 28px;
   box-shadow:
-    inset 0 0 0 0.5px rgba(60, 60, 67, 0.24),
-    0 2px 8px rgba(28, 28, 30, 0.06);
+    inset 0 0 0 0.5px var(--line-heavy),
+    0 2px 8px var(--shadow-color-soft);
 }
 
 .app-date-time-picker__confirm {
@@ -349,12 +349,12 @@
   height: 58px;
   padding: 0;
   place-items: center;
-  color: #fff;
-  background: #007aff;
+  color: var(--text-on-accent);
+  background: var(--blue-link);
   border-radius: 50%;
   box-shadow:
-    0 8px 20px rgba(0, 122, 255, 0.24),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    0 8px 20px var(--blue-tint-strong),
+    inset 0 0 0 1px var(--edge-highlight-faint);
 }
 
 .app-date-time-picker__confirm svg {
@@ -428,13 +428,13 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .app-date-time-picker__backdrop {
-    background: rgba(220, 222, 228, 0.72);
+    background: var(--line-soft);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
 
   .app-date-time-picker__dialog {
-    background: #f9fafb;
+    background: var(--bg-subtle);
   }
 }
 
@@ -455,10 +455,10 @@
 
 @media (prefers-contrast: more) {
   .app-date-time-picker__dialog {
-    border: 1px solid #1c1c1e;
+    border: 1px solid var(--text-primary);
   }
 
   .app-date-time-picker__trigger {
-    border-color: rgba(28, 28, 30, 0.34);
+    border-color: var(--line-heavy);
   }
 }

@@ -1,0 +1,129 @@
+/*
+ * 玻璃分段开关（shared/ui/GlassSegmented.vue）。
+ *
+ * 底板用 LiquidGlass，透明度刻意压低：它只是"一层更亮的分组背景"，
+ * 滑块用 --bg-surface，保证选中项文字在深浅两套主题下都有足够对比度。
+ */
+
+/*
+ * 玻璃分段开关：底板用 LiquidGlass，滑块与文字自绘。
+ *
+ * 透明度刻意压低：底板几乎只是"一层更亮的分组背景"，滑块则用
+ * --bg-surface 保证选中项文字始终有足够对比度（深色下同样成立）。
+ */
+.glass-segmented {
+  --glass-segmented-count: 3;
+  --glass-segmented-index: 0;
+  --glass-segmented-offset: 0%;
+  --glass-segmented-rim: 4px;
+  --glass-segmented-corner: 12px;
+  --glass-segmented-thumb-corner: 9px;
+
+  position: relative;
+  display: block;
+  padding: 0;
+  border-radius: var(--glass-segmented-corner);
+  isolation: isolate;
+}
+
+.glass-segmented__glass {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--glass-segmented-corner);
+  /* 压低玻璃存在感：底板底色只用一点点分组灰 */
+  background: var(--control-track-soft);
+  border: 1px solid var(--edge-highlight-faint);
+}
+
+/* 让 LiquidGlass 的根元素铺满外层容器 */
+.glass-segmented__glass > * {
+  width: 100%;
+  height: 100%;
+}
+
+.glass-segmented__glass-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-glass-faint);
+  /* 0.55 是在"看得出是玻璃"和"不抢戏"之间取的折中值 */
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.glass-segmented__thumb {
+  position: absolute;
+  z-index: 1;
+  top: var(--glass-segmented-rim);
+  left: var(--glass-segmented-rim);
+  width: calc((100% - var(--glass-segmented-rim) * 2) / var(--glass-segmented-count));
+  height: calc(100% - var(--glass-segmented-rim) * 2);
+  pointer-events: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--edge-highlight-faint);
+  border-radius: var(--glass-segmented-thumb-corner);
+  box-shadow:
+    0 1px 2px var(--shadow-color-soft),
+    inset 0 1px 0 var(--edge-highlight-soft);
+  transform: translate3d(var(--glass-segmented-offset), 0, 0);
+  transition: transform 320ms cubic-bezier(0.22, 0.9, 0.24, 1.08);
+  will-change: transform;
+}
+
+.glass-segmented.is-dragging .glass-segmented__thumb {
+  /* 拖动中不要过渡，否则滑块会"追"指针 */
+  transition: none;
+}
+
+.glass-segmented.is-dragging .glass-segmented__option {
+  cursor: grabbing;
+}
+
+.glass-segmented__track {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  /* 高度必须写死为 100%：按钮的 UA 默认 min-height 会把网格行撑到 64px，
+     比开关本身还高，导致滑块、文字、底板三者错位。 */
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: repeat(var(--glass-segmented-count), minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  /* 只接管横向拖动，纵向仍然可以滚动页面 */
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+}
+
+.glass-segmented__option {
+  /* 网格项同样要解掉 UA 的 min-height/min-width，否则会反过来撑高轨道 */
+  min-width: 0;
+  min-height: 0;
+  padding: 0 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: var(--glass-segmented-thumb-corner);
+  transition: color 160ms ease;
+}
+
+.glass-segmented__option.is-selected {
+  color: var(--text-primary);
+}
+
+.glass-segmented__option:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-segmented__thumb {
+    transition-duration: 0.01ms;
+  }
+}

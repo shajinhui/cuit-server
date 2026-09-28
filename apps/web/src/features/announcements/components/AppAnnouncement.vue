@@ -19,6 +19,8 @@ const props = defineProps<{
   allowPresentation: boolean
 }>()
 
+const promotion = ACTIVE_ANNOUNCEMENT.promotion
+
 const visible = ref(false)
 const dialog = ref<HTMLElement | null>(null)
 let closedForSession = false
@@ -102,11 +104,45 @@ function handleKeydown(event: KeyboardEvent) {
           <p id="app-announcement-description" class="app-announcement-dialog__description">
             {{ ACTIVE_ANNOUNCEMENT.description }}
           </p>
+
+          <a
+            v-if="promotion"
+            class="app-announcement-dialog__promotion"
+            :href="promotion.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            @click="closeAnnouncement"
+          >
+            <span class="app-announcement-dialog__promotion-tag">{{ promotion.tag }}</span>
+            <strong class="app-announcement-dialog__promotion-headline">
+              {{ promotion.headline }}
+            </strong>
+            <span class="app-announcement-dialog__promotion-url">
+              {{ promotion.url }}
+              <span aria-hidden="true">›</span>
+            </span>
+          </a>
+
           <p class="app-announcement-dialog__group">QQ群 {{ QQ_GROUP_NUMBER }}</p>
 
           <div class="app-announcement-dialog__actions">
             <button type="button" @click="closeAnnouncement">我知道了</button>
-            <a :href="QQ_GROUP_URL" target="_blank" rel="noopener noreferrer" @click="closeAnnouncement">
+            <a
+              v-if="promotion"
+              :href="promotion.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="closeAnnouncement"
+            >
+              {{ promotion.actionLabel }}
+            </a>
+            <a
+              v-else
+              :href="QQ_GROUP_URL"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="closeAnnouncement"
+            >
               立即入群
             </a>
           </div>

@@ -11,6 +11,9 @@ import AvatarPicker from '@/features/profile/components/AvatarPicker.vue'
 import { usePwaInstall } from '@/features/pwa-install'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
+import type { ColorSchemePreference } from '@/shared/theme/colorScheme'
+import { useColorScheme } from '@/shared/theme/useColorScheme'
 import AppShell from '@/shared/ui/AppShell.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
@@ -20,6 +23,8 @@ const router = useRouter()
 const profileStore = useProfileStore()
 const session = useSessionStore()
 const { isInstalled, requestInstall } = usePwaInstall()
+const { preference: colorScheme, options: colorSchemeOptions, setPreference: setColorScheme } =
+  useColorScheme()
 const notice = ref('')
 const loggingOut = ref(false)
 const avatarPickerOpen = ref(false)
@@ -43,7 +48,7 @@ const majorAndClass = computed(() => {
 const studentNumber = computed(() => maskStudentNumber(profileStore.profile?.StudentNo || ''))
 const installLabel = computed(() => (isInstalled.value ? '已安装到桌面' : '安装到桌面'))
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 onMounted(() => {
   void loadProfile()
@@ -208,6 +213,22 @@ function maskStudentNumber(studentNo: string) {
             <path d="m7.5 4.5 5 5.5-5 5.5" />
           </svg>
         </button>
+        <div class="profile-menu__row">
+          <svg class="profile-menu__leading-icon" aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z" />
+            <path d="M12 3.5v17a8.5 8.5 0 0 0 0-17Z" fill="currentColor" stroke="none" />
+          </svg>
+          <span>外观</span>
+          <GlassSegmented
+            class="profile-menu__theme-switch"
+            :options="colorSchemeOptions"
+            :model-value="colorScheme"
+            aria-label="外观"
+            :corner-radius="12"
+            :thumb-radius="9"
+            @update:model-value="setColorScheme($event as ColorSchemePreference)"
+          />
+        </div>
         <button type="button" @click="router.push({ name: 'about' })">
           <img :src="aboutIcon" alt="" />
           <span>关于我们</span>

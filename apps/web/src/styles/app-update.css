@@ -6,17 +6,17 @@
   align-items: flex-end;
   justify-content: center;
   padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--scrim);
 }
 
 .app-update-dialog {
   width: 100%;
   max-width: 480px;
   padding: 10px 22px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  color: #1c1c1e;
-  background: #f2f2f7;
+  color: var(--text-primary);
+  background: var(--bg-page);
   border-radius: 28px 28px 0 0;
-  box-shadow: 0 -16px 44px rgba(28, 28, 30, 0.18);
+  box-shadow: 0 -16px 44px var(--shadow-color);
   outline: none;
 }
 
@@ -24,7 +24,7 @@
   width: 36px;
   height: 5px;
   margin: 0 auto 18px;
-  background: #c7c7cc;
+  background: var(--text-placeholder-soft);
   border-radius: 3px;
 }
 
@@ -47,7 +47,7 @@
 
 .app-update-dialog header p {
   margin-bottom: 3px;
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 13px;
   line-height: 1.3;
 }
@@ -61,7 +61,7 @@
 
 .app-update-dialog__description {
   margin: 18px 0 0;
-  color: #3a3a3c;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.5;
   white-space: pre-line;
@@ -69,15 +69,15 @@
 
 .app-update-dialog__notice {
   margin: 10px 0 0;
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 13px;
   line-height: 1.4;
 }
 
 .app-update-dialog__notice--error {
   padding: 12px 14px;
-  color: #b42318;
-  background: rgba(255, 59, 48, 0.08);
+  color: var(--danger-strong);
+  background: var(--danger-tint);
   border-radius: 14px;
 }
 
@@ -90,8 +90,8 @@
   margin-top: 18px;
   padding: 14px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(60, 60, 67, 0.08);
+  background: var(--bg-nav);
+  border: 1px solid var(--line-faint);
   border-radius: 18px;
 }
 
@@ -107,7 +107,7 @@
 
 .app-update-dialog__status div > span {
   margin-top: 3px;
-  color: #636366;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -118,7 +118,7 @@
   bottom: 0;
   left: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #0088ff 42%, transparent);
+  background: linear-gradient(90deg, transparent, var(--blue-strong) 42%, transparent);
   content: '';
   transform: translateX(-100%);
   animation: app-update-progress 1.1s linear infinite;
@@ -132,8 +132,8 @@
 }
 
 .app-update-dialog__spinner {
-  border: 3px solid rgba(0, 136, 255, 0.18);
-  border-top-color: #0088ff;
+  border: 3px solid var(--blue-tint);
+  border-top-color: var(--blue-strong);
   border-radius: 50%;
   animation: app-update-spin 720ms linear infinite;
 }
@@ -141,8 +141,8 @@
 .app-update-dialog__status-icon {
   display: grid;
   place-items: center;
-  color: #248a3d;
-  background: rgba(52, 199, 89, 0.13);
+  color: var(--success-deep);
+  background: var(--success-tint);
   border-radius: 50%;
 }
 
@@ -183,21 +183,21 @@
 }
 
 .app-update-dialog__later {
-  color: #3a3a3c;
-  background: #e5e5ea;
+  color: var(--text-secondary);
+  background: var(--control-bg);
 }
 
 .app-update-dialog__apply {
   gap: 8px;
-  color: #fff;
-  background: #0088ff;
+  color: var(--text-on-accent);
+  background: var(--blue-strong);
 }
 
 .app-update-dialog__button-spinner {
   width: 17px;
   height: 17px;
-  border: 2px solid rgba(255, 255, 255, 0.38);
-  border-top-color: #fff;
+  border: 2px solid var(--edge-highlight-faint);
+  border-top-color: var(--edge-highlight);
   border-radius: 50%;
   animation: app-update-spin 720ms linear infinite;
 }

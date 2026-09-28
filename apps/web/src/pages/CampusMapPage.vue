@@ -54,7 +54,7 @@ const zoomPercentage = computed(() => `${Math.round(zoom.value * 100)}%`)
 const imageStyle = computed(() => ({ width: `${zoom.value * 100}%` }))
 const backdropStyle = computed(() => ({ backgroundImage: `url("${currentMap.value.imageURL}")` }))
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 function selectCampus(campus: CampusId) {
   if (selectedCampus.value === campus) return

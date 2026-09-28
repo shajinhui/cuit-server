@@ -24,7 +24,7 @@ const privacyAttention = ref(false)
 let noticeTimer: number | undefined
 let retryTimer: number | undefined
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 onBeforeUnmount(() => {
   window.clearTimeout(noticeTimer)

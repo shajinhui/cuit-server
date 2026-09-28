@@ -57,7 +57,7 @@ const currentTitle = computed(() => {
   return currentPath.value.split('/').filter(Boolean).at(-1) || '全部课程'
 })
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 onMounted(() => void loadIndex())
 onBeforeUnmount(() => {

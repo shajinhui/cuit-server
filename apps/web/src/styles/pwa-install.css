@@ -10,13 +10,13 @@
   gap: 12px;
   min-height: 76px;
   padding: 12px 14px;
-  color: #1c1c1e;
-  background: rgba(255, 255, 255, 0.94);
-  border: 0.5px solid rgba(60, 60, 67, 0.16);
+  color: var(--text-primary);
+  background: var(--edge-highlight);
+  border: 0.5px solid var(--line-medium);
   border-radius: 22px;
   box-shadow:
-    0 18px 46px rgba(28, 28, 30, 0.16),
-    0 3px 12px rgba(28, 28, 30, 0.07);
+    0 18px 46px var(--shadow-color),
+    0 3px 12px var(--shadow-color-soft);
   -webkit-backdrop-filter: blur(20px) saturate(165%);
   backdrop-filter: blur(20px) saturate(165%);
 }
@@ -45,7 +45,7 @@
 
 .pwa-install-promotion__copy span {
   overflow: hidden;
-  color: #636366;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -56,10 +56,10 @@
   min-width: 58px;
   min-height: 44px;
   padding: 0 15px;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 15px;
   font-weight: 600;
-  background: #0088ff;
+  background: var(--blue-strong);
   border: 0;
   border-radius: 22px;
   transition:
@@ -85,7 +85,7 @@
   height: 44px;
   padding: 10px;
   place-items: center;
-  color: #636366;
+  color: var(--text-muted);
   background: transparent;
   border: 0;
 }
@@ -96,9 +96,9 @@
   width: 24px;
   height: 24px;
   content: '';
-  background: #e5e5ea;
+  background: var(--control-bg);
   border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(28, 28, 30, 0.12);
+  box-shadow: 0 1px 4px var(--shadow-color);
 }
 
 .pwa-install-promotion__dismiss svg {
@@ -118,17 +118,17 @@
   align-items: flex-end;
   justify-content: center;
   padding-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
-  background: rgba(0, 0, 0, 0.24);
+  background: var(--scrim-strong);
 }
 
 .pwa-install-guide {
   width: 100%;
   max-width: 480px;
   padding: 10px 22px calc(18px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
-  color: #1c1c1e;
-  background: #f2f2f7;
+  color: var(--text-primary);
+  background: var(--bg-page);
   border-radius: 28px 28px 0 0;
-  box-shadow: 0 -16px 44px rgba(28, 28, 30, 0.18);
+  box-shadow: 0 -16px 44px var(--shadow-color);
   outline: none;
 }
 
@@ -136,7 +136,7 @@
   width: 36px;
   height: 5px;
   margin: 0 auto 18px;
-  background: #c7c7cc;
+  background: var(--text-placeholder-soft);
   border-radius: 3px;
 }
 
@@ -159,7 +159,7 @@
 
 .pwa-install-guide header p {
   margin-bottom: 3px;
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 13px;
   line-height: 1.3;
 }
@@ -173,7 +173,7 @@
 
 .pwa-install-guide__description {
   margin: 18px 0 14px;
-  color: #636366;
+  color: var(--text-muted);
   font-size: 15px;
   line-height: 1.45;
 }
@@ -183,7 +183,7 @@
   padding: 0;
   overflow: hidden;
   list-style: none;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--edge-highlight);
   border-radius: 22px;
 }
 
@@ -204,7 +204,7 @@
   left: 56px;
   height: 0.5px;
   content: '';
-  background: rgba(60, 60, 67, 0.18);
+  background: var(--line-strong-alpha);
 }
 
 .pwa-install-guide li > span {
@@ -212,10 +212,10 @@
   width: 28px;
   height: 28px;
   place-items: center;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 14px;
   font-weight: 600;
-  background: #0088ff;
+  background: var(--blue-strong);
   border-radius: 50%;
 }
 
@@ -239,10 +239,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 17px;
   font-weight: 600;
-  background: #0088ff;
+  background: var(--blue-strong);
   border: 0;
   border-radius: 25px;
   text-decoration: none;
@@ -260,8 +260,8 @@
 }
 
 .pwa-install-guide__done.is-secondary {
-  color: #007aff;
-  background: rgba(0, 122, 255, 0.1);
+  color: var(--blue-link);
+  background: var(--blue-tint);
 }
 
 .pwa-install-guide__browser:active,
@@ -336,7 +336,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .pwa-install-promotion {
-    background: #fff;
+    background: var(--bg-surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

@@ -1,5 +1,5 @@
 .app-shell.app-shell--tools {
-  background: #f2f2f7;
+  background: var(--bg-page);
 }
 
 .tools-page {
@@ -15,14 +15,14 @@
   grid-template-columns: 42px minmax(0, 1fr) 16px;
   align-items: center;
   gap: 12px;
-  color: #1f1f23;
+  color: var(--text-strong);
   text-align: left;
-  background: rgba(255, 255, 255, 0.66);
-  border: 0.5px solid rgba(255, 255, 255, 0.88);
+  background: var(--bg-glass);
+  border: 0.5px solid var(--bg-surface-glass);
   border-radius: 22px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.08),
-    0 8px 24px rgba(38, 42, 48, 0.055);
+    0 0.5px 0 var(--hairline),
+    0 8px 24px var(--map-tint-weak);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
   transition:
@@ -31,7 +31,7 @@
 }
 
 .tools-announcement-card:active {
-  background: rgba(245, 245, 247, 0.88);
+  background: var(--bg-surface-overlay);
   transform: scale(0.985);
 }
 
@@ -41,7 +41,7 @@
   grid-template-columns: 34px minmax(0, 1fr) 16px;
   gap: 10px;
   border-radius: 18px;
-  box-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.07);
+  box-shadow: 0 0.5px 0 var(--hairline);
 }
 
 .tools-announcement-card.is-viewed .tools-announcement-card__icon {
@@ -61,10 +61,10 @@
   width: 42px;
   height: 42px;
   place-items: center;
-  color: #fff;
-  background: #1687e8;
+  color: var(--text-on-accent);
+  background: var(--blue-bright);
   border-radius: 13px;
-  box-shadow: 0 5px 14px rgba(22, 135, 232, 0.2);
+  box-shadow: 0 5px 14px var(--blue-tint-strong);
 }
 
 .tools-announcement-card__icon svg {
@@ -84,7 +84,7 @@
 }
 
 .tools-announcement-card__copy small {
-  color: #8e8e93;
+  color: var(--text-faint);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.25;
@@ -105,7 +105,7 @@
   display: -webkit-box;
   min-width: 0;
   overflow: hidden;
-  color: #77777d;
+  color: var(--card-ink-soft);
   font-size: 12px;
   line-height: 1.35;
   -webkit-box-orient: vertical;
@@ -113,7 +113,7 @@
 }
 
 .tools-announcement-card__chevron {
-  color: #a2a2a7;
+  color: var(--text-placeholder);
   font-size: 28px;
   font-weight: 300;
   line-height: 1;
@@ -125,12 +125,12 @@
   height: 52px;
   margin-top: 12px;
   padding: 0 18px;
-  background: rgba(255, 255, 255, 0.58);
-  border: 0.5px solid rgba(255, 255, 255, 0.82);
+  background: var(--bg-glass-faint);
+  border: 0.5px solid var(--bg-surface-soft);
   border-radius: 28px;
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.09),
-    0 8px 24px rgba(38, 42, 48, 0.06);
+    0 0.5px 0 var(--hairline),
+    0 8px 24px var(--map-tint-weak);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
 }
@@ -140,7 +140,7 @@
   width: 18px;
   height: 18px;
   margin-right: 14px;
-  border: 1.7px solid #8e8e93;
+  border: 1.7px solid var(--text-faint);
   border-radius: 50%;
 }
 
@@ -151,7 +151,7 @@
   width: 7px;
   height: 2px;
   content: '';
-  background: #8e8e93;
+  background: var(--text-faint);
   border-radius: 2px;
   transform: rotate(45deg);
 }
@@ -159,7 +159,7 @@
 .tool-search input {
   min-width: 0;
   flex: 1;
-  color: #1f1f23;
+  color: var(--text-strong);
   font-size: 16px;
   background: transparent;
   border: 0;
@@ -167,14 +167,14 @@
 }
 
 .tool-search input::placeholder {
-  color: #a0a0a6;
+  color: var(--text-placeholder);
 }
 
 .tool-search:focus-within {
   border-color: var(--focus-ring);
   box-shadow:
     0 0 0 3px var(--focus-ring-soft),
-    0 8px 24px rgba(38, 42, 48, 0.06);
+    0 8px 24px var(--map-tint-weak);
 }
 
 .tools-grid {
@@ -194,13 +194,13 @@
   align-items: center;
   justify-content: center;
   gap: clamp(6px, 2vw, 9px);
-  color: #242428;
-  background: rgba(255, 255, 255, 0.58);
-  border: 0.5px solid rgba(255, 255, 255, 0.82);
+  color: var(--card-ink);
+  background: var(--bg-glass-faint);
+  border: 0.5px solid var(--bg-surface-soft);
   border-radius: clamp(20px, 5.2vw, 22px);
   box-shadow:
-    0 0.5px 0 rgba(0, 0, 0, 0.09),
-    0 12px 30px rgba(38, 42, 48, 0.065);
+    0 0.5px 0 var(--hairline),
+    0 12px 30px var(--map-tint-faint);
   -webkit-backdrop-filter: blur(22px) saturate(140%);
   backdrop-filter: blur(22px) saturate(140%);
   transition:
@@ -209,7 +209,7 @@
 }
 
 .tools-grid button:not(:disabled):active {
-  background: rgba(245, 245, 247, 0.82);
+  background: var(--map-surface);
   transform: scale(0.985);
 }
 
@@ -244,7 +244,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .tools-announcement-card {
-    background: #fff;
+    background: var(--bg-surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

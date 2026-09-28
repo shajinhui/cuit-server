@@ -26,7 +26,7 @@ const canSubmit = computed(
   () => contentLength.value >= 10 && contentLength.value <= 2000 && !submitting.value,
 )
 
-usePageTheme('#f2f2f7')
+usePageTheme('bg-page')
 
 async function submit() {
   if (!canSubmit.value) return
