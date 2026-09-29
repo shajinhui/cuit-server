@@ -4,15 +4,19 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { mockApiPlugin } from './src/mock/vite-plugin'
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const isNativeBuild = mode === 'android' || mode === 'ios'
   const enableDevPwa = env.VITE_PWA_DEV === 'true'
+  const enableMockApi = env.VITE_MOCK_API === 'true'
 
   return {
     base: isNativeBuild ? './' : '/',
     plugins: [
       vue(),
+      mockApiPlugin(enableMockApi),
       VitePWA({
         disable: isNativeBuild,
         registerType: 'autoUpdate',
