@@ -256,9 +256,9 @@ onBeforeUnmount(() => {
     ref="navigationRef"
   >
     <!--
-      LiquidGlass 的折射滤镜会把边缘高光渲染到容器之外，iOS 上会明显溢出胶囊、
-      横贯整个页面，所以单独用一层 overflow: hidden 的容器把它裁住。
-      交互内容必须放在这层之外：选中项拖动时会向上浮出胶囊，放进去会被裁掉。
+      LiquidGlass 自己负责折射、模糊和边缘高光；position/top/left 通过 style prop
+      传给组件根节点（库的根节点不会自动继承默认的 50% 定位）。交互内容放在这层之外，
+      这样选中项拖动时可以向上浮出胶囊，不会被材质层裁掉。
     -->
     <span class="bottom-navigation__glass" aria-hidden="true">
       <LiquidGlass
@@ -270,6 +270,7 @@ onBeforeUnmount(() => {
         :elasticity="0.08"
         :corner-radius="32"
         padding="0"
+        :style="{ position: 'absolute', top: '50%', left: '50%', width: '100%', height: '100%' }"
       >
         <span class="bottom-navigation__glass-fill" />
       </LiquidGlass>
@@ -296,7 +297,21 @@ onBeforeUnmount(() => {
         }"
         :style="selectionStyle"
         aria-hidden="true"
-      />
+      >
+        <LiquidGlass
+          :mode="GlassMode.standard"
+          :displacement-scale="48"
+          :blur-amount="0.1"
+          :saturation="145"
+          :aberration-intensity="1.6"
+          :elasticity="0.1"
+          :corner-radius="26"
+          padding="0"
+          :style="{ position: 'absolute', top: '50%', left: '50%', width: '100%', height: '100%' }"
+        >
+          <span class="bottom-navigation__selection-fill" />
+        </LiquidGlass>
+      </span>
       <template v-for="item in resolvedItems" :key="item.name">
         <RouterLink
           v-if="item.to"
