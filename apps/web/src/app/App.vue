@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 import { AppAnnouncement } from '@/features/announcements'
+import { isRatingsConfigured } from '@/features/ratings'
 import {
   AndroidAppDownloadPrompt,
   AppUpdatePrompt,
@@ -18,7 +19,12 @@ import BottomNavigation from './components/BottomNavigation.vue'
 defineOptions({ name: 'AppRoot' })
 
 const route = useRoute()
-const navigationRoutes = new Set(['schedule', 'tools', 'profile'])
+const navigationRoutes = new Set([
+  'schedule',
+  'tools',
+  ...(isRatingsConfigured() ? ['ratings'] : []),
+  'profile',
+])
 const resolvingInitialRoute = computed(() => !route.name)
 const showBottomNavigation = computed(() => navigationRoutes.has(String(route.name)))
 const { updateDialogVisible } = useAndroidLiveUpdate()

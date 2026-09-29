@@ -17,6 +17,10 @@
   padding-bottom: calc(106px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
 }
 
+.ratings-page--with-bottom-navigation {
+  padding-bottom: calc(104px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
 .ratings-topbar,
 .ratings-home-header {
   position: sticky;

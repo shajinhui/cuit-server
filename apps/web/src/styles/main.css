@@ -192,31 +192,38 @@ select:focus-visible {
   transform: translateX(-50%);
 }
 
+/*
+ * 这一层只负责裁剪 LiquidGlass：库会把折射产生的边缘高光渲染到自身盒子之外，
+ * iOS 上会溢出成横贯整个页面的一道弧线。
+ * 交互内容不在这里面（见 .bottom-navigation__content），否则拖动时上浮的选中项会被裁掉。
+ */
 .bottom-navigation__glass {
-  position: absolute !important;
+  position: absolute;
   z-index: 1;
-  top: 50% !important;
-  left: 50% !important;
-  width: 100%;
-  height: 100%;
+  inset: 0;
+  display: block;
+  overflow: hidden;
   border-radius: var(--bottom-navigation-outer-radius);
+  pointer-events: none;
 }
 
-.bottom-navigation__glass > .glass {
-  display: block !important;
+/*
+ * LiquidGlass 根元素自带 transform: translate(-50%, -50%)（上面还叠加拖动时的弹性位移），
+ * 所以这里沿用 top/left 50% 配合它居中。库把这些写在行内样式里，必须 !important 才能覆盖。
+ */
+.bottom-navigation__glass > * {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block;
   width: 100%;
   height: 100%;
   min-height: 100%;
-  padding: 0 !important;
-  overflow: visible !important;
-  border-radius: inherit !important;
-}
-
-.bottom-navigation__glass > .glass > .glass__warp {
   border-radius: inherit;
 }
 
-.bottom-navigation__glass > .glass > div:last-child {
+.bottom-navigation__glass-fill {
+  display: block;
   width: 100%;
   height: 100%;
 }
@@ -282,9 +289,7 @@ html[data-platform='android'] .bottom-navigation {
     var(--control-track);
   border: 1px solid var(--edge-highlight-faint);
   border-radius: var(--bottom-navigation-inner-radius);
-  box-shadow:
-    inset 0 1px 0 var(--edge-highlight-faint),
-    0 4px 12px var(--shadow-color-soft);
+  box-shadow: 0 4px 12px var(--shadow-color-soft);
   transform: translate3d(calc(var(--selection-position, 0) * 100%), var(--selection-lift, 0px), 0)
     scale(var(--selection-scale, 1));
   transform-origin: center;
@@ -305,7 +310,6 @@ html[data-platform='android'] .bottom-navigation {
 .bottom-navigation__selection.is-lifted {
   border-color: var(--edge-highlight-strong);
   box-shadow:
-    inset 0 1px 0 var(--edge-highlight-strong),
     0 14px 26px var(--shadow-color-strong),
     0 4px 10px var(--shadow-color-soft);
 }
@@ -417,12 +421,17 @@ html[data-platform='android'] .bottom-navigation {
     display: block !important;
   }
 
-  .bottom-navigation__glass > .glass {
+  /* 不透明降级：直接给 LiquidGlass 根元素上色，并停用折射滤镜。 */
+  .bottom-navigation__glass > * {
     background: var(--bg-surface);
     box-shadow: 0 8px 24px var(--shadow-color) !important;
   }
 
-  .bottom-navigation__glass > .glass > .glass__warp {
+  .bottom-navigation__glass > * > .glass__warp {
+    display: none;
+  }
+
+  .bottom-navigation__glass-fill {
     display: none;
   }
 
@@ -442,12 +451,17 @@ html[data-platform='android'] .bottom-navigation {
     display: block !important;
   }
 
-  .bottom-navigation__glass > .glass {
+  /* 不透明降级：直接给 LiquidGlass 根元素上色，并停用折射滤镜。 */
+  .bottom-navigation__glass > * {
     background: var(--bg-surface);
     box-shadow: 0 8px 24px var(--shadow-color) !important;
   }
 
-  .bottom-navigation__glass > .glass > .glass__warp {
+  .bottom-navigation__glass > * > .glass__warp {
+    display: none;
+  }
+
+  .bottom-navigation__glass-fill {
     display: none;
   }
 

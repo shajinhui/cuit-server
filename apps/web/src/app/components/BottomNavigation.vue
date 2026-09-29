@@ -4,8 +4,10 @@ import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
 
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
+import ratingsIcon from '@/assets/icons/nav-ratings.svg'
 import scheduleIcon from '@/assets/icons/nav-schedule.png'
 import toolsIcon from '@/assets/icons/nav-tools.png'
+import { isRatingsConfigured } from '@/features/ratings'
 
 defineOptions({ name: 'BottomNavigation' })
 
@@ -14,6 +16,9 @@ const router = useRouter()
 const defaultItems = [
   { name: 'schedule', label: '课表', icon: scheduleIcon, to: { name: 'schedule' } },
   { name: 'tools', label: '工具', icon: toolsIcon, to: { name: 'tools' } },
+  ...(isRatingsConfigured()
+    ? [{ name: 'ratings', label: '评分', icon: ratingsIcon, to: { name: 'ratings' } }]
+    : []),
   { name: 'profile', label: '我的', icon: profileIcon, to: { name: 'profile' } },
 ] as const
 
@@ -74,8 +79,13 @@ const selectionPosition = computed(() =>
 
 const selectionStyle = computed(() => ({
   '--selection-position': selectionPosition.value,
-  '--selection-lift': isLifted.value ? '-17px' : '0px',
-  '--selection-scale': isLifted.value ? '1.12' : isPressed.value ? '1.015' : '1',
+  // 按住时以胶囊自身为中心鼓起（对齐 iOS 导航栏的做法）：上下对称地鼓出导航栏，
+  // 而不是整体上移——整体上移会让图标和文字偏离胶囊中心，看起来像没对齐。
+  // 只留一点点上移保留「弹起」的手感，主体靠放大：上移多了胶囊会整体往上跑，
+  // 下边缘鼓不出来，和导航栏就不对称了。
+  '--selection-lift': isLifted.value ? '-2px' : '0px',
+  // 胶囊比导航栏矮 10px（上下各留 5px），所以放大倍数要更大才能鼓出来。
+  '--selection-scale': isLifted.value ? '1.36' : isPressed.value ? '1.02' : '1',
 }))
 
 function clearInteractionTimers() {
@@ -244,73 +254,80 @@ onBeforeUnmount(() => {
     }"
     ref="navigationRef"
   >
-    <LiquidGlass
-      class="bottom-navigation__glass"
-      :mode="GlassMode.standard"
-      :displacement-scale="64"
-      :blur-amount="0.1"
-      :saturation="135"
-      :aberration-intensity="1.6"
-      :elasticity="0.08"
-      :corner-radius="32"
-      padding="0"
-      :style="{ position: 'absolute', width: '100%', height: '100%' }"
-    >
-      <nav
-        class="bottom-navigation__content"
-        ref="contentRef"
-        :style="{ '--navigation-item-count': resolvedItems.length }"
-        :aria-label="ariaLabel"
-        @pointerdown="handleNavigationPointerDown"
-        @pointermove="handleSelectionPointerMove"
-        @pointerup="handleSelectionPointerUp"
-        @pointercancel="handleSelectionPointerCancel"
-        @click.capture="handleNavigationClick"
+    <!--
+      LiquidGlass 的折射滤镜会把边缘高光渲染到容器之外，iOS 上会明显溢出胶囊、
+      横贯整个页面，所以单独用一层 overflow: hidden 的容器把它裁住。
+      交互内容必须放在这层之外：选中项拖动时会向上浮出胶囊，放进去会被裁掉。
+    -->
+    <span class="bottom-navigation__glass" aria-hidden="true">
+      <LiquidGlass
+        :mode="GlassMode.standard"
+        :displacement-scale="64"
+        :blur-amount="0.1"
+        :saturation="135"
+        :aberration-intensity="1.6"
+        :elasticity="0.08"
+        :corner-radius="32"
+        padding="0"
       >
-        <span
-          ref="selectionRef"
-          class="bottom-navigation__selection"
-          :class="{
-            'is-pressed': isPressed,
-            'is-lifted': isLifted,
-            'is-dragging': isDragging,
-          }"
-          :style="selectionStyle"
-          aria-hidden="true"
-        />
-        <template v-for="item in resolvedItems" :key="item.name">
-          <RouterLink
-            v-if="item.to"
-            :to="item.to"
-            class="bottom-navigation__item"
-            :class="{ 'is-active': resolvedActiveName === item.name }"
-          >
-            <span
-              class="bottom-navigation__icon"
-              :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
-              :style="{ '--nav-icon': `url(${item.icon})` }"
-              aria-hidden="true"
-            />
-            <span>{{ item.label }}</span>
-          </RouterLink>
-          <button
-            v-else
-            type="button"
-            class="bottom-navigation__item"
-            :class="{ 'is-active': resolvedActiveName === item.name }"
-            :aria-current="resolvedActiveName === item.name ? 'page' : undefined"
-            @click="emit('select', item.name)"
-          >
-            <span
-              class="bottom-navigation__icon"
-              :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
-              :style="{ '--nav-icon': `url(${item.icon})` }"
-              aria-hidden="true"
-            />
-            <span>{{ item.label }}</span>
-          </button>
-        </template>
-      </nav>
-    </LiquidGlass>
+        <span class="bottom-navigation__glass-fill" />
+      </LiquidGlass>
+    </span>
+
+    <nav
+      class="bottom-navigation__content"
+      ref="contentRef"
+      :style="{ '--navigation-item-count': resolvedItems.length }"
+      :aria-label="ariaLabel"
+      @pointerdown="handleNavigationPointerDown"
+      @pointermove="handleSelectionPointerMove"
+      @pointerup="handleSelectionPointerUp"
+      @pointercancel="handleSelectionPointerCancel"
+      @click.capture="handleNavigationClick"
+    >
+      <span
+        ref="selectionRef"
+        class="bottom-navigation__selection"
+        :class="{
+          'is-pressed': isPressed,
+          'is-lifted': isLifted,
+          'is-dragging': isDragging,
+        }"
+        :style="selectionStyle"
+        aria-hidden="true"
+      />
+      <template v-for="item in resolvedItems" :key="item.name">
+        <RouterLink
+          v-if="item.to"
+          :to="item.to"
+          class="bottom-navigation__item"
+          :class="{ 'is-active': resolvedActiveName === item.name }"
+        >
+          <span
+            class="bottom-navigation__icon"
+            :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
+            :style="{ '--nav-icon': `url(${item.icon})` }"
+            aria-hidden="true"
+          />
+          <span>{{ item.label }}</span>
+        </RouterLink>
+        <button
+          v-else
+          type="button"
+          class="bottom-navigation__item"
+          :class="{ 'is-active': resolvedActiveName === item.name }"
+          :aria-current="resolvedActiveName === item.name ? 'page' : undefined"
+          @click="emit('select', item.name)"
+        >
+          <span
+            class="bottom-navigation__icon"
+            :class="`bottom-navigation__icon--${item.iconClass ?? item.name}`"
+            :style="{ '--nav-icon': `url(${item.icon})` }"
+            aria-hidden="true"
+          />
+          <span>{{ item.label }}</span>
+        </button>
+      </template>
+    </nav>
   </div>
 </template>

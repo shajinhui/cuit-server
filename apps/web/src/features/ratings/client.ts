@@ -24,6 +24,10 @@ export class RatingsApiError extends Error {
 
 const apiBaseURL = (import.meta.env.VITE_RATINGS_API_BASE_URL || '').replace(/\/$/, '')
 
+export function isRatingsConfigured() {
+  return Boolean(apiBaseURL)
+}
+
 export async function ratingsRequest<T>(
   path: string,
   options: RequestInit = {},

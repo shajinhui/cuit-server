@@ -78,7 +78,7 @@ function deduplicate(items: RatingBoard[]) {
 </script>
 
 <template>
-  <main class="ratings-page">
+  <main class="ratings-page ratings-page--with-bottom-navigation">
     <header class="ratings-home-header">
       <button type="button" class="ratings-icon-button" aria-label="返回工具页" @click="router.push({ name: 'tools' })">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" /></svg>
@@ -145,4 +145,3 @@ function deduplicate(items: RatingBoard[]) {
     </section>
   </main>
 </template>
-
