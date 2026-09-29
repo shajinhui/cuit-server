@@ -108,6 +108,9 @@ describe('样式层颜色约束', () => {
       '--active-index',
       '--navigation-item-count',
       '--nav-icon',
+      '--selection-position',
+      '--selection-lift',
+      '--selection-scale',
       '--schedule-muted-opacity',
       '--schedule-section-count',
     ])
