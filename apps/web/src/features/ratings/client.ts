@@ -22,7 +22,11 @@ export class RatingsApiError extends Error {
   }
 }
 
-const apiBaseURL = (import.meta.env.VITE_RATINGS_API_BASE_URL || '').replace(/\/$/, '')
+export const DEFAULT_RATINGS_API_BASE_URL = 'https://ratings-server.fanxiaogao05.dpdns.org'
+
+const apiBaseURL = (
+  import.meta.env.VITE_RATINGS_API_BASE_URL || DEFAULT_RATINGS_API_BASE_URL
+).replace(/\/$/, '')
 
 export function isRatingsConfigured() {
   return Boolean(apiBaseURL)
