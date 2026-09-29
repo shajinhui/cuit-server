@@ -80,9 +80,6 @@ function deduplicate(items: RatingBoard[]) {
 <template>
   <main class="ratings-page ratings-page--with-bottom-navigation">
     <header class="ratings-home-header">
-      <button type="button" class="ratings-icon-button" aria-label="返回工具页" @click="router.push({ name: 'tools' })">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" /></svg>
-      </button>
       <div>
         <small>校园社区</small>
         <h1>友友评分</h1>

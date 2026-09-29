@@ -104,8 +104,15 @@
 }
 
 .ratings-home-header > div {
+  /* 头部已经去掉「返回工具页」按钮，但网格仍是三栏，这里把标题钉在中间栏、
+     右侧的「我的评分」钉在第三栏，标题才会保持在正中。 */
+  grid-column: 2;
   min-width: 0;
   text-align: center;
+}
+
+.ratings-home-header > .ratings-icon-button {
+  grid-column: 3;
 }
 
 .ratings-home-header small {

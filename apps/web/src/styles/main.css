@@ -173,6 +173,8 @@ select:focus-visible {
   --bottom-navigation-outer-radius: 32px;
   --bottom-navigation-inner-radius: 26px;
   --bottom-navigation-min-gap: 0px;
+  /* 按住滑块时整个导航栏轻微放大；1 就是静止状态（见 .bottom-navigation.is-lifted）。 */
+  --bottom-navigation-scale: 1;
 
   position: fixed;
   z-index: 50;
@@ -189,7 +191,18 @@ select:focus-visible {
   box-shadow:
     0 16px 36px var(--shadow-color),
     0 3px 9px var(--shadow-color-soft);
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--bottom-navigation-scale));
+  transition: transform 160ms var(--ease-out);
+  will-change: transform;
+}
+
+/*
+ * 按住滑块时整个导航栏也轻微放大：和选中项自己鼓起是同一个动作的两层。
+ * 这里只改缩放变量、不直接写 transform，横向居中的 translateX(-50%)（手机）和
+ * 竖排导航的 translateY(-50%)（横屏 / 平板）因此都保留各自的 transform 不被覆盖。
+ */
+.bottom-navigation.is-lifted {
+  --bottom-navigation-scale: 1.03;
 }
 
 /*
@@ -348,6 +361,11 @@ html[data-platform='android'] .bottom-navigation {
 .bottom-navigation__icon--profile {
   --nav-icon-size: 117%;
   --nav-icon-offset-y: 0px;
+}
+
+/* 房子图标在 192 画布里只占 66%，要放大到和其他 tab 一样的 ~22px 可见宽度。 */
+.bottom-navigation__icon--ratings {
+  --nav-icon-size: 135%;
 }
 
 /* These custom icons already fill their canvas; the default PNG overscan would crop them. */
@@ -571,6 +589,11 @@ html[data-platform='android'] .bottom-navigation {
     transition: opacity 120ms ease !important;
   }
 
+  /* 缩放本身就是动效，减动效下不放大，只留选中项自己的状态变化。 */
+  .bottom-navigation.is-lifted {
+    --bottom-navigation-scale: 1;
+  }
+
   .login-submit:active,
   .password-toggle:active {
     transform: none !important;
@@ -651,7 +674,7 @@ html[data-platform='android'] .bottom-navigation {
     width: 64px;
     max-width: none;
     height: 174px;
-    transform: translateY(-50%);
+    transform: translateY(-50%) scale(var(--bottom-navigation-scale));
   }
 
   .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__content {
@@ -1303,7 +1326,7 @@ html[data-platform='android'] .bottom-navigation {
     width: 72px;
     max-width: none;
     height: 210px;
-    transform: translateY(-50%);
+    transform: translateY(-50%) scale(var(--bottom-navigation-scale));
   }
 
   .bottom-navigation:not(.bottom-navigation--inline) .bottom-navigation__content {

@@ -4,7 +4,7 @@ import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
 
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
-import ratingsIcon from '@/assets/icons/nav-ratings.svg'
+import ratingsIcon from '@/assets/icons/nav-ratings.png'
 import scheduleIcon from '@/assets/icons/nav-schedule.png'
 import toolsIcon from '@/assets/icons/nav-tools.png'
 import { isRatingsConfigured } from '@/features/ratings'
@@ -251,6 +251,7 @@ onBeforeUnmount(() => {
     :class="{
       'bottom-navigation--inline': inline,
       'bottom-navigation--compact': compact,
+      'is-lifted': isLifted,
     }"
     ref="navigationRef"
   >
