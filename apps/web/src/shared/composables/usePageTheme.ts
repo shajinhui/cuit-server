@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, watch } from 'vue'
+import { onActivated, onBeforeUnmount, onDeactivated, onMounted, watch } from 'vue'
 
 import { setNativeSystemBarTheme } from '@/shared/native/systemBars'
 import type { ResolvedColorScheme } from '@/shared/theme/colorScheme'
@@ -59,11 +59,21 @@ export function usePageTheme(color: ThemeTokenName | string) {
   // 卸载阶段不能再依赖 watch 的触发时机，自己记住最后一次生效的模式。
   let lastMode: ResolvedColorScheme = resolved.value
 
-  onMounted(() => {
+  function activate() {
     currentOwner = owner
     lastMode = resolved.value
     applyPageColor(color, lastMode)
-  })
+  }
+
+  function deactivate() {
+    if (currentOwner !== owner) return
+
+    currentOwner = null
+    clearPageColor(lastMode)
+  }
+
+  onMounted(activate)
+  onActivated(activate)
 
   // 主题切换（含系统配色变化）后重新解析令牌：颜色本身来自 CSS 变量，
   // 但 meta theme-color 与 Android 系统栏需要具体色值。
@@ -73,10 +83,6 @@ export function usePageTheme(color: ThemeTokenName | string) {
     applyPageColor(color, mode)
   })
 
-  onBeforeUnmount(() => {
-    if (currentOwner !== owner) return
-
-    currentOwner = null
-    clearPageColor(lastMode)
-  })
+  onBeforeUnmount(deactivate)
+  onDeactivated(deactivate)
 }

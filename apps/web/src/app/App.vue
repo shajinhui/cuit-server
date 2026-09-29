@@ -19,6 +19,13 @@ import BottomNavigation from './components/BottomNavigation.vue'
 defineOptions({ name: 'AppRoot' })
 
 const route = useRoute()
+const cachedRatingPageNames = [
+  'RatingsPage',
+  'RatingsMinePage',
+  'RatingBoardPage',
+  'RatingItemPage',
+  'RatingAdminPage',
+]
 const navigationRoutes = new Set([
   'schedule',
   'tools',
@@ -68,7 +75,11 @@ onMounted(async () => {
       <p class="app-launch-status">正在启动</p>
     </div>
   </div>
-  <RouterView v-else />
+  <RouterView v-else v-slot="{ Component, route: currentRoute }">
+    <KeepAlive :include="cachedRatingPageNames">
+      <component :is="Component" :key="currentRoute.fullPath" />
+    </KeepAlive>
+  </RouterView>
   <BottomNavigation v-if="showBottomNavigation" />
   <AppAnnouncement :allow-presentation="allowAnnouncement" />
   <PwaInstallPrompt
