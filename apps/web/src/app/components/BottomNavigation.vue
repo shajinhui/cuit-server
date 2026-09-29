@@ -79,13 +79,10 @@ const selectionPosition = computed(() =>
 
 const selectionStyle = computed(() => ({
   '--selection-position': selectionPosition.value,
-  // 按住时以胶囊自身为中心鼓起（对齐 iOS 导航栏的做法）：上下对称地鼓出导航栏，
-  // 而不是整体上移——整体上移会让图标和文字偏离胶囊中心，看起来像没对齐。
-  // 只留一点点上移保留「弹起」的手感，主体靠放大：上移多了胶囊会整体往上跑，
-  // 下边缘鼓不出来，和导航栏就不对称了。
-  '--selection-lift': isLifted.value ? '-2px' : '0px',
-  // 胶囊比导航栏矮 10px（上下各留 5px），所以放大倍数要更大才能鼓出来。
-  '--selection-scale': isLifted.value ? '1.36' : isPressed.value ? '1.02' : '1',
+  // 放大以胶囊自身中心为基准，上下保持对称；不再额外向上偏移。
+  '--selection-lift': '0px',
+  // 胶囊比导航栏矮 10px（上下各留 5px），1.18 基本填满但不会越界。
+  '--selection-scale': isLifted.value ? '1.18' : isPressed.value ? '1.02' : '1',
 }))
 
 function clearInteractionTimers() {

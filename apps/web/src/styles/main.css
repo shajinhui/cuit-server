@@ -215,6 +215,8 @@ select:focus-visible {
   inset: 0;
   display: block;
   overflow: hidden;
+  contain: paint;
+  isolation: isolate;
   border-radius: var(--bottom-navigation-outer-radius);
   pointer-events: none;
 }
@@ -321,6 +323,9 @@ html[data-platform='android'] .bottom-navigation {
   border: 0;
   border-radius: var(--bottom-navigation-inner-radius);
   box-shadow: none;
+  overflow: hidden;
+  contain: paint;
+  isolation: isolate;
   transform: translate3d(calc(var(--selection-position, 0) * 100%), var(--selection-lift, 0px), 0)
     scale(var(--selection-scale, 1));
   transform-origin: center;
@@ -399,6 +404,18 @@ html[data-platform='android'] .bottom-navigation {
   max-width: none;
   height: 56px;
   transform: none;
+}
+
+/*
+ * The shared content layer keeps a 64px minimum for the floating phone bar.
+ * Inline bars (for example the three-tab Campus Run bar beside its back
+ * button) are only 56px tall, so leaving that minimum in place pushes the
+ * content and active capsule 8px below their glass surface. Keep the
+ * interaction layer on the same box as the inline material.
+ */
+.bottom-navigation--inline .bottom-navigation__content {
+  min-height: 56px;
+  height: 56px;
 }
 
 .bottom-navigation--compact {

@@ -9,6 +9,7 @@ import {
   joinAutoRunClub,
   loginToAutoRun,
   prepareAutoRun,
+  setAutoRunClubSchedule,
   signAutoRunClub,
   submitAutoRun,
 } from './api'
@@ -146,6 +147,22 @@ describe('校园跑 API 客户端', () => {
         new AutoRunApiError('加载校园跑进度失败：上游网络请求失败', 502, 50200),
       ),
     ).toBe(false)
+  })
+
+  it('将定时开关的上游故障转换为可重试提示', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json(
+          { code: 50200, msg: '上游请求失败', response: {} },
+          { status: 502 },
+        ),
+      ),
+    )
+
+    await expect(setAutoRunClubSchedule('session-example', true)).rejects.toEqual(
+      new AutoRunApiError('校园跑上游服务暂时不可用，请稍后重试', 502, 50200),
+    )
   })
 
   it('拒绝非 JSON 响应和业务错误响应', async () => {

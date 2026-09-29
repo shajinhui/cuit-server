@@ -4,6 +4,7 @@ export {
   getAutoRunClubData,
   getAutoRunInfo,
   isAutoRunAuthExpiredError,
+  isAutoRunUpstreamUnavailableError,
   joinAutoRunClub,
   loginToAutoRun,
   prepareAutoRun,

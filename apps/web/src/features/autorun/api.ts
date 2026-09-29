@@ -133,6 +133,14 @@ export function isAutoRunAuthExpiredError(error: unknown) {
   return /登录态.*(?:失效|过期)|登录过期|请重新登录|unauthorized|token/i.test(error.message)
 }
 
+export function isAutoRunUpstreamUnavailableError(error: unknown) {
+  if (!(error instanceof AutoRunApiError)) return false
+  return (
+    (error.status >= 500 && error.status < 600 && /上游|upstream/i.test(error.message)) ||
+    (error.code >= 50200 && error.code < 50300)
+  )
+}
+
 export const AUTORUN_LOGIN_TIMEOUT_MS = 20_000
 const AUTORUN_REQUEST_TIMEOUT_MS = 60_000
 
@@ -171,7 +179,22 @@ async function callAutoRunApi<T>(
     }
 
     if (!response.ok || payload.code !== 10000) {
-      throw new AutoRunApiError(payload.msg || '请求失败', response.status, payload.code)
+      const message = payload.msg || '请求失败'
+      // `club_schedule_set` performs an immediate probe of the school-side
+      // activity service. When that upstream is unavailable the relay returns
+      // a 5xx/50200 envelope; exposing only “上游请求失败” makes it look as if
+      // the switch itself is broken. Keep the failure retryable and explicit,
+      // while still preserving auth/business errors verbatim.
+      const upstreamUnavailable =
+        (response.status >= 500 && response.status < 600 && /上游|upstream/i.test(message)) ||
+        (payload.code >= 50200 && payload.code < 50300)
+      throw new AutoRunApiError(
+        upstreamUnavailable
+          ? '校园跑上游服务暂时不可用，请稍后重试'
+          : message,
+        response.status,
+        payload.code,
+      )
     }
 
     return { data: payload.response, message: payload.msg }

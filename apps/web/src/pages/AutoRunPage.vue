@@ -20,6 +20,7 @@ import {
   getAutoRunClubData,
   getAutoRunInfo,
   isAutoRunAuthExpiredError,
+  isAutoRunUpstreamUnavailableError,
   isSignedStatus,
   joinAutoRunClub,
   loadAutoRunSessionKey,
@@ -423,6 +424,9 @@ function handleApiError(error: unknown, fallback: string) {
     clearSession()
     showLogin.value = true
     loginError.value = '登录态已失效，请重新输入手机号和密码'
+  }
+  if (fallback === '保存定时配置失败' && isAutoRunUpstreamUnavailableError(error)) {
+    return '校园跑上游服务暂时不可用，定时设置未保存，请稍后重试'
   }
   return readableError(error, fallback)
 }
