@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, type RouteLocationRaw } from 'vue-router'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
 
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
@@ -10,6 +10,7 @@ import toolsIcon from '@/assets/icons/nav-tools.png'
 defineOptions({ name: 'BottomNavigation' })
 
 const route = useRoute()
+const router = useRouter()
 const defaultItems = [
   { name: 'schedule', label: '课表', icon: scheduleIcon, to: { name: 'schedule' } },
   { name: 'tools', label: '工具', icon: toolsIcon, to: { name: 'tools' } },
@@ -49,6 +50,189 @@ const activeIndex = computed(() => {
   const index = resolvedItems.value.findIndex((item) => item.name === resolvedActiveName.value)
   return index < 0 ? 0 : index
 })
+
+const navigationRef = ref<HTMLElement | null>(null)
+const contentRef = ref<HTMLElement | null>(null)
+const selectionRef = ref<HTMLElement | null>(null)
+const dragPosition = ref<number | null>(null)
+const settledPosition = ref<number | null>(null)
+const isPressed = ref(false)
+const isLifted = ref(false)
+const isDragging = ref(false)
+
+let holdTimer: number | undefined
+let settleTimer: number | undefined
+let pointerId: number | undefined
+let pointerStartX = 0
+let pointerStartPosition = 0
+let itemWidth = 1
+let suppressClick = false
+
+const selectionPosition = computed(() =>
+  dragPosition.value ?? settledPosition.value ?? activeIndex.value,
+)
+
+const selectionStyle = computed(() => ({
+  '--selection-position': selectionPosition.value,
+  '--selection-lift': isLifted.value ? '-17px' : '0px',
+  '--selection-scale': isLifted.value ? '1.12' : isPressed.value ? '1.015' : '1',
+}))
+
+function clearInteractionTimers() {
+  if (holdTimer !== undefined) window.clearTimeout(holdTimer)
+  if (settleTimer !== undefined) window.clearTimeout(settleTimer)
+  holdTimer = undefined
+  settleTimer = undefined
+}
+
+function resetInteraction() {
+  clearInteractionTimers()
+  pointerId = undefined
+  isPressed.value = false
+  isLifted.value = false
+  isDragging.value = false
+  dragPosition.value = null
+}
+
+function getItemWidth() {
+  const navigation = navigationRef.value
+  if (!navigation) return 1
+  const count = Math.max(resolvedItems.value.length, 1)
+  return (navigation.clientWidth - 10) / count
+}
+
+function selectItem(index: number) {
+  const item = resolvedItems.value[index]
+  if (!item) return
+
+  if (item.to) {
+    void router.push(item.to)
+  } else {
+    emit('select', item.name)
+  }
+}
+
+function finishSelectionDrag() {
+  if (dragPosition.value === null) {
+    resetInteraction()
+    return
+  }
+
+  if (holdTimer !== undefined) window.clearTimeout(holdTimer)
+  holdTimer = undefined
+
+  const lastPosition = dragPosition.value
+  const targetIndex = Math.min(
+    Math.max(Math.round(lastPosition), 0),
+    Math.max(resolvedItems.value.length - 1, 0),
+  )
+  const wasDragging = isDragging.value
+
+  dragPosition.value = targetIndex
+  settledPosition.value = targetIndex
+  isPressed.value = false
+  isLifted.value = false
+  isDragging.value = false
+  suppressClick = wasDragging
+
+  if (targetIndex !== activeIndex.value) selectItem(targetIndex)
+
+  pointerId = undefined
+
+  settleTimer = window.setTimeout(() => {
+    if (!isDragging.value) {
+      settledPosition.value = null
+      dragPosition.value = null
+    }
+  }, 460)
+}
+
+function handleSelectionPointerDown(event: PointerEvent) {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  const navigation = navigationRef.value
+  if (!navigation) return
+
+  event.preventDefault()
+  contentRef.value?.setPointerCapture(event.pointerId)
+  pointerId = event.pointerId
+  pointerStartX = event.clientX
+  pointerStartPosition = activeIndex.value
+  itemWidth = getItemWidth()
+  dragPosition.value = activeIndex.value
+  isPressed.value = true
+  isDragging.value = false
+  isLifted.value = false
+
+  clearInteractionTimers()
+  holdTimer = window.setTimeout(() => {
+    if (pointerId === event.pointerId) isLifted.value = true
+  }, 160)
+}
+
+function handleSelectionPointerMove(event: PointerEvent) {
+  if (pointerId !== event.pointerId || dragPosition.value === null) return
+
+  const deltaX = event.clientX - pointerStartX
+  if (!isDragging.value && Math.abs(deltaX) < 6) return
+
+  isDragging.value = true
+  isLifted.value = true
+  const rawPosition = pointerStartPosition + deltaX / itemWidth
+  const maxIndex = Math.max(resolvedItems.value.length - 1, 0)
+  const clamped = Math.min(Math.max(rawPosition, 0), maxIndex)
+  const overshoot = rawPosition - clamped
+  const resistance = overshoot === 0 ? 0 : (overshoot * 0.18) / (1 + Math.abs(overshoot) * 0.18)
+  dragPosition.value = clamped + resistance
+  event.preventDefault()
+}
+
+function handleSelectionPointerUp(event: PointerEvent) {
+  if (pointerId !== event.pointerId) return
+  contentRef.value?.releasePointerCapture(event.pointerId)
+  finishSelectionDrag()
+}
+
+function handleSelectionPointerCancel(event: PointerEvent) {
+  if (pointerId !== event.pointerId) return
+  contentRef.value?.releasePointerCapture(event.pointerId)
+  resetInteraction()
+}
+
+function handleNavigationPointerDown(event: PointerEvent) {
+  const selection = selectionRef.value
+  if (!selection) return
+  const bounds = selection.getBoundingClientRect()
+  if (
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  ) {
+    return
+  }
+  suppressClick = false
+  handleSelectionPointerDown(event)
+}
+
+function handleNavigationClick(event: MouseEvent) {
+  if (!suppressClick) return
+  event.preventDefault()
+  event.stopPropagation()
+  suppressClick = false
+}
+
+watch(activeIndex, (index) => {
+  if (isDragging.value) return
+  if (settledPosition.value !== null && settledPosition.value !== index) {
+    settledPosition.value = null
+    dragPosition.value = null
+  }
+})
+
+onBeforeUnmount(() => {
+  clearInteractionTimers()
+})
 </script>
 
 <template>
@@ -58,6 +242,7 @@ const activeIndex = computed(() => {
       'bottom-navigation--inline': inline,
       'bottom-navigation--compact': compact,
     }"
+    ref="navigationRef"
   >
     <LiquidGlass
       class="bottom-navigation__glass"
@@ -73,12 +258,24 @@ const activeIndex = computed(() => {
     >
       <nav
         class="bottom-navigation__content"
+        ref="contentRef"
         :style="{ '--navigation-item-count': resolvedItems.length }"
         :aria-label="ariaLabel"
+        @pointerdown="handleNavigationPointerDown"
+        @pointermove="handleSelectionPointerMove"
+        @pointerup="handleSelectionPointerUp"
+        @pointercancel="handleSelectionPointerCancel"
+        @click.capture="handleNavigationClick"
       >
         <span
+          ref="selectionRef"
           class="bottom-navigation__selection"
-          :style="{ '--active-index': activeIndex }"
+          :class="{
+            'is-pressed': isPressed,
+            'is-lifted': isLifted,
+            'is-dragging': isDragging,
+          }"
+          :style="selectionStyle"
           aria-hidden="true"
         />
         <template v-for="item in resolvedItems" :key="item.name">
