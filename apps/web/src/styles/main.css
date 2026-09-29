@@ -60,7 +60,7 @@ html[data-ios-top-scrim='true'] .ios-pwa-status-strip {
   height: 11px;
   pointer-events: none;
   color: transparent;
-  background-color: var(--app-canvas);
+  background-color: var(--page-bg);
   -webkit-background-clip: text;
   background-clip: text;
 }

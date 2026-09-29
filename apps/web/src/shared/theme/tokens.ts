@@ -138,6 +138,8 @@ const tokenNames = [
   'schedule-ink',
   'schedule-ink-soft',
   'schedule-muted',
+  'schedule-tone-blue-gray',
+  'schedule-tone-seafoam',
 ] as const
 
 export type ThemeTokenName = (typeof tokenNames)[number]

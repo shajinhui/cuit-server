@@ -193,6 +193,9 @@
   --schedule-ink: #101722;
   --schedule-ink-soft: #26343d;
   --schedule-muted: rgba(38, 52, 61, 0.58);
+  /* 课程色卡保持独立且跨主题稳定，不复用通用语义色。 */
+  --schedule-tone-blue-gray: #60999a;
+  --schedule-tone-seafoam: #6f9d86;
   --ink-deepest: #0f151f;
 
 }
@@ -361,6 +364,8 @@
   --schedule-ink: #f2f2f7;
   --schedule-ink-soft: #d1d1d6;
   --schedule-muted: rgba(209, 209, 214, 0.72);
+  --schedule-tone-blue-gray: #60999a;
+  --schedule-tone-seafoam: #6f9d86;
   --ink-deepest: #f2f2f7;
 
 }
@@ -521,6 +526,8 @@
     --schedule-ink: #f2f2f7;
     --schedule-ink-soft: #d1d1d6;
     --schedule-muted: rgba(209, 209, 214, 0.72);
+    --schedule-tone-blue-gray: #60999a;
+    --schedule-tone-seafoam: #6f9d86;
     --sheen-accent: rgba(142, 207, 63, 0.08);
     --focus-ring-soft: rgba(165, 221, 95, 0.24);
     --focus-ring: #a5dd5f;
