@@ -260,10 +260,10 @@ onBeforeUnmount(() => {
     <span class="bottom-navigation__glass" aria-hidden="true">
       <LiquidGlass
         :mode="GlassMode.standard"
-        :displacement-scale="64"
-        :blur-amount="0.1"
+        :displacement-scale="18"
+        :blur-amount="0.3"
         :saturation="135"
-        :aberration-intensity="1.6"
+        :aberration-intensity="0.5"
         :elasticity="0.08"
         :corner-radius="32"
         padding="0"
@@ -297,10 +297,10 @@ onBeforeUnmount(() => {
       >
         <LiquidGlass
           :mode="GlassMode.standard"
-          :displacement-scale="48"
-          :blur-amount="0.1"
+          :displacement-scale="14"
+          :blur-amount="0.125"
           :saturation="145"
-          :aberration-intensity="1.6"
+          :aberration-intensity="0.5"
           :elasticity="0.1"
           :corner-radius="26"
           padding="0"
