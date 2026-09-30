@@ -267,6 +267,24 @@ select:focus-visible {
   box-sizing: border-box;
 }
 
+/*
+ * The library supplies refraction and blur, but intentionally leaves the
+ * material tint to the host app. Keep a translucent tint on the glass itself
+ * so the effect remains visible over quiet/light pages as well as the colorful
+ * schedule. The inner highlight is the thin light-catching edge from iOS.
+ */
+.bottom-navigation__glass .glass {
+  background: var(--bg-nav);
+  border: 1px solid var(--edge-highlight-soft);
+  box-shadow: inset 0 1px 0 var(--edge-highlight-soft), 0 12px 40px var(--shadow-color);
+}
+
+.bottom-navigation__selection .glass {
+  background: var(--bg-glass);
+  border: 1px solid var(--edge-highlight);
+  box-shadow: inset 0 1px 0 var(--edge-highlight), 0 8px 24px var(--shadow-color-soft);
+}
+
 /* 组件会给 slot 再包一层内容容器；同样需要把这层撑满材质面。 */
 .bottom-navigation__glass .glass > div:last-child,
 .bottom-navigation__selection .glass > div:last-child {
@@ -494,6 +512,13 @@ html[data-platform='android'] .bottom-navigation {
     display: none;
   }
 
+  .bottom-navigation__glass .glass,
+  .bottom-navigation__selection .glass {
+    background: var(--bg-surface);
+    border-color: var(--line-soft);
+    box-shadow: 0 8px 24px var(--shadow-color);
+  }
+
   .bottom-navigation__glass-fill,
   .bottom-navigation__selection-fill {
     display: none;
@@ -529,6 +554,13 @@ html[data-platform='android'] .bottom-navigation {
   .bottom-navigation__glass > * > .glass__warp,
   .bottom-navigation__selection .glass__warp {
     display: none;
+  }
+
+  .bottom-navigation__glass .glass,
+  .bottom-navigation__selection .glass {
+    background: var(--bg-surface);
+    border-color: var(--line-soft);
+    box-shadow: 0 8px 24px var(--shadow-color);
   }
 
   .bottom-navigation__glass-fill,
