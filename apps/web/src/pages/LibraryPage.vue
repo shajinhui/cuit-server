@@ -22,6 +22,8 @@ import LibrarySeatMap from '@/features/library/components/LibrarySeatMap.vue'
 import { useSessionStore } from '@/features/session'
 import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
+import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import AppDateTimePicker from '@/shared/ui/AppDateTimePicker.vue'
 import AppSelect from '@/shared/ui/AppSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
@@ -407,12 +409,11 @@ function reservationIsDanger(status: number) {
 <template>
   <main class="library-page">
     <header class="library-topbar">
-      <button type="button" class="library-icon-button" aria-label="返回工具页" @click="router.push({ name: 'tools' })">
+      <GlassIconButton class="library-icon-button" aria-label="返回工具页" @click="router.push({ name: 'tools' })">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" /></svg>
-      </button>
+      </GlassIconButton>
       <h1>图书馆预约</h1>
-      <button
-        type="button"
+      <GlassIconButton
         class="library-icon-button"
         aria-label="刷新预约信息"
         :disabled="store.initializing || store.loadingSeats || store.loadingReservations"
@@ -422,25 +423,16 @@ function reservationIsDanger(status: number) {
           <path d="M19 8a7.5 7.5 0 1 0 .15 7.7" />
           <path d="M19 4v4h-4" />
         </svg>
-      </button>
+      </GlassIconButton>
     </header>
 
-    <nav class="library-tabs" aria-label="预约类型">
-      <button
-        v-for="tab in [
-          { value: 'seat', label: '座位' },
-          { value: 'study', label: '自修室' },
-          { value: 'reservations', label: '我的预约' },
-        ]"
-        :key="tab.value"
-        type="button"
-        :class="{ 'is-selected': activeTab === tab.value }"
-        :aria-pressed="activeTab === tab.value"
-        @click="chooseTab(tab.value as PageTab)"
-      >
-        {{ tab.label }}
-      </button>
-    </nav>
+    <GlassSegmented
+      class="library-tabs"
+      :model-value="activeTab"
+      :options="[{ value: 'seat', label: '座位' }, { value: 'study', label: '自修室' }, { value: 'reservations', label: '我的预约' }] as const"
+      aria-label="预约类型"
+      @update:model-value="chooseTab"
+    />
 
     <section class="library-content">
       <div v-if="store.initializing && !store.initialized" class="library-page-state">
@@ -536,24 +528,13 @@ function reservationIsDanger(status: number) {
             <strong v-if="store.hasSearched">{{ availableCount }} 个可约</strong>
           </header>
 
-          <nav v-if="seatMapAvailable" class="library-view-switch" aria-label="座位显示方式">
-            <button
-              type="button"
-              :class="{ 'is-selected': seatViewMode === 'map' }"
-              :aria-pressed="seatViewMode === 'map'"
-              @click="seatViewMode = 'map'"
-            >
-              平面图
-            </button>
-            <button
-              type="button"
-              :class="{ 'is-selected': seatViewMode === 'list' }"
-              :aria-pressed="seatViewMode === 'list'"
-              @click="seatViewMode = 'list'"
-            >
-              列表
-            </button>
-          </nav>
+          <GlassSegmented
+            v-if="seatMapAvailable"
+            v-model="seatViewMode"
+            class="library-view-switch"
+            :options="[{ value: 'map', label: '平面图' }, { value: 'list', label: '列表' }] as const"
+            aria-label="座位显示方式"
+          />
 
           <div v-if="store.loadingSeats && !store.hasSearched" class="library-list-loader">
             <HamsterLoader label="正在读取座位…" />

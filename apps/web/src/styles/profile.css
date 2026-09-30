@@ -319,7 +319,8 @@
 }
 
 /* 外观开关：尺寸与环境跟随 profile 菜单的栅格（高度与文字行一致） */
-.profile-menu__theme-switch {
+.profile-menu__theme-switch.glass-segmented {
+  --glass-segmented-font-size: 12px;
   width: 174px;
   height: 32px;
 }
@@ -494,7 +495,7 @@
     row-gap: 8px;
   }
 
-  .profile-menu__theme-switch {
+  .profile-menu__theme-switch.glass-segmented {
     width: 100%;
     grid-column: 1 / -1;
   }

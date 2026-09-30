@@ -18,6 +18,8 @@ import {
   RatingState,
 } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
+import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
 
 defineOptions({ name: 'RatingBoardPage' })
 
@@ -132,9 +134,13 @@ function showNotice() {
       <section class="ratings-section ratings-section--inset">
         <header class="ratings-section-heading ratings-section-heading--stacked">
           <div><small>全部评分</small><h2>{{ submittedQuery || `${board.item_count} 个对象` }}</h2></div>
-          <div class="ratings-segment ratings-segment--four" role="group" aria-label="对象排序">
-            <button v-for="option in ([['popular', '热门'], ['newest', '最新'], ['highest', '高分'], ['lowest', '低分']] as const)" :key="option[0]" type="button" :class="{ 'is-active': sort === option[0] }" @click="changeSort(option[0])">{{ option[1] }}</button>
-          </div>
+          <GlassSegmented
+            class="ratings-segment ratings-segment--four"
+            :model-value="sort"
+            :options="[{ value: 'popular', label: '热门' }, { value: 'newest', label: '最新' }, { value: 'highest', label: '高分' }, { value: 'lowest', label: '低分' }] as const"
+            aria-label="对象排序"
+            @update:model-value="changeSort"
+          />
         </header>
 
         <p v-if="error" class="ratings-inline-error" role="alert">{{ error }}</p>
@@ -145,12 +151,12 @@ function showNotice() {
         </div>
       </section>
 
-      <div class="ratings-bottom-action">
+      <GlassToolbar class="ratings-bottom-action" :corner-radius="34">
         <RouterLink :to="{ name: 'rating-create-item', params: { boardId: board.id } }">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" /></svg>
           添加评分对象
         </RouterLink>
-      </div>
+      </GlassToolbar>
       <RatingReportDialog :open="reportOpen" target-type="board" :target-id="board.id" @close="reportOpen = false" @submitted="showNotice" />
       <div v-if="notice" class="ratings-toast" role="status">{{ notice }}</div>
     </template>

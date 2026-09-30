@@ -1,15 +1,24 @@
 .campus-header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: calc(8px + var(--safe-area-inset-top, env(safe-area-inset-top, 0px))) 16px 8px;
 }
-.campus-header h1 { margin: 0; font-size: 20px; }
-.campus-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; background: var(--control-bg); border-radius: 15px; }
-.campus-tabs a { display: grid; min-height: 44px; place-items: center; color: var(--text-secondary); text-decoration: none; font-size: 15px; font-weight: 650; border-radius: 12px; }
-.campus-tabs a.is-active { color: var(--blue-bright); background: var(--bg-surface); }
-.campus-tabs a:active { background: var(--bg-surface-soft); }
+.campus-header h1 { margin: 0; font-size: 18px; font-weight: 650; line-height: 1.2; letter-spacing: -0.02em; }
+.campus-header > .ratings-icon-button { justify-self: end; box-shadow: none; }
+/* The glass is visually 36px tall, while native route links retain a 44px hit
+   target. Symmetric side columns keep the compact tabs centred on the page. */
+.campus-tabs.glass-segmented { width: clamp(144px, 42vw, 168px); height: 44px; }
+.campus-tabs > .glass-surface { inset: 4px 0; }
+.campus-tabs .glass-segmented__thumb { top: 7px; bottom: 7px; background: var(--control-track-soft); border: 0; box-shadow: none; }
+.campus-tabs .glass-segmented__track { padding-block: 0; }
+.campus-tabs .glass-segmented__option { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+.campus-tabs .glass-segmented__option.is-selected { color: var(--text-primary); font-weight: 600; }
+.campus-tabs .glass-segmented__option:active { background: var(--control-track-soft); }
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .campus-tabs .glass-segmented__thumb { background: var(--control-bg); border: 1px solid var(--line-strong); }
+}
 .marketplace-intro { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 16px 12px; }
 .marketplace-intro > div { min-width: 0; }
 .marketplace-intro h2 { margin: 0 0 4px; font-size: 20px; letter-spacing: -0.02em; }
@@ -52,7 +61,7 @@
 .marketplace-contact > span { color: var(--text-secondary); font-size: 13px; }
 .marketplace-contact > strong { font-size: 22px; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
 .marketplace-secondary-button { min-height: 48px; padding: 12px; color: var(--text-primary); background: var(--control-bg); border: 0; border-radius: 14px; font: inherit; font-weight: 600; }
-.marketplace-buy-bar { position: fixed; z-index: 30; bottom: 0; left: 50%; width: min(100%, 480px); padding: 8px 16px calc(8px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); background: var(--bg-surface-overlay); border-top: 1px solid var(--line-faint); transform: translateX(-50%); }
+.marketplace-buy-bar { position: fixed; z-index: 30; bottom: max(10px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))); left: 50%; width: min(calc(100% - 24px), 456px); padding: 8px; background: transparent; border: 0; transform: translateX(-50%); }
 .marketplace-buy-bar button { width: 100%; }
 .marketplace-page button:disabled { opacity: 0.5; cursor: default; }
 .marketplace-secondary-button:active, .marketplace-card:active { background: var(--bg-surface-soft); }

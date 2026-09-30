@@ -50,14 +50,12 @@
   padding: 5px;
   overflow: hidden;
   color: var(--text-primary);
-  background: var(--bg-surface-raised);
-  border: 0.5px solid var(--line-strong-alpha);
+  background: transparent;
+  border: 0;
   border-radius: 15px;
   box-shadow:
     0 14px 38px rgba(16, 23, 34, 0.18),
     0 1px 0 var(--bg-surface-glass) inset;
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
   transform-origin: top center;
 }
 

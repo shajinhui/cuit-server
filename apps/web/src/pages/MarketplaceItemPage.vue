@@ -6,6 +6,7 @@ import { campusLabels, contactLabels, formatPrice, getMarketplaceItem, revealSel
 import { RatingsApiError } from '@/features/ratings'
 import { RatingAvatar, RatingImage, RatingPageHeader, RatingState } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -99,9 +100,9 @@ async function copyContact() {
         <p class="marketplace-note">买卖双方自行联系、约定交易。本版本暂不支持在线支付。</p>
         <p v-if="actionError" class="ratings-form-error" role="alert">{{ actionError }}</p>
       </div>
-      <div v-if="!item.is_mine" class="marketplace-buy-bar">
+      <GlassToolbar v-if="!item.is_mine" class="marketplace-buy-bar" :corner-radius="24">
         <button type="button" class="ratings-primary-button" :disabled="busy || item.status !== 'on_sale'" @click="buy">{{ item.status !== 'on_sale' ? statusLabels[item.status] : busy ? '正在获取联系方式…' : contact ? '查看卖家联系方式' : '我想购买' }}</button>
-      </div>
+      </GlassToolbar>
     </template>
   </main>
 </template>

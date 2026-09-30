@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 
 import { academicCalendarURL, academicYearForDate } from '@/features/calendar'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
+import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'CalendarPage' })
@@ -39,14 +41,14 @@ function retry() {
 <template>
   <main class="calendar-page page-padding">
     <header class="calendar-topbar">
-      <button type="button" class="calendar-icon-button" aria-label="返回工具页" @click="router.push({ name: 'tools' })">
+      <GlassIconButton class="calendar-icon-button" aria-label="返回工具页" @click="router.push({ name: 'tools' })">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" /></svg>
-      </button>
+      </GlassIconButton>
       <div>
         <h1>校历</h1>
         <p>{{ academicYear.startYear }}—{{ academicYear.endYear }} 学年</p>
       </div>
-      <a
+      <GlassIconButton
         class="calendar-icon-button"
         :href="calendarURL"
         target="_blank"
@@ -56,7 +58,7 @@ function retry() {
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path d="M14 5h5v5M19 5l-8 8M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
         </svg>
-      </a>
+      </GlassIconButton>
     </header>
 
     <section
@@ -86,7 +88,7 @@ function retry() {
       </div>
     </section>
 
-    <div class="calendar-toolbar" aria-label="校历查看选项">
+    <GlassToolbar class="calendar-toolbar" :corner-radius="27" aria-label="校历查看选项">
       <button type="button" :aria-pressed="zoomed" @click="zoomed = !zoomed">
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <circle cx="10.5" cy="10.5" r="5.5" />
@@ -100,7 +102,7 @@ function retry() {
         </svg>
         <span>打开原图</span>
       </a>
-    </div>
+    </GlassToolbar>
 
     <p class="calendar-source">图片来源：成都信息工程大学教务处</p>
   </main>

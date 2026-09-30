@@ -26,6 +26,8 @@ import {
   StarRating,
 } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
+import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
 
 defineOptions({ name: 'RatingItemPage' })
 
@@ -266,10 +268,13 @@ function showNotice() {
         <section class="rating-comments">
           <header class="ratings-section-heading">
             <div><small>讨论</small><h2>全部评论 {{ item.comment_count }}</h2></div>
-            <div class="ratings-segment" role="group" aria-label="评论排序">
-              <button type="button" :class="{ 'is-active': commentSort === 'newest' }" @click="changeCommentSort('newest')">最新</button>
-              <button type="button" :class="{ 'is-active': commentSort === 'oldest' }" @click="changeCommentSort('oldest')">最早</button>
-            </div>
+            <GlassSegmented
+              class="ratings-segment"
+              :model-value="commentSort"
+              :options="[{ value: 'newest', label: '最新' }, { value: 'oldest', label: '最早' }] as const"
+              aria-label="评论排序"
+              @update:model-value="changeCommentSort"
+            />
           </header>
           <p v-if="commentError" class="ratings-inline-error" role="alert">{{ commentError }}</p>
           <RatingState v-if="commentsLoading && comments.length === 0" title="正在加载评论" loading />
@@ -300,13 +305,13 @@ function showNotice() {
         </section>
       </div>
 
-      <form class="rating-comment-composer" @submit.prevent="submitComment">
+      <GlassToolbar as="form" class="rating-comment-composer" :corner-radius="24" @submit.prevent="submitComment">
         <div v-if="replyTarget" class="rating-comment-composer__reply">回复 {{ replyTarget.author.display_name }}<button type="button" aria-label="取消回复" @click="replyTarget = null">×</button></div>
         <div>
           <textarea id="rating-comment-input" v-model="commentBody" rows="1" maxlength="1000" :placeholder="replyTarget ? '写下回复…' : '写下你的看法…'" aria-label="评论内容" />
           <button type="submit" :disabled="!canSubmitComment">{{ commentSubmitting ? '发送中' : '发送' }}</button>
         </div>
-      </form>
+      </GlassToolbar>
       <RatingReportDialog
         :open="Boolean(reportTarget)"
         :target-type="reportTarget?.type ?? 'item'"

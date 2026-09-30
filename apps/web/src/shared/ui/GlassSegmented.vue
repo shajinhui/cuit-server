@@ -1,171 +1,111 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
+<script setup lang="ts" generic="T extends string = string">
+import { computed, nextTick, ref } from 'vue'
+import { RouterLink, type RouteLocationRaw } from 'vue-router'
 
-import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
+import GlassSurface from './GlassSurface.vue'
+import type { GlassMaterial } from './glassMaterial'
+import { useCapsuleGesture } from './useCapsuleGesture'
 
-import { ratioFromPointer, snapIndex, thumbOffset } from './glassSegmented'
-
-/**
- * 玻璃分段开关。
- *
- * 交互：点选任意一段，或者按住滑块（拇指）左右拖动，松手吸附到最近的一段。
- *
- * 实现要点：
- *  1. LiquidGlass 只当底板，且 --glass-fill / --glass-rim 都刻意压到很低的
- *     不透明度，避免在设置行里"抢戏"；
- *  2. 拖动逻辑挂在一层独立的透明覆盖层（.glass-segmented__track）上，不用去动
- *     玻璃组件内部的指针事件；松手后再开启过渡，让滑块吸附回弹；
- *  3. 拖到位与点选都走同一套 select()，越界位置会被夹到 [0, count - 1]。
- */
-
-defineOptions({ name: 'GlassSegmented' })
-
-const props = defineProps<{
-  /** 每一项的取值，v-model 用 */
-  options: { value: string; label: string; shortLabel?: string }[]
-  modelValue: string
-  /** 无障碍名称 */
+const props = withDefaults(defineProps<{
+  options: readonly { value: T; label: string; shortLabel?: string; disabled?: boolean; to?: RouteLocationRaw }[]
+  modelValue: T
   ariaLabel?: string
-  /** 底板的圆角与单个滑块圆角 */
   cornerRadius?: number
   thumbRadius?: number
-}>()
+  material?: GlassMaterial
+  /** Ordinary switches keep native clicks; opt in only for a draggable capsule. */
+  draggable?: boolean
+}>(), { cornerRadius: 12, thumbRadius: 9, material: 'control', draggable: false })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
-  change: [value: string]
+  'update:modelValue': [value: T]
+  change: [value: T]
 }>()
 
-const activeIndex = computed(() => {
-  const index = props.options.findIndex((option) => option.value === props.modelValue)
-  return index < 0 ? 0 : index
+const containerRef = ref<HTMLElement | null>(null)
+const trackRef = ref<HTMLElement | null>(null)
+const thumbRef = ref<HTMLElement | null>(null)
+const activeIndex = computed(() => Math.max(0, props.options.findIndex(option => option.value === props.modelValue)))
+const hasLinks = computed(() => props.options.some(option => option.to))
+const dragEnabled = computed(() => props.draggable && !hasLinks.value)
+const {
+  position, isDragging, handlePointerDown, handlePointerMove, handlePointerUp,
+  handlePointerCancel, handleLostPointerCapture, handlePointerLeave, handleClick,
+} = useCapsuleGesture({
+  activeIndex,
+  itemCount: () => props.options.length,
+  navigation: containerRef,
+  content: trackRef,
+  selection: thumbRef,
+  rim: 3,
+  select,
 })
 
-const count = computed(() => props.options.length)
-const cornerRadius = computed(() => props.cornerRadius ?? 12)
-const thumbRadius = computed(() => props.thumbRadius ?? 9)
-
-/** 拖动中的滑块偏移，单位是"整条轨道的百分比"；null 表示跟随选中项。 */
-const dragOffset = ref<number | null>(null)
-
 const switchStyle = computed(() => ({
-  '--glass-segmented-count': count.value,
-  '--glass-segmented-index': activeIndex.value,
-  '--glass-segmented-offset':
-    dragOffset.value === null ? 'calc(var(--glass-segmented-index) * 100%)' : `${dragOffset.value}%`,
-  '--glass-segmented-corner': `${cornerRadius.value}px`,
-  '--glass-segmented-thumb-corner': `${thumbRadius.value}px`,
+  '--glass-segmented-count': Math.max(1, props.options.length),
+  '--glass-segmented-offset': `${position.value * 100}%`,
+  '--glass-segmented-corner': `${props.cornerRadius}px`,
+  '--glass-segmented-thumb-corner': `${props.thumbRadius}px`,
 }))
 
 function select(index: number) {
-  const next = props.options[Math.min(count.value - 1, Math.max(0, index))]
-  if (!next || next.value === props.modelValue) return
-
-  emit('update:modelValue', next.value)
-  emit('change', next.value)
+  const option = props.options[index]
+  if (!option || option.disabled || option.to || option.value === props.modelValue) return
+  emit('update:modelValue', option.value)
+  emit('change', option.value)
 }
 
-let dragging = false
-let dragStartX = 0
-let movedDuringDrag = false
-
-function handlePointerDown(event: PointerEvent) {
-  if (event.button !== 0 && event.pointerType === 'mouse') return
-
-  // 阻止按住时的文字选中与图片拖拽：拖动只应该移动滑块。
+async function handleKeydown(event: KeyboardEvent, index: number) {
+  if (hasLinks.value || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
   event.preventDefault()
-  dragging = true
-  movedDuringDrag = false
-  dragStartX = event.clientX
-  dragOffset.value = activeIndex.value * 100
-  ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
-}
-
-function handlePointerMove(event: PointerEvent) {
-  if (!dragging) return
-
-  const ratio = ratioFromPointer(event.clientX, event.currentTarget as HTMLElement)
-  if (ratio === null) return
-
-  if (Math.abs(event.clientX - dragStartX) > 3) movedDuringDrag = true
-  dragOffset.value = thumbOffset(ratio, count.value)
-}
-
-function handlePointerUp(event: PointerEvent) {
-  if (!dragging) return
-
-  dragging = false
-  const ratio = ratioFromPointer(event.clientX, event.currentTarget as HTMLElement)
-  const target = ratio === null ? activeIndex.value : snapIndex(ratio, count.value)
-  // 先清掉拖动偏移，让滑块回到"选中项坐标"；这样松手后的位移始终是吸附动画。
-  dragOffset.value = null
-  if (movedDuringDrag || target !== activeIndex.value) select(target)
-}
-
-function handlePointerCancel() {
-  dragging = false
-  dragOffset.value = null
-}
-
-function handleKeydown(event: KeyboardEvent, index: number) {
-  const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
-  if (!keys.includes(event.key)) return
-
-  event.preventDefault()
-  if (event.key === 'Home') return select(0)
-  if (event.key === 'End') return select(count.value - 1)
-  select(index + (event.key === 'ArrowRight' ? 1 : -1))
+  const enabled = props.options.map((option, i) => option.disabled ? -1 : i).filter(i => i >= 0)
+  if (!enabled.length) return
+  const current = enabled.indexOf(index)
+  const delta = event.key === 'ArrowLeft' ? -1 : 1
+  const target = event.key === 'Home' ? enabled[0] : event.key === 'End' ? enabled.at(-1)!
+    : enabled[(current + delta + enabled.length) % enabled.length]!
+  select(target)
+  await nextTick()
+  trackRef.value?.querySelector<HTMLElement>(`[data-navigation-index="${target}"]`)?.focus()
 }
 </script>
 
 <template>
-  <div
-    class="glass-segmented"
-    :class="{ 'is-dragging': dragOffset !== null }"
-    :style="switchStyle"
-  >
-    <span class="glass-segmented__glass" aria-hidden="true">
-      <!-- LiquidGlass 的根元素自带 relative 布局，位置交给外层容器控制 -->
-      <LiquidGlass
-        :mode="GlassMode.standard"
-        :displacement-scale="36"
-        :blur-amount="0.06"
-        :saturation="112"
-        :aberration-intensity="0.8"
-        :elasticity="0.05"
-        :corner-radius="cornerRadius"
-        padding="0"
-      >
-        <span class="glass-segmented__glass-fill" />
-      </LiquidGlass>
-    </span>
-
-    <span class="glass-segmented__thumb" aria-hidden="true" />
-
-    <div
+  <div ref="containerRef" class="glass-segmented" :class="{ 'is-dragging': isDragging, 'is-draggable': dragEnabled }" :style="switchStyle">
+    <GlassSurface :preset="material" :corner-radius="cornerRadius" />
+    <span ref="thumbRef" class="glass-segmented__thumb" aria-hidden="true" />
+    <component
+      :is="hasLinks ? 'nav' : 'div'"
+      ref="trackRef"
       class="glass-segmented__track"
-      role="radiogroup"
+      :role="hasLinks ? undefined : 'radiogroup'"
       :aria-label="ariaLabel"
-      @pointerdown="handlePointerDown"
-      @pointermove="handlePointerMove"
-      @pointerup="handlePointerUp"
+      @pointerdown="dragEnabled && handlePointerDown($event)"
+      @pointermove="dragEnabled && handlePointerMove($event)"
+      @pointerup="dragEnabled && handlePointerUp($event)"
       @pointercancel="handlePointerCancel"
+      @lostpointercapture="handleLostPointerCapture"
+      @pointerleave="handlePointerLeave"
+      @click.capture="handleClick"
     >
-      <button
+      <component
+        :is="option.to && !option.disabled ? RouterLink : 'button'"
         v-for="(option, index) in options"
         :key="option.value"
-        type="button"
+        :to="option.to && !option.disabled ? option.to : undefined"
+        :type="option.to && !option.disabled ? undefined : 'button'"
         class="glass-segmented__option"
         :class="{ 'is-selected': index === activeIndex }"
-        role="radio"
+        :data-navigation-index="index"
+        :role="hasLinks ? undefined : 'radio'"
         :aria-label="option.label"
-        :aria-checked="index === activeIndex"
-        :tabindex="index === activeIndex ? 0 : -1"
+        :aria-checked="hasLinks ? undefined : index === activeIndex"
+        :aria-current="hasLinks && index === activeIndex ? 'page' : undefined"
+        :tabindex="hasLinks || index === activeIndex ? 0 : -1"
+        :disabled="option.disabled || undefined"
         @click="select(index)"
         @keydown="handleKeydown($event, index)"
-      >
-        {{ option.shortLabel ?? option.label }}
-      </button>
-    </div>
+      >{{ option.shortLabel ?? option.label }}</component>
+    </component>
   </div>
 </template>

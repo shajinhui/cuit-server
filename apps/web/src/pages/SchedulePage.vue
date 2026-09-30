@@ -26,6 +26,8 @@ import {
 import { useProfileStore } from '@/features/profile'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassPopover from '@/shared/ui/GlassPopover.vue'
+import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import AppSelect from '@/shared/ui/AppSelect.vue'
 import AppShell from '@/shared/ui/AppShell.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
@@ -390,8 +392,7 @@ async function refreshSchedule() {
           </p>
         </div>
         <div class="schedule-header__actions" aria-label="课表操作">
-          <button
-            type="button"
+          <GlassIconButton
             aria-label="添加课程"
             :disabled="!store.selectedSemesterID"
             @click="openAddCourse"
@@ -399,9 +400,8 @@ async function refreshSchedule() {
             <svg aria-hidden="true" viewBox="0 0 24 24">
               <path d="M12 5v14M5 12h14" />
             </svg>
-          </button>
-          <button
-            type="button"
+          </GlassIconButton>
+          <GlassIconButton
             class="round-action"
             :class="{ 'is-syncing': store.loading }"
             :aria-label="store.loading ? '正在同步课表' : '重新同步课表'"
@@ -414,10 +414,9 @@ async function refreshSchedule() {
               <path d="M5 16a8 8 0 0 0 13.5 2l2.5-2.5" />
               <path d="M21 20v-4.5h-4.5" />
             </svg>
-          </button>
+          </GlassIconButton>
           <div ref="moreMenuRef" class="schedule-more">
-            <button
-              type="button"
+            <GlassIconButton
               class="more-button"
               aria-label="更多操作"
               aria-controls="schedule-more-menu"
@@ -429,9 +428,9 @@ async function refreshSchedule() {
                 <circle cx="9" cy="3" r="1.5" />
                 <circle cx="15" cy="3" r="1.5" />
               </svg>
-            </button>
+            </GlassIconButton>
             <Transition name="schedule-more-menu">
-              <div
+              <GlassPopover
                 v-if="moreMenuOpen"
                 id="schedule-more-menu"
                 class="schedule-more-menu"
@@ -523,7 +522,7 @@ async function refreshSchedule() {
                     <path d="M6 2v3M14 2v3M2.5 7.5h15M10 10v5M7.5 12.5H12.5" />
                   </svg>
                 </button>
-              </div>
+              </GlassPopover>
             </Transition>
           </div>
         </div>

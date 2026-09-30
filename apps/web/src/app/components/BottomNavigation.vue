@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
-import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
 
 import profileIcon from '@/assets/icons/nav-profile-tab.png'
 import ratingsIcon from '@/assets/icons/nav-ratings.png'
 import scheduleIcon from '@/assets/icons/nav-schedule.png'
 import toolsIcon from '@/assets/icons/nav-tools.png'
 import { isRatingsConfigured } from '@/features/ratings'
-import { useNavigationGesture } from './useNavigationGesture'
+import GlassSurface from '@/shared/ui/GlassSurface.vue'
+import { useCapsuleGesture } from '@/shared/ui/useCapsuleGesture'
 
 defineOptions({ name: 'BottomNavigation' })
 
@@ -64,7 +64,7 @@ const {
   position: selectionPosition, isPressed, isLifted, isDragging,
   handlePointerDown, handlePointerMove, handlePointerUp,
   handlePointerCancel, handleLostPointerCapture, handlePointerLeave, handleClick,
-} = useNavigationGesture({
+} = useCapsuleGesture({
   activeIndex,
   itemCount: () => resolvedItems.value.length,
   navigation: navigationRef,
@@ -105,25 +105,10 @@ function selectItem(index: number) {
     ref="navigationRef"
   >
     <!--
-      LiquidGlass 自己负责折射、模糊和边缘高光；position/top/left 通过 style prop
-      传给组件根节点（库的根节点不会自动继承默认的 50% 定位）。交互内容放在这层之外，
-      这样选中项拖动时可以向上浮出胶囊，不会被材质层裁掉。
+      GlassSurface 统一库的折射、高光和兼容处理；导航只负责布局与手势。
+      原始链接位于独立交互层，装饰材质不拦截点击，也不裁剪拖动中的内容。
     -->
-    <span class="bottom-navigation__glass" aria-hidden="true">
-      <LiquidGlass
-        :mode="GlassMode.standard"
-        :displacement-scale="18"
-        :blur-amount="0.3"
-        :saturation="135"
-        :aberration-intensity="0.5"
-        :elasticity="0.08"
-        :corner-radius="32"
-        padding="0"
-        :style="{ position: 'absolute', top: '50%', left: '50%', width: '100%', height: '100%' }"
-      >
-        <span class="bottom-navigation__glass-fill" />
-      </LiquidGlass>
-    </span>
+    <GlassSurface class="bottom-navigation__glass" preset="navigation" :corner-radius="32" :style="{ '--glass-clip-radius': 'var(--bottom-navigation-outer-radius)' }" />
 
     <nav
       class="bottom-navigation__content"
@@ -150,19 +135,7 @@ function selectItem(index: number) {
         :style="selectionStyle"
         aria-hidden="true"
       >
-        <LiquidGlass
-          :mode="GlassMode.standard"
-          :displacement-scale="14"
-          :blur-amount="0.125"
-          :saturation="145"
-          :aberration-intensity="0.5"
-          :elasticity="0.1"
-          :corner-radius="26"
-          padding="0"
-          :style="{ position: 'absolute', top: '50%', left: '50%', width: '100%', height: '100%' }"
-        >
-          <span class="bottom-navigation__selection-fill" />
-        </LiquidGlass>
+        <GlassSurface preset="selection" :corner-radius="26" :style="{ '--glass-clip-radius': 'var(--bottom-navigation-inner-radius)' }" />
       </span>
       <template v-for="(item, index) in resolvedItems" :key="item.name">
         <RouterLink

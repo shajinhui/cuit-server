@@ -226,6 +226,7 @@ function maskStudentNumber(studentNo: string) {
             aria-label="外观"
             :corner-radius="12"
             :thumb-radius="9"
+            draggable
             @update:model-value="setColorScheme($event as ColorSchemePreference)"
           />
         </div>

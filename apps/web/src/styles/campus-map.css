@@ -52,14 +52,12 @@
   place-items: center;
   color: var(--text-tertiary);
   text-decoration: none;
-  background: var(--bg-glass);
+  background: transparent;
   border: 0;
   border-radius: 50%;
   box-shadow:
     0 0.5px 0 var(--hairline),
     0 5px 16px var(--shadow-color-soft);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-  backdrop-filter: blur(20px) saturate(145%);
   transition: transform 140ms var(--ease-out);
 }
 
@@ -82,56 +80,10 @@
   outline-color: var(--blue-ring);
 }
 
-.campus-map-selector {
-  position: relative;
-  display: grid;
-  min-height: 48px;
+.campus-map-selector.glass-segmented {
+  flex: 0 0 auto;
+  height: 48px;
   margin-top: 10px;
-  padding: 4px;
-  grid-template-columns: repeat(2, 1fr);
-  background: var(--control-track-soft);
-  border-radius: 24px;
-}
-
-.campus-map-selector__selection {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
-  pointer-events: none;
-  background: var(--edge-highlight);
-  border-radius: 20px;
-  box-shadow:
-    0 0.5px 0 var(--hairline),
-    0 3px 10px var(--map-tint-soft);
-  transition: transform 180ms var(--ease-out);
-}
-
-.campus-map-selector__selection.is-longquan {
-  transform: translateX(100%);
-}
-
-.campus-map-selector button {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  min-height: 40px;
-  padding: 0 12px;
-  color: var(--text-muted);
-  font-size: 15px;
-  font-weight: 600;
-  background: transparent;
-  border: 0;
-  border-radius: 20px;
-}
-
-.campus-map-selector button[aria-pressed='true'] {
-  color: var(--text-primary);
-}
-
-.campus-map-selector button:active {
-  transform: scale(0.98);
 }
 
 .campus-map-viewer {
@@ -269,13 +221,11 @@
   padding: 4px;
   flex: 1;
   grid-template-columns: 44px minmax(0, 1fr) 44px;
-  background: var(--bg-glass);
+  background: transparent;
   border-radius: 26px;
   box-shadow:
     0 0.5px 0 var(--hairline),
     0 8px 22px var(--map-tint-weak);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-  backdrop-filter: blur(20px) saturate(145%);
 }
 
 .campus-map-zoom button {

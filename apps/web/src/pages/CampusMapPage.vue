@@ -5,6 +5,9 @@ import { useRouter } from 'vue-router'
 import airportMapURL from '@/assets/maps/campus-map-airport.jpg'
 import longquanMapURL from '@/assets/maps/campus-map-longquan.jpg'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
+import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
+import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'CampusMapPage' })
@@ -138,21 +141,20 @@ async function saveMapImage() {
 <template>
   <main class="campus-map-page">
     <header class="campus-map-topbar">
-      <button
-        type="button"
+      <GlassIconButton
         class="campus-map-icon-button"
         aria-label="返回工具页"
         @click="router.push({ name: 'tools' })"
       >
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7" /></svg>
-      </button>
+      </GlassIconButton>
 
       <div>
         <h1>校园地图</h1>
         <p>{{ currentMap.title }}</p>
       </div>
 
-      <a
+      <GlassIconButton
         class="campus-map-icon-button"
         :href="currentMap.imageURL"
         aria-label="打开当前校园地图原图"
@@ -160,25 +162,18 @@ async function saveMapImage() {
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path d="M14 5h5v5M19 5l-8 8M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
         </svg>
-      </a>
+      </GlassIconButton>
     </header>
 
-    <div class="campus-map-selector" role="group" aria-label="选择校区">
-      <span
-        class="campus-map-selector__selection"
-        :class="{ 'is-longquan': selectedCampus === 'longquan' }"
-        aria-hidden="true"
-      />
-      <button
-        v-for="campus in maps"
-        :key="campus.id"
-        type="button"
-        :aria-pressed="selectedCampus === campus.id"
-        @click="selectCampus(campus.id)"
-      >
-        {{ campus.label }}
-      </button>
-    </div>
+    <GlassSegmented
+      class="campus-map-selector"
+      :model-value="selectedCampus"
+      :options="maps.map(campus => ({ value: campus.id, label: campus.label }))"
+      aria-label="选择校区"
+      :corner-radius="24"
+      :thumb-radius="20"
+      @update:model-value="selectCampus"
+    />
 
     <section
       ref="viewport"
@@ -218,7 +213,7 @@ async function saveMapImage() {
     </section>
 
     <div class="campus-map-controls">
-      <div class="campus-map-zoom" aria-label="地图缩放">
+      <GlassToolbar class="campus-map-zoom" :corner-radius="26" aria-label="地图缩放">
         <button
           type="button"
           :disabled="zoom <= 1"
@@ -244,7 +239,7 @@ async function saveMapImage() {
         >
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12" /></svg>
         </button>
-      </div>
+      </GlassToolbar>
 
       <button
         type="button"

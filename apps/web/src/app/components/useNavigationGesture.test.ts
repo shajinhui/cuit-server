@@ -2,11 +2,11 @@ import { readFileSync } from 'node:fs'
 import { effectScope, nextTick, ref, shallowRef, type EffectScope } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useNavigationGesture } from './useNavigationGesture'
+import { useCapsuleGesture as useNavigationGesture } from '@/shared/ui/useCapsuleGesture'
 
 let scope: EffectScope
 
-function setup(active = 0, presented = active) {
+function setup(active = 0, presented = active, rim = 5) {
   scope = effectScope()
   const captured = new Set<number>()
   const content = {
@@ -16,13 +16,15 @@ function setup(active = 0, presented = active) {
   }
   const activeIndex = ref(active)
   const select = vi.fn((index: number) => { activeIndex.value = index })
+  const itemWidth = (410 - rim * 2) / 4
   const gesture = scope.run(() => useNavigationGesture({
     activeIndex,
     itemCount: () => 4,
     navigation: shallowRef({ clientWidth: 410, getBoundingClientRect: () => ({ left: 0, width: 410 }) } as HTMLElement),
-    selection: shallowRef({ getBoundingClientRect: () => ({ left: 5 + presented * 100, right: 105 + presented * 100, top: 5, bottom: 59, width: 100 }) } as HTMLElement),
+    selection: shallowRef({ getBoundingClientRect: () => ({ left: rim + presented * itemWidth, right: rim + (presented + 1) * itemWidth, top: 5, bottom: 59, width: itemWidth }) } as HTMLElement),
     content: shallowRef(content as unknown as HTMLElement),
     select,
+    rim,
   }))
   if (!gesture) throw new Error('gesture scope did not start')
   return { gesture, content, select, activeIndex }
@@ -92,6 +94,15 @@ describe('导航点按与胶囊拖动互不抢占', () => {
     expect(content.setPointerCapture).not.toHaveBeenCalled()
     gesture.handlePointerUp(pointer())
     expect(gesture.isLifted.value).toBe(false)
+  })
+
+  it('小型分段控件的 3px 内边距不会使胶囊吸附坐标偏移', () => {
+    const { gesture, select } = setup(0, 0, 3)
+    gesture.handlePointerDown(pointer())
+    gesture.handlePointerMove(pointer(0, 156))
+    expect(gesture.position.value).toBeCloseTo(1)
+    gesture.handlePointerUp(pointer(0, 156))
+    expect(select).toHaveBeenCalledExactlyOnceWith(1)
   })
 
   it('确认拖动后捕获、跟随，并且只提交一次目标', async () => {

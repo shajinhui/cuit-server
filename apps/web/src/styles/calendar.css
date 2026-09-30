@@ -50,14 +50,12 @@
   place-items: center;
   color: var(--text-tertiary);
   text-decoration: none;
-  background: var(--bg-glass);
+  background: transparent;
   border: 0;
   border-radius: 50%;
   box-shadow:
     0 0.5px 0 var(--hairline),
     0 5px 16px var(--shadow-color-soft);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-  backdrop-filter: blur(20px) saturate(145%);
   transition: transform 140ms var(--ease-out);
 }
 
@@ -171,13 +169,11 @@
   margin-top: 12px;
   padding: 4px;
   grid-template-columns: repeat(2, 1fr);
-  background: var(--bg-glass);
+  background: transparent;
   border-radius: 27px;
   box-shadow:
     0 0.5px 0 var(--hairline),
     0 9px 24px var(--map-tint-weak);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
-  backdrop-filter: blur(20px) saturate(145%);
 }
 
 .calendar-toolbar button,

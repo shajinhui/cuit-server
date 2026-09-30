@@ -104,7 +104,7 @@
     background 140ms ease;
 }
 
-.library-tabs button.is-selected {
+.library-tabs:not(.glass-segmented) button.is-selected {
   color: var(--library-label);
   background: var(--edge-highlight-strong);
   box-shadow: 0 1px 3px var(--shadow-color-soft);
@@ -278,7 +278,7 @@
     background 140ms ease;
 }
 
-.library-view-switch button.is-selected {
+.library-view-switch:not(.glass-segmented) button.is-selected {
   color: var(--library-label);
   background: var(--bg-surface);
   box-shadow: 0 1px 3px var(--shadow-color-soft);
@@ -991,4 +991,12 @@
   .library-primary-button {
     transition-duration: 0.01ms;
   }
+}
+
+.library-tabs.glass-segmented,
+.library-view-switch.glass-segmented {
+  display: block;
+  height: 50px;
+  padding: 0;
+  background: transparent;
 }

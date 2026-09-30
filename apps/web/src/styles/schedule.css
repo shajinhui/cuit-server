@@ -173,8 +173,8 @@
   border-radius: 50%;
 }
 
-.schedule-header__actions .round-action::before,
-.schedule-header__actions .more-button::before {
+.schedule-header__actions .round-action:not(.glass-icon-button)::before,
+.schedule-header__actions .more-button:not(.glass-icon-button)::before {
   position: absolute;
   width: 29px;
   height: 29px;
@@ -213,15 +213,13 @@
   right: 0;
   width: min(238px, calc(100vw - 44px));
   padding: 6px;
-  background: var(--bg-surface-glass);
+  background: transparent;
   border: 0;
   border-radius: 18px;
   box-shadow:
     0 18px 44px var(--chart-line-soft),
     0 2px 8px var(--chart-line-faint);
   transform-origin: calc(100% - 22px) 0;
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-  backdrop-filter: blur(22px) saturate(150%);
 }
 
 .schedule-header__actions .schedule-semester-option {

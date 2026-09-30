@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, useId, watch, type CSSProperties } from 'vue'
 
+import GlassPopover from './GlassPopover.vue'
+
 type SelectValue = string | number
 
 interface SelectOption {
@@ -33,7 +35,7 @@ const emit = defineEmits<{
 const open = ref(false)
 const triggerRef = ref<HTMLButtonElement | null>(null)
 const listRef = ref<HTMLElement | null>(null)
-const popoverRef = ref<HTMLElement | null>(null)
+const popoverRef = ref<InstanceType<typeof GlassPopover> | null>(null)
 const listID = `${useId()}-list`
 const popoverStyle = ref<CSSProperties>({})
 const listStyle = ref<CSSProperties>({})
@@ -85,7 +87,7 @@ function updatePosition() {
   const availableBelow = viewportHeight - triggerRect.bottom - gap - viewportPadding
   const availableAbove = triggerRect.top - gap - viewportPadding
   const maxHeight = Math.max(108, Math.min(360, Math.max(availableBelow, availableAbove)))
-  const measuredHeight = Math.min(popoverRef.value?.offsetHeight || maxHeight, maxHeight)
+  const measuredHeight = Math.min(popoverRef.value?.element?.offsetHeight || maxHeight, maxHeight)
   const placeBelow = availableBelow >= measuredHeight || availableBelow >= availableAbove
   const top = placeBelow
     ? triggerRect.bottom + gap
@@ -101,12 +103,12 @@ function updatePosition() {
 
 function handleOutsidePointer(event: PointerEvent) {
   const target = event.target as Node
-  if (triggerRef.value?.contains(target) || popoverRef.value?.contains(target)) return
+  if (triggerRef.value?.contains(target) || popoverRef.value?.element?.contains(target)) return
   void closeList(false)
 }
 
 function handleViewportChange(event: Event) {
-  if (popoverRef.value?.contains(event.target as Node)) return
+  if (popoverRef.value?.element?.contains(event.target as Node)) return
   updatePosition()
 }
 
@@ -181,8 +183,9 @@ onBeforeUnmount(() => {
 
     <Teleport to="body">
       <Transition name="app-select-popover" appear>
-        <div
+        <GlassPopover
           v-if="open"
+          :corner-radius="15"
           :id="listID"
           ref="popoverRef"
           class="app-select-popover"
@@ -212,7 +215,7 @@ onBeforeUnmount(() => {
               </svg>
             </button>
           </div>
-        </div>
+        </GlassPopover>
       </Transition>
     </Teleport>
   </div>

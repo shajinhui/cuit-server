@@ -10,6 +10,7 @@ import {
 import { RatingBoardCard, RatingState } from '@/features/ratings/components'
 import CampusHeader from '@/app/components/CampusHeader.vue'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
 
 defineOptions({ name: 'RatingsPage' })
 
@@ -102,10 +103,13 @@ function deduplicate(items: RatingBoard[]) {
           <small>{{ submittedQuery ? '搜索结果' : '评分广场' }}</small>
           <h2>{{ submittedQuery || '大家都在评' }}</h2>
         </div>
-        <div class="ratings-segment" role="group" aria-label="板块排序">
-          <button type="button" :class="{ 'is-active': sort === 'popular' }" @click="changeSort('popular')">热门</button>
-          <button type="button" :class="{ 'is-active': sort === 'newest' }" @click="changeSort('newest')">最新</button>
-        </div>
+        <GlassSegmented
+          class="ratings-segment"
+          :model-value="sort"
+          :options="[{ value: 'popular', label: '热门' }, { value: 'newest', label: '最新' }] as const"
+          aria-label="板块排序"
+          @update:model-value="changeSort"
+        />
       </header>
 
       <RatingState v-if="loading" title="正在加载评分板块" loading />

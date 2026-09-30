@@ -73,15 +73,18 @@
   place-items: center;
   color: var(--text-primary);
   text-decoration: none;
-  background: var(--bg-surface-glass);
+  background: transparent;
   border: 0;
   border-radius: 50%;
   box-shadow: 0 0.5px 1px var(--hairline);
   transition: transform 140ms var(--ease-out), background-color 140ms ease;
 }
 
+.ratings-icon-button:not(.glass-icon-button) {
+  background: var(--bg-surface-glass);
+}
+
 .ratings-icon-button:active {
-  background: var(--control-bg);
   transform: scale(0.96);
 }
 
@@ -725,12 +728,10 @@
   padding: 7px;
   align-items: flex-start;
   justify-content: center;
-  background: var(--bg-nav);
-  border: 0.5px solid var(--bg-glass-bright);
+  background: transparent;
+  border: 0;
   border-radius: 34px;
   box-shadow: 0 14px 32px var(--shadow-color), 0 2px 8px var(--shadow-color-soft);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  backdrop-filter: blur(18px) saturate(150%);
 }
 
 .ratings-bottom-action > a {
@@ -1244,16 +1245,15 @@
 .rating-comment-composer {
   position: fixed;
   z-index: 30;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  bottom: max(10px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  left: 50%;
+  width: min(calc(100% - 24px), 456px);
   display: grid;
-  padding: 9px max(18px, calc((100vw - 480px) / 2 + 18px)) calc(9px + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+  padding: 9px;
   gap: 5px;
-  background: var(--bg-surface-raised);
-  border-top: 0.5px solid var(--line-soft);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-  backdrop-filter: blur(18px) saturate(150%);
+  background: transparent;
+  border: 0;
+  transform: translateX(-50%);
 }
 
 .rating-comment-composer > div:last-child {
@@ -1784,4 +1784,11 @@
   .ratings-sheet-leave-active .rating-report-dialog {
     transition: none;
   }
+}
+
+.ratings-segment.glass-segmented {
+  display: block;
+  height: 38px;
+  padding: 0;
+  background: transparent;
 }

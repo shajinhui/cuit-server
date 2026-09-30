@@ -1,16 +1,17 @@
 import { computed, onScopeDispose, ref, watch, type Ref } from 'vue'
 
-interface NavigationGestureOptions {
+interface CapsuleGestureOptions {
   activeIndex: Readonly<Ref<number>>
   itemCount: () => number
   navigation: Ref<HTMLElement | null>
   content: Ref<HTMLElement | null>
   selection: Ref<HTMLElement | null>
   select: (index: number) => void
+  rim?: number
 }
 
 /** 点击仍交给原始链接；只有确认拖动后才把指针捕获到导航容器。 */
-export function useNavigationGesture(options: NavigationGestureOptions) {
+export function useCapsuleGesture(options: CapsuleGestureOptions) {
   const dragPosition = ref<number | null>(null)
   const settledPosition = ref<number | null>(null)
   const isPressed = ref(false)
@@ -75,9 +76,10 @@ export function useNavigationGesture(options: NavigationGestureOptions) {
     clearTimers()
     const bounds = navigation.getBoundingClientRect()
     const scale = bounds.width / navigation.clientWidth
-    itemWidth = (bounds.width - 10 * scale) / Math.max(options.itemCount(), 1)
+    const rim = options.rim ?? 5
+    itemWidth = (bounds.width - 2 * rim * scale) / Math.max(options.itemCount(), 1)
     // 接住尚在移动的胶囊，而不是跳到动画的逻辑终点。
-    startPosition = (selectedBounds.left + selectedBounds.width / 2 - bounds.left - 5 * scale) / itemWidth - 0.5
+    startPosition = (selectedBounds.left + selectedBounds.width / 2 - bounds.left - rim * scale) / itemWidth - 0.5
     startX = event.clientX
     pointerId = event.pointerId
     dragPosition.value = startPosition
