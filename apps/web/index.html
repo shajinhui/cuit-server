@@ -49,6 +49,11 @@
         // 启动屏与首屏画布共用同一组变量，避免中间出现第三种颜色。
         root.style.setProperty('--launch-canvas', canvas)
         root.style.setProperty('--launch-page', page)
+        // 主样式加载前后都用页面令牌作底色；不能等异步路由/会话恢复后才上色。
+        root.style.setProperty(
+          '--page-bg',
+          `var(--${schedule ? 'bg-page-schedule' : 'bg-page'}, var(--launch-page))`,
+        )
       })()
     </script>
     <script>
@@ -133,7 +138,7 @@
       #app {
         min-height: 100%;
         margin: 0;
-        background: var(--launch-canvas);
+        background: var(--page-bg, var(--launch-page));
       }
 
       .app-launch-screen {
@@ -148,7 +153,7 @@
         color: var(--launch-text);
         background:
           linear-gradient(158deg, var(--launch-sheen), transparent 46%),
-          var(--launch-page);
+          var(--page-bg, var(--launch-page));
         box-sizing: border-box;
         font-family:
           system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC",
@@ -159,7 +164,7 @@
       html[data-initial-page='schedule'] body,
       html[data-initial-page='schedule'] #app,
       html[data-initial-page='schedule'] .app-launch-screen {
-        background: var(--launch-page);
+        background: var(--page-bg, var(--launch-page));
       }
 
       .app-launch-content {

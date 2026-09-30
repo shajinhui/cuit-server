@@ -2,7 +2,7 @@ import { onActivated, onBeforeUnmount, onDeactivated, onMounted, watch } from 'v
 
 import { setNativeSystemBarTheme } from '@/shared/native/systemBars'
 import type { ResolvedColorScheme } from '@/shared/theme/colorScheme'
-import { isThemeTokenName, resolveThemeToken, themeTokenVar, type ThemeTokenName } from '@/shared/theme/tokens'
+import { clearThemeTokenCache, isThemeTokenName, resolveThemeToken, themeTokenVar, type ThemeTokenName } from '@/shared/theme/tokens'
 import { useColorScheme } from '@/shared/theme/useColorScheme'
 
 /**
@@ -63,9 +63,22 @@ export function usePageTheme(color: ThemeTokenName | string) {
     currentOwner = owner
     lastMode = resolved.value
     applyPageColor(color, lastMode)
+    window.addEventListener('pageshow', refresh)
+    document.addEventListener('visibilitychange', refresh)
+  }
+
+  // iOS 回到前台/BFCache 恢复时可能仍使用旧的浏览器 UI 颜色。
+  // 只由当前页面立即重同步，不用延时器，也不让缓存页面抢占底色。
+  function refresh() {
+    if (currentOwner !== owner || document.visibilityState === 'hidden') return
+    clearThemeTokenCache()
+    lastMode = resolved.value
+    applyPageColor(color, lastMode)
   }
 
   function deactivate() {
+    window.removeEventListener('pageshow', refresh)
+    document.removeEventListener('visibilitychange', refresh)
     if (currentOwner !== owner) return
 
     currentOwner = null

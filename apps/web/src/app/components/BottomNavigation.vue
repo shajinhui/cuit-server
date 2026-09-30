@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router'
 import { GlassMode, LiquidGlass } from '@wxperia/liquid-glass-vue'
 
@@ -8,6 +8,7 @@ import ratingsIcon from '@/assets/icons/nav-ratings.png'
 import scheduleIcon from '@/assets/icons/nav-schedule.png'
 import toolsIcon from '@/assets/icons/nav-tools.png'
 import { isRatingsConfigured } from '@/features/ratings'
+import { useNavigationGesture } from './useNavigationGesture'
 
 defineOptions({ name: 'BottomNavigation' })
 
@@ -59,23 +60,18 @@ const activeIndex = computed(() => {
 const navigationRef = ref<HTMLElement | null>(null)
 const contentRef = ref<HTMLElement | null>(null)
 const selectionRef = ref<HTMLElement | null>(null)
-const dragPosition = ref<number | null>(null)
-const settledPosition = ref<number | null>(null)
-const isPressed = ref(false)
-const isLifted = ref(false)
-const isDragging = ref(false)
-
-let holdTimer: number | undefined
-let settleTimer: number | undefined
-let pointerId: number | undefined
-let pointerStartX = 0
-let pointerStartPosition = 0
-let itemWidth = 1
-let suppressClick = false
-
-const selectionPosition = computed(() =>
-  dragPosition.value ?? settledPosition.value ?? activeIndex.value,
-)
+const {
+  position: selectionPosition, isPressed, isLifted, isDragging,
+  handlePointerDown, handlePointerMove, handlePointerUp,
+  handlePointerCancel, handleLostPointerCapture, handlePointerLeave, handleClick,
+} = useNavigationGesture({
+  activeIndex,
+  itemCount: () => resolvedItems.value.length,
+  navigation: navigationRef,
+  content: contentRef,
+  selection: selectionRef,
+  select: selectItem,
+})
 
 const selectionStyle = computed(() => ({
   '--selection-position': selectionPosition.value,
@@ -84,29 +80,6 @@ const selectionStyle = computed(() => ({
   // 胶囊比导航栏矮 10px（上下各留 5px），1.18 基本填满但不会越界。
   '--selection-scale': isLifted.value ? '1.18' : isPressed.value ? '1.02' : '1',
 }))
-
-function clearInteractionTimers() {
-  if (holdTimer !== undefined) window.clearTimeout(holdTimer)
-  if (settleTimer !== undefined) window.clearTimeout(settleTimer)
-  holdTimer = undefined
-  settleTimer = undefined
-}
-
-function resetInteraction() {
-  clearInteractionTimers()
-  pointerId = undefined
-  isPressed.value = false
-  isLifted.value = false
-  isDragging.value = false
-  dragPosition.value = null
-}
-
-function getItemWidth() {
-  const navigation = navigationRef.value
-  if (!navigation) return 1
-  const count = Math.max(resolvedItems.value.length, 1)
-  return (navigation.clientWidth - 10) / count
-}
 
 function selectItem(index: number) {
   const item = resolvedItems.value[index]
@@ -119,127 +92,6 @@ function selectItem(index: number) {
   }
 }
 
-function finishSelectionDrag() {
-  if (dragPosition.value === null) {
-    resetInteraction()
-    return
-  }
-
-  if (holdTimer !== undefined) window.clearTimeout(holdTimer)
-  holdTimer = undefined
-
-  const lastPosition = dragPosition.value
-  const targetIndex = Math.min(
-    Math.max(Math.round(lastPosition), 0),
-    Math.max(resolvedItems.value.length - 1, 0),
-  )
-  const wasDragging = isDragging.value
-
-  dragPosition.value = targetIndex
-  settledPosition.value = targetIndex
-  isPressed.value = false
-  isLifted.value = false
-  isDragging.value = false
-  suppressClick = wasDragging
-
-  if (targetIndex !== activeIndex.value) selectItem(targetIndex)
-
-  pointerId = undefined
-
-  settleTimer = window.setTimeout(() => {
-    if (!isDragging.value) {
-      settledPosition.value = null
-      dragPosition.value = null
-    }
-  }, 460)
-}
-
-function handleSelectionPointerDown(event: PointerEvent) {
-  if (event.pointerType === 'mouse' && event.button !== 0) return
-
-  const navigation = navigationRef.value
-  if (!navigation) return
-
-  event.preventDefault()
-  contentRef.value?.setPointerCapture(event.pointerId)
-  pointerId = event.pointerId
-  pointerStartX = event.clientX
-  pointerStartPosition = activeIndex.value
-  itemWidth = getItemWidth()
-  dragPosition.value = activeIndex.value
-  isPressed.value = true
-  isDragging.value = false
-  isLifted.value = false
-
-  clearInteractionTimers()
-  holdTimer = window.setTimeout(() => {
-    if (pointerId === event.pointerId) isLifted.value = true
-  }, 160)
-}
-
-function handleSelectionPointerMove(event: PointerEvent) {
-  if (pointerId !== event.pointerId || dragPosition.value === null) return
-
-  const deltaX = event.clientX - pointerStartX
-  if (!isDragging.value && Math.abs(deltaX) < 6) return
-
-  isDragging.value = true
-  isLifted.value = true
-  const rawPosition = pointerStartPosition + deltaX / itemWidth
-  const maxIndex = Math.max(resolvedItems.value.length - 1, 0)
-  const clamped = Math.min(Math.max(rawPosition, 0), maxIndex)
-  const overshoot = rawPosition - clamped
-  const resistance = overshoot === 0 ? 0 : (overshoot * 0.18) / (1 + Math.abs(overshoot) * 0.18)
-  dragPosition.value = clamped + resistance
-  event.preventDefault()
-}
-
-function handleSelectionPointerUp(event: PointerEvent) {
-  if (pointerId !== event.pointerId) return
-  contentRef.value?.releasePointerCapture(event.pointerId)
-  finishSelectionDrag()
-}
-
-function handleSelectionPointerCancel(event: PointerEvent) {
-  if (pointerId !== event.pointerId) return
-  contentRef.value?.releasePointerCapture(event.pointerId)
-  resetInteraction()
-}
-
-function handleNavigationPointerDown(event: PointerEvent) {
-  const selection = selectionRef.value
-  if (!selection) return
-  const bounds = selection.getBoundingClientRect()
-  if (
-    event.clientX < bounds.left ||
-    event.clientX > bounds.right ||
-    event.clientY < bounds.top ||
-    event.clientY > bounds.bottom
-  ) {
-    return
-  }
-  suppressClick = false
-  handleSelectionPointerDown(event)
-}
-
-function handleNavigationClick(event: MouseEvent) {
-  if (!suppressClick) return
-  event.preventDefault()
-  event.stopPropagation()
-  suppressClick = false
-}
-
-watch(activeIndex, (index) => {
-  if (isDragging.value) return
-  if (settledPosition.value !== null && settledPosition.value !== index) {
-    settledPosition.value = null
-    dragPosition.value = null
-  }
-})
-
-onBeforeUnmount(() => {
-  clearInteractionTimers()
-})
 </script>
 
 <template>
@@ -278,11 +130,14 @@ onBeforeUnmount(() => {
       ref="contentRef"
       :style="{ '--navigation-item-count': resolvedItems.length }"
       :aria-label="ariaLabel"
-      @pointerdown="handleNavigationPointerDown"
-      @pointermove="handleSelectionPointerMove"
-      @pointerup="handleSelectionPointerUp"
-      @pointercancel="handleSelectionPointerCancel"
-      @click.capture="handleNavigationClick"
+      @pointerdown="handlePointerDown"
+      @pointermove="handlePointerMove"
+      @pointerup="handlePointerUp"
+      @pointercancel="handlePointerCancel"
+      @lostpointercapture="handleLostPointerCapture"
+      @pointerleave="handlePointerLeave"
+      @click.capture="handleClick"
+      @dragstart.prevent
     >
       <span
         ref="selectionRef"
@@ -309,11 +164,12 @@ onBeforeUnmount(() => {
           <span class="bottom-navigation__selection-fill" />
         </LiquidGlass>
       </span>
-      <template v-for="item in resolvedItems" :key="item.name">
+      <template v-for="(item, index) in resolvedItems" :key="item.name">
         <RouterLink
           v-if="item.to"
           :to="item.to"
           class="bottom-navigation__item"
+          :data-navigation-index="index"
           :class="{ 'is-active': resolvedActiveName === item.name }"
         >
           <span
@@ -328,6 +184,7 @@ onBeforeUnmount(() => {
           v-else
           type="button"
           class="bottom-navigation__item"
+          :data-navigation-index="index"
           :class="{ 'is-active': resolvedActiveName === item.name }"
           :aria-current="resolvedActiveName === item.name ? 'page' : undefined"
           @click="emit('select', item.name)"

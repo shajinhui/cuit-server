@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createRenderer } from 'vue'
 
-import { clearPageColor, applyPageColor } from '@/shared/composables/usePageTheme'
+import { clearPageColor, applyPageColor, usePageTheme } from '@/shared/composables/usePageTheme'
 import { COLOR_SCHEME_STORAGE_KEY, resolveColorScheme } from './colorScheme'
 import { clearThemeTokenCache } from './tokens'
 import {
@@ -50,11 +51,12 @@ function installDom({ systemDark = false, stored }: { systemDark?: boolean; stor
     },
   }
 
-  vi.stubGlobal('document', {
+  vi.stubGlobal('document', Object.assign(new EventTarget(), {
     documentElement,
+    visibilityState: 'visible',
     querySelector: (selector: string) => (selector.includes('theme-color') ? metaTheme : null),
-  })
-  vi.stubGlobal('window', {
+  }))
+  vi.stubGlobal('window', Object.assign(new EventTarget(), {
     localStorage: {
       getItem: (key: string) => storage.get(key) ?? null,
       setItem: (key: string, value: string) => storage.set(key, value),
@@ -65,12 +67,25 @@ function installDom({ systemDark = false, stored }: { systemDark?: boolean; stor
       addEventListener: () => undefined,
       removeEventListener: () => undefined,
     }),
-  })
+  }))
   vi.stubGlobal('getComputedStyle', () => ({
     getPropertyValue: (name: string) => resolvedToken(name),
   }))
 
   return { metaTheme, styleValues, storage, documentElement, attributes }
+}
+
+function mountPageTheme(color: 'bg-page' | 'bg-page-schedule') {
+  // 仅运行 Vue 生命周期，不引入浏览器 DOM 或组件测试框架。
+  const renderer = createRenderer<object, object>({
+    createElement: () => ({}), createText: () => ({}), createComment: () => ({}),
+    insert: () => undefined, remove: () => undefined, patchProp: () => undefined,
+    setText: () => undefined, setElementText: () => undefined,
+    parentNode: () => null, nextSibling: () => null,
+  })
+  const app = renderer.createApp({ setup() { usePageTheme(color); return () => null } })
+  app.mount({})
+  return app
 }
 
 describe('主题运行时', () => {
@@ -167,6 +182,34 @@ describe('页面底色与浏览器 UI 同步', () => {
     clearPageColor('light')
 
     expect(dom.styleValues.has('--page-bg')).toBe(false)
+    expect(dom.metaTheme.content).toBe('#fbfcf9')
+  })
+
+  it('重新显示页面和回到前台时立即重同步安全区，而非等待加载', () => {
+    const dom = installDom()
+    resetColorSchemeStateForTests()
+    const app = mountPageTheme('bg-page-schedule')
+    try {
+      dom.metaTheme.content = '#fbfcf9'
+      window.dispatchEvent(new Event('pageshow'))
+      expect(dom.metaTheme.content).toBe('#c9d5e7')
+      dom.styleValues.delete('--page-bg')
+      document.dispatchEvent(new Event('visibilitychange'))
+      expect(dom.styleValues.get('--page-bg')).toBe('#c9d5e7')
+    } finally { app.unmount() }
+  })
+
+  it('旧页面卸载不覆盖新页面，清理后也不能再抢占前台颜色', () => {
+    const dom = installDom()
+    resetColorSchemeStateForTests()
+    const schedule = mountPageTheme('bg-page-schedule')
+    const profile = mountPageTheme('bg-page')
+    schedule.unmount()
+    window.dispatchEvent(new Event('pageshow'))
+    expect(dom.metaTheme.content).toBe('#f2f2f7')
+    profile.unmount()
+    window.dispatchEvent(new Event('pageshow'))
+    document.dispatchEvent(new Event('visibilitychange'))
     expect(dom.metaTheme.content).toBe('#fbfcf9')
   })
 })
