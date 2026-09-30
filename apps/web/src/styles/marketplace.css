@@ -42,6 +42,8 @@
 .marketplace-status { display: inline-flex; width: fit-content; padding: 4px 8px; color: var(--text-secondary); background: var(--control-bg); border-radius: 8px; font-size: 12px; }
 .marketplace-card__status { position: absolute; top: 8px; right: 8px; max-width: calc(100% - 16px); padding: 3px 6px; color: var(--text-primary); background: var(--bg-surface); border: 0.5px solid var(--line-faint); border-radius: 6px; font-size: 11px; pointer-events: none; }
 .marketplace-card--wanted .marketplace-card__status { position: static; margin: 8px 8px 0; }
+.marketplace-card--wanted .marketplace-price { gap: 2px; font-size: 20px; }
+.marketplace-card--wanted .marketplace-price small { font-size: 12px; }
 .marketplace-card .marketplace-card__description { display: -webkit-box; overflow: hidden; margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .marketplace-editor { padding: 8px 16px 0; }
 .marketplace-editor fieldset { display: grid; min-width: 0; margin: 0; padding: 0; gap: 12px; border: 0; }
