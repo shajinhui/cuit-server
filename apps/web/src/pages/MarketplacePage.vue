@@ -48,23 +48,20 @@ function clearSearch() {
 </script>
 
 <template>
-  <main class="ratings-page marketplace-page" :class="{ 'ratings-page--with-bottom-navigation': !mine }">
-    <RatingPageHeader v-if="mine" title="我的二手商品" @back="router.push({ name: 'marketplace' })" />
+  <main class="ratings-page marketplace-page marketplace-list-page" :class="{ 'ratings-page--with-bottom-navigation': !mine }">
+    <RatingPageHeader v-if="mine" title="我的二手商品" @back="router.push({ name: 'marketplace' })">
+      <RouterLink class="marketplace-text-button" :to="{ name: 'marketplace-create' }" aria-label="发布闲置">发布</RouterLink>
+    </RatingPageHeader>
     <CampusHeader v-else active="marketplace" />
 
-    <section class="marketplace-intro">
-      <div>
-        <h2>{{ mine ? '给闲置一个新去处' : '校园二手' }}</h2>
-        <p>{{ mine ? '成交后记得标记已售出。' : '校内闲置，当面交易。' }}</p>
-      </div>
+    <div v-if="!mine" class="marketplace-toolbar">
+      <form class="ratings-search" role="search" @submit.prevent="search">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></svg>
+        <input v-model="query" type="search" maxlength="50" placeholder="搜索想要的闲置" aria-label="搜索二手商品" enterkeyhint="search" />
+        <button v-if="query" type="button" aria-label="清空搜索" @click="clearSearch">×</button>
+      </form>
       <RouterLink class="marketplace-publish" :to="{ name: 'marketplace-create' }"><span aria-hidden="true">＋</span>发布闲置</RouterLink>
-    </section>
-
-    <form v-if="!mine" class="ratings-search" role="search" @submit.prevent="search">
-      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></svg>
-      <input v-model="query" type="search" maxlength="50" placeholder="搜索想要的闲置" aria-label="搜索二手商品" enterkeyhint="search" />
-      <button v-if="query" type="button" aria-label="清空搜索" @click="clearSearch">×</button>
-    </form>
+    </div>
 
     <section class="ratings-section">
       <header class="marketplace-section-heading">
@@ -85,11 +82,13 @@ function clearSearch() {
         <div class="marketplace-grid" :aria-busy="loading">
           <RouterLink v-for="item in items" :key="item.id" class="marketplace-card" :to="{ name: 'marketplace-item', params: { itemId: item.id } }">
             <RatingImage :asset="item.image_asset" :alt="item.title" />
+            <span v-if="mine" class="marketplace-status marketplace-card__status">{{ statusLabels[item.status] }}</span>
             <div class="marketplace-card__body">
-              <span v-if="mine" class="marketplace-status">{{ statusLabels[item.status] }}</span>
               <h3>{{ item.title }}</h3>
-              <strong class="marketplace-price"><small>¥</small>{{ formatPrice(item.price_cents) }}</strong>
-              <p>{{ campusLabels[item.campus] }}</p>
+              <div class="marketplace-card__meta">
+                <strong class="marketplace-price"><small>¥</small>{{ formatPrice(item.price_cents) }}</strong>
+                <p>{{ campusLabels[item.campus] }}</p>
+              </div>
             </div>
           </RouterLink>
         </div>

@@ -65,7 +65,7 @@ async function copyContact() {
 </script>
 
 <template>
-  <main class="ratings-page marketplace-page ratings-page--with-action">
+  <main class="ratings-page marketplace-page marketplace-item-page" :class="{ 'ratings-page--with-action': !item?.is_mine }">
     <RatingPageHeader title="商品详情" @back="router.push({ name: 'marketplace' })">
       <RouterLink v-if="item?.is_mine" class="marketplace-text-button" :to="{ name: 'marketplace-mine' }">我的</RouterLink>
     </RatingPageHeader>
@@ -83,9 +83,10 @@ async function copyContact() {
         </section>
         <section v-if="contact" ref="contactPanel" class="marketplace-contact" tabindex="-1" aria-labelledby="seller-contact-title">
           <h2 id="seller-contact-title">卖家联系方式</h2>
-          <span>{{ contactLabels[contact.contact_type] }}</span>
-          <strong>{{ contact.contact_value }}</strong>
-          <button type="button" class="marketplace-secondary-button" @click="copyContact">复制联系方式</button>
+          <div class="marketplace-contact__value">
+            <div><span>{{ contactLabels[contact.contact_type] }}</span><strong>{{ contact.contact_value }}</strong></div>
+            <button type="button" class="marketplace-secondary-button" @click="copyContact">复制联系方式</button>
+          </div>
           <p role="status">{{ copyMessage || '联系卖家确认商品情况和交易方式。获取联系方式不代表已预订或成交。' }}</p>
         </section>
         <section v-if="item.is_mine" class="marketplace-owner-actions">
