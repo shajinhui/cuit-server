@@ -8,9 +8,9 @@ defineProps<{ summary: RatingSummary }>()
 
 <template>
   <section class="rating-summary-card" aria-label="评分概览">
-    <div class="rating-summary-card__score">
+    <div class="rating-summary-card__score" :class="{ 'is-empty': summary.score === null }">
+      <span>综合评分</span>
       <strong>{{ scoreLabel(summary.score) }}</strong>
-      <span v-if="summary.score !== null">/ 10</span>
       <small>{{ ratingCountLabel(summary.count) }}</small>
       <em v-if="summary.count > 0 && summary.count < 5">样本较少</em>
     </div>
@@ -23,5 +23,6 @@ defineProps<{ summary: RatingSummary }>()
         <small>{{ ratingPercentage(summary.distribution[String(star) as '1' | '2' | '3' | '4' | '5'], summary.count) }}%</small>
       </div>
     </div>
+    <div v-if="$slots.default" class="rating-summary-card__action"><slot /></div>
   </section>
 </template>

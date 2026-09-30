@@ -18,6 +18,7 @@ import {
   RatingState,
 } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
 import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
 
@@ -103,8 +104,12 @@ function showNotice() {
 </script>
 
 <template>
-  <main class="ratings-page ratings-page--with-action">
-    <RatingPageHeader title="评分板块" back-label="返回评分广场" @back="router.push({ name: 'ratings' })" />
+  <main class="ratings-page ratings-page--with-action ratings-board-page">
+    <RatingPageHeader title="评分板块" back-label="返回评分广场" @back="router.push({ name: 'ratings' })">
+      <GlassIconButton v-if="board" class="ratings-icon-button" aria-label="举报板块" @click="reportOpen = true">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4m0 0c4-3 8 3 12 0v10c-4 3-8-3-12 0" /></svg>
+      </GlassIconButton>
+    </RatingPageHeader>
 
     <RatingState v-if="loading" title="正在加载板块" loading />
     <RatingState v-else-if="error && !board" title="无法打开这个板块" :description="error" action-label="重新加载" @action="loadPage" />
@@ -113,16 +118,11 @@ function showNotice() {
       <section class="rating-board-hero">
         <RatingImage :asset="board.cover_asset" :alt="board.title" />
         <div class="rating-board-hero__copy">
-          <small>评分板块</small>
           <h1>{{ board.title }}</h1>
-          <p>{{ board.description || '创建者还没有填写板块介绍。' }}</p>
           <span><RatingAvatar :author="board.creator" />{{ board.creator.display_name }} 创建</span>
-          <button type="button" class="rating-report-link" @click="reportOpen = true">举报板块</button>
+          <p class="rating-board-hero__stats">{{ board.item_count }} 个对象 · {{ board.rating_count }} 人次评分</p>
         </div>
-        <dl>
-          <div><dt>{{ board.item_count }}</dt><dd>对象</dd></div>
-          <div><dt>{{ board.rating_count }}</dt><dd>评分人次</dd></div>
-        </dl>
+        <p v-if="board.description" class="rating-hero-description">{{ board.description }}</p>
       </section>
 
       <form class="ratings-search ratings-search--inset" role="search" @submit.prevent="search">
@@ -132,8 +132,8 @@ function showNotice() {
       </form>
 
       <section class="ratings-section ratings-section--inset">
-        <header class="ratings-section-heading ratings-section-heading--stacked">
-          <div><small>全部评分</small><h2>{{ submittedQuery || `${board.item_count} 个对象` }}</h2></div>
+        <header class="ratings-section-heading ratings-section-heading--inline">
+          <h2>全部评分 <span class="ratings-section-count">/ {{ board.item_count }}</span></h2>
           <GlassSegmented
             class="ratings-segment ratings-segment--four"
             :model-value="sort"
@@ -143,6 +143,7 @@ function showNotice() {
           />
         </header>
 
+        <p v-if="submittedQuery" class="ratings-search-result">搜索：{{ submittedQuery }}</p>
         <p v-if="error" class="ratings-inline-error" role="alert">{{ error }}</p>
         <RatingState v-if="items.length === 0" :title="submittedQuery ? '没有找到相关对象' : '还没有评分对象'" description="你可以为这个板块添加第一个对象。" />
         <div v-else class="rating-item-list">

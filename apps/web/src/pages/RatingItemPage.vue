@@ -26,6 +26,7 @@ import {
   StarRating,
 } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
 import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
 
@@ -233,8 +234,12 @@ function showNotice() {
 </script>
 
 <template>
-  <main class="ratings-page ratings-page--with-composer">
-    <RatingPageHeader title="评分详情" @back="item ? router.push({ name: 'rating-board', params: { boardId: item.board_id } }) : router.back()" />
+  <main class="ratings-page ratings-page--with-composer ratings-item-page">
+    <RatingPageHeader title="评分详情" @back="item ? router.push({ name: 'rating-board', params: { boardId: item.board_id } }) : router.back()">
+      <GlassIconButton v-if="item" class="ratings-icon-button" aria-label="举报对象" @click="reportTarget = { type: 'item', id: item.id }">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 21V4m0 0c4-3 8 3 12 0v10c-4 3-8-3-12 0" /></svg>
+      </GlassIconButton>
+    </RatingPageHeader>
 
     <RatingState v-if="loading" title="正在加载评分详情" loading />
     <RatingState v-else-if="error || !item" title="无法打开这个评分对象" :description="error" action-label="重新加载" @action="loadPage" />
@@ -243,31 +248,32 @@ function showNotice() {
       <section class="rating-item-hero">
         <RatingImage :asset="item.image_asset" :alt="item.name" />
         <div>
-          <RouterLink :to="{ name: 'rating-board', params: { boardId: item.board.id } }">{{ item.board.title }} ›</RouterLink>
           <h1>{{ item.name }}</h1>
-          <p>{{ item.description || '添加者还没有填写介绍。' }}</p>
           <span><RatingAvatar :author="item.creator" />{{ item.creator.display_name }} 添加</span>
-          <button type="button" class="rating-report-link" @click="reportTarget = { type: 'item', id: item.id }">举报对象</button>
+          <RouterLink :to="{ name: 'rating-board', params: { boardId: item.board.id } }">{{ item.board.title }} ›</RouterLink>
         </div>
+        <p v-if="item.description" class="rating-hero-description">{{ item.description }}</p>
       </section>
 
       <div class="ratings-detail-content">
-        <RatingSummaryCard :summary="item.rating" />
-
-        <section class="rating-action-card">
-          <header><div><small>我的评分</small><h2>{{ item.my_rating?.status === 'excluded' ? '评分已被管理员排除' : activeRating ? `已评 ${activeRating.stars * 2} 分` : '选择星级' }}</h2></div><strong v-if="selectedStars">{{ selectedStars * 2 }}.0</strong></header>
-          <StarRating v-model="selectedStars" :disabled="ratingSubmitting || item.capabilities?.can_rate === false" />
-          <p v-if="item.my_rating?.status === 'excluded'">这份评分当前为只读状态，如有疑问请联系管理员。</p>
-          <p v-if="ratingError" role="alert">{{ ratingError }}</p>
-          <div>
-            <button v-if="activeRating" type="button" class="is-secondary" :disabled="ratingSubmitting" @click="withdrawRating">撤回评分</button>
-            <button v-if="item.capabilities?.can_rate !== false" type="button" :disabled="!ratingChanged || selectedStars === 0 || ratingSubmitting" @click="submitRating">{{ ratingSubmitting ? '正在保存…' : activeRating ? '更新评分' : '提交评分' }}</button>
-          </div>
-        </section>
+        <RatingSummaryCard :summary="item.rating">
+          <section class="rating-action-card" aria-label="我的评分">
+            <div class="rating-action-card__selection">
+              <h2>{{ item.my_rating?.status === 'excluded' ? '评分已排除' : activeRating ? `已评 ${activeRating.stars * 2} 分` : '立即评分' }}</h2>
+              <StarRating v-model="selectedStars" :disabled="ratingSubmitting || item.capabilities?.can_rate === false" compact />
+            </div>
+            <p v-if="item.my_rating?.status === 'excluded'">这份评分当前为只读状态，如有疑问请联系管理员。</p>
+            <p v-if="ratingError" role="alert">{{ ratingError }}</p>
+            <div v-if="activeRating || ratingChanged" class="rating-action-card__buttons">
+              <button v-if="activeRating" type="button" class="is-secondary" :disabled="ratingSubmitting" @click="withdrawRating">撤回评分</button>
+              <button v-if="ratingChanged && selectedStars > 0 && item.capabilities?.can_rate !== false" type="button" :disabled="ratingSubmitting" @click="submitRating">{{ ratingSubmitting ? '正在保存…' : `${activeRating ? '更新' : '提交'}评分 · ${selectedStars * 2} 分` }}</button>
+            </div>
+          </section>
+        </RatingSummaryCard>
 
         <section class="rating-comments">
-          <header class="ratings-section-heading">
-            <div><small>讨论</small><h2>全部评论 {{ item.comment_count }}</h2></div>
+          <header class="ratings-section-heading ratings-section-heading--inline">
+            <h2>全部评论 <span class="ratings-section-count">/ {{ item.comment_count }}</span></h2>
             <GlassSegmented
               class="ratings-segment"
               :model-value="commentSort"
@@ -283,7 +289,10 @@ function showNotice() {
             <article v-for="comment in comments" :key="comment.id" class="rating-comment">
               <RatingAvatar :author="comment.author" />
               <div>
-                <header><strong>{{ comment.author.display_name }}</strong><span v-if="comment.stars_snapshot">发言时 {{ comment.stars_snapshot * 2 }} 分</span></header>
+                <header>
+                  <strong>{{ comment.author.display_name }}</strong>
+                  <span v-if="comment.stars_snapshot" class="rating-comment__stars" role="img" :aria-label="`发言时评分 ${comment.stars_snapshot * 2} 分`"><span aria-hidden="true">{{ '★'.repeat(comment.stars_snapshot) }}<span class="rating-comment__empty-stars">{{ '★'.repeat(5 - comment.stars_snapshot) }}</span></span></span>
+                </header>
                 <p>{{ comment.body }}</p>
                 <footer>
                   <time>{{ formatRatingTime(comment.created_at) }}</time>

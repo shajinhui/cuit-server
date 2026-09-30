@@ -12,13 +12,12 @@ defineProps<{ item: RatingItem }>()
     <RatingImage :asset="item.image_asset" :alt="item.name" />
     <span class="rating-item-card__body">
       <strong>{{ item.name }}</strong>
-      <span>{{ item.description || '暂无介绍' }}</span>
-      <small>由 {{ item.creator.display_name }} 添加</small>
     </span>
     <span class="rating-item-card__score" :class="{ 'is-empty': item.rating.score === null }">
       <span class="rating-item-card__stars" aria-hidden="true">★★★★★</span>
       <b>{{ scoreLabel(item.rating.score) }}</b>
       <small>{{ item.rating.count }} 人评分</small>
     </span>
+    <span v-if="item.description" class="rating-item-card__description">{{ item.description }}</span>
   </RouterLink>
 </template>
