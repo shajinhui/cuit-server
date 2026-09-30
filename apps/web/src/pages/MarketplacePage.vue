@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import CampusHeader from '@/app/components/CampusHeader.vue'
-import { campusLabels, formatPrice, listMarketplaceItems, statusLabels, type MarketplaceItem } from '@/features/marketplace'
+import { campusLabels, formatPrice, listMarketplaceItems, listingStatusLabel, listingTypeFromQuery, listingTypes, type ListingType, type MarketplaceItem } from '@/features/marketplace'
 import { RatingImage, RatingPageHeader, RatingState } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 const route = useRoute()
 const router = useRouter()
 const mine = computed(() => route.name === 'marketplace-mine')
+const listingType = computed(() => listingTypeFromQuery(route.query.type))
+const wanted = computed(() => listingType.value === 'wanted')
+const publishLabel = computed(() => wanted.value ? '发布求购' : '发布闲置')
+const createRoute = computed(() => ({ name: 'marketplace-create', query: { type: listingType.value } }))
 const items = ref<MarketplaceItem[]>([])
 const query = ref('')
 const submittedQuery = ref('')
@@ -19,7 +23,11 @@ const error = ref('')
 const nextCursor = ref<string | null>(null)
 let requestVersion = 0
 usePageTheme('bg-page')
-onMounted(() => void load(true))
+watch([mine, listingType], () => {
+  items.value = []
+  nextCursor.value = null
+  void load(true)
+}, { immediate: true })
 
 async function load(reset: boolean) {
   const version = ++requestVersion
@@ -27,12 +35,12 @@ async function load(reset: boolean) {
   else loadingMore.value = true
   error.value = ''
   try {
-    const page = await listMarketplaceItems({ mine: mine.value, q: submittedQuery.value, cursor: reset ? undefined : nextCursor.value ?? undefined })
+    const page = await listMarketplaceItems({ mine: mine.value, listing_type: listingType.value, q: submittedQuery.value, cursor: reset ? undefined : nextCursor.value ?? undefined })
     if (version !== requestVersion) return
     items.value = reset ? page.items : Array.from(new Map([...items.value, ...page.items].map((item) => [item.id, item])).values())
     nextCursor.value = page.has_more ? page.next_cursor : null
   } catch (reason) {
-    if (version === requestVersion) error.value = reason instanceof Error ? reason.message : '商品加载失败'
+    if (version === requestVersion) error.value = reason instanceof Error ? reason.message : '发布内容加载失败'
   } finally {
     if (version === requestVersion) { loading.value = false; loadingMore.value = false }
   }
@@ -45,48 +53,54 @@ function clearSearch() {
   query.value = ''
   search()
 }
+function selectType(type: ListingType) {
+  void router.replace({ query: { ...route.query, type } })
+}
 </script>
 
 <template>
   <main class="ratings-page marketplace-page marketplace-list-page" :class="{ 'ratings-page--with-bottom-navigation': !mine }">
-    <RatingPageHeader v-if="mine" title="我的二手商品" @back="router.push({ name: 'marketplace' })">
-      <RouterLink class="marketplace-text-button" :to="{ name: 'marketplace-create' }" aria-label="发布闲置">发布</RouterLink>
+    <RatingPageHeader v-if="mine" title="我的二手发布" @back="router.push({ name: 'marketplace', query: { type: listingType } })">
+      <RouterLink class="marketplace-text-button" :to="createRoute" :aria-label="publishLabel">发布</RouterLink>
     </RatingPageHeader>
     <CampusHeader v-else active="marketplace" />
 
     <div v-if="!mine" class="marketplace-toolbar">
       <form class="ratings-search" role="search" @submit.prevent="search">
         <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></svg>
-        <input v-model="query" type="search" maxlength="50" placeholder="搜索想要的闲置" aria-label="搜索二手商品" enterkeyhint="search" />
+        <input v-model="query" type="search" maxlength="50" :placeholder="wanted ? '搜索求购需求' : '搜索想要的闲置'" :aria-label="wanted ? '搜索求购' : '搜索二手商品'" enterkeyhint="search" />
         <button v-if="query" type="button" aria-label="清空搜索" @click="clearSearch">×</button>
       </form>
-      <RouterLink class="marketplace-publish" :to="{ name: 'marketplace-create' }"><span aria-hidden="true">＋</span>发布闲置</RouterLink>
+      <RouterLink class="marketplace-publish" :to="createRoute"><span aria-hidden="true">＋</span>{{ publishLabel }}</RouterLink>
     </div>
 
     <section class="ratings-section">
       <header class="marketplace-section-heading">
-        <h2>{{ mine ? '我发布的' : submittedQuery ? '搜索结果' : '最新上架' }}</h2>
+        <div class="marketplace-type-switch" role="group" aria-label="二手类型">
+          <button v-for="type in listingTypes" :key="type.value" type="button" :aria-pressed="listingType === type.value" @click="selectType(type.value)">{{ type.label }}</button>
+        </div>
         <button type="button" :disabled="loading || loadingMore" @click="load(true)">刷新</button>
       </header>
-      <RatingState v-if="loading && !items.length" title="正在加载商品" loading />
-      <RatingState v-else-if="error && !items.length" title="暂时无法加载商品" :description="error" action-label="重新加载" @action="load(true)" />
+      <RatingState v-if="loading && !items.length" :title="wanted ? '正在加载求购' : '正在加载商品'" loading />
+      <RatingState v-else-if="error && !items.length" :title="wanted ? '暂时无法加载求购' : '暂时无法加载商品'" :description="error" action-label="重新加载" @action="load(true)" />
       <RatingState
         v-else-if="!items.length"
-        :title="submittedQuery ? '没有找到相关商品' : mine ? '还没有发布商品' : '二手小铺等待开张'"
-        :description="submittedQuery ? '换个关键词试试。' : '整理一下闲置，让它们继续派上用场。'"
-        :action-label="submittedQuery ? '清空搜索' : '发布第一件闲置'"
-        @action="submittedQuery ? clearSearch() : router.push({ name: 'marketplace-create' })"
+        :title="submittedQuery ? (wanted ? '没有找到相关求购' : '没有找到相关商品') : wanted ? (mine ? '还没有发布求购' : '暂时没有求购') : mine ? '还没有发布商品' : '二手小铺等待开张'"
+        :description="submittedQuery ? '换个关键词试试。' : wanted ? '写下想要的物品，让有闲置的同学联系你。' : '整理一下闲置，让它们继续派上用场。'"
+        :action-label="submittedQuery ? '清空搜索' : wanted ? '发布第一条求购' : '发布第一件闲置'"
+        @action="submittedQuery ? clearSearch() : router.push(createRoute)"
       />
       <template v-else>
         <p v-if="loading" class="marketplace-note" role="status">正在刷新…</p>
         <div class="marketplace-grid" :aria-busy="loading">
-          <RouterLink v-for="item in items" :key="item.id" class="marketplace-card" :to="{ name: 'marketplace-item', params: { itemId: item.id } }">
-            <RatingImage :asset="item.image_asset" :alt="item.title" />
-            <span v-if="mine" class="marketplace-status marketplace-card__status">{{ statusLabels[item.status] }}</span>
+          <RouterLink v-for="item in items" :key="item.id" class="marketplace-card" :class="{ 'marketplace-card--wanted': item.listing_type === 'wanted' }" :to="{ name: 'marketplace-item', params: { itemId: item.id }, query: { type: listingType } }">
+            <RatingImage v-if="item.listing_type !== 'wanted' || item.image_asset" :asset="item.image_asset" :alt="item.title" />
+            <span v-if="mine" class="marketplace-status marketplace-card__status">{{ listingStatusLabel(item) }}</span>
             <div class="marketplace-card__body">
               <h3>{{ item.title }}</h3>
+              <p v-if="item.listing_type === 'wanted'" class="marketplace-card__description">{{ item.description }}</p>
               <div class="marketplace-card__meta">
-                <strong class="marketplace-price"><small>¥</small>{{ formatPrice(item.price_cents) }}</strong>
+                <strong class="marketplace-price"><small v-if="item.listing_type === 'wanted'">预算</small><small>¥</small>{{ formatPrice(item.price_cents) }}</strong>
                 <p>{{ campusLabels[item.campus] }}</p>
               </div>
             </div>

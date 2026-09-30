@@ -7,7 +7,7 @@
 - 登录、课表、成绩、考试、空教室、校历、校园地图和历年试卷
 - 校园跑进度、轨迹提交、俱乐部活动与签到
 - 校园页的评分 / 二手栏目切换；评分板块、图片本地缓存和全屏预览
-- 二手商品上架、定价、搜索、卖家联系方式，以及下架 / 已售出管理
+- 二手出售与求购切换、发布、定价或预算、搜索、联系发布者，以及下架 / 关闭 / 完成管理
 - PWA 安装、Android APK 与 iOS 构建
 
 服务端 API 不在公开仓库中；本地开发时通过 `VITE_API_BASE_URL` 或 `VITE_DEV_API_TARGET` 指向已部署的接口。
@@ -16,7 +16,9 @@
 
 评分和二手均通过 `VITE_RATINGS_API_BASE_URL` 连接独立的校园后端 `cuit-ratings-api`，沿用 `/api/v1/auth/ratings-token` 签发的登录凭证。二手请求路径为 `/api/v1/marketplace/*`，图片复用 `/api/v1/ratings/assets`。
 
-上线前先部署后端的 `002_marketplace` 数据库迁移与 NGINX marketplace 路由，并确保上述域名指向包含二手模块的 NestJS 服务。第一版点击“我想购买”只获取联系方式，不创建订单、不预订商品、不处理支付。
+上线前先部署后端的 `002_marketplace`、`003_marketplace_wanted` 数据库迁移与 NGINX marketplace 路由，并确保上述域名指向包含二手模块的 NestJS 服务。出售点击“我想购买”、求购点击“我有闲置”只获取发布者联系方式，不创建订单、不预订商品、不处理支付。
+
+`/marketplace?type=wanted` 可直接进入求购，发布页可切换出售或求购。请求字段 `listing_type` 为 `sell` / `wanted`，`price_cents` 分别表示售价或预算；求购状态显示为“求购中 / 已关闭 / 已求到”。我的发布也按类型筛选。
 
 ## 本地运行
 

@@ -1,10 +1,12 @@
 import { ratingsRequest, type CursorPage, type RatingAssetRef, type RatingAuthor } from '@/features/ratings'
 
 export type ListingStatus = 'on_sale' | 'sold' | 'withdrawn'
+export type ListingType = 'sell' | 'wanted'
 export type ContactType = 'wechat' | 'qq' | 'phone'
 export type Campus = 'airport' | 'longquan'
 export interface MarketplaceItem {
   id: string
+  listing_type: ListingType
   title: string
   description: string
   price_cents: number
@@ -22,6 +24,7 @@ export interface SellerContact {
   contact_value: string
 }
 export interface CreateMarketplaceItem extends SellerContact {
+  listing_type: ListingType
   title: string
   description: string
   price_cents: number
@@ -30,8 +33,9 @@ export interface CreateMarketplaceItem extends SellerContact {
   create_request_id: string
 }
 
-export function listMarketplaceItems(options: { mine?: boolean; q?: string; cursor?: string } = {}) {
+export function listMarketplaceItems(options: { mine?: boolean; q?: string; cursor?: string; listing_type?: ListingType } = {}) {
   const params = new URLSearchParams({ limit: '20' })
+  params.set('listing_type', options.listing_type ?? 'sell')
   if (options.q) params.set('q', options.q)
   if (options.cursor) params.set('cursor', options.cursor)
   return ratingsRequest<CursorPage<MarketplaceItem>>(`/api/v1/marketplace/${options.mine ? 'me/items' : 'items'}?${params}`)

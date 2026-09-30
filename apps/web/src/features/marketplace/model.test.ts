@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatPrice, parsePriceCents, validContact } from './model'
+import { formatPrice, listingStatusLabel, listingTypeFromQuery, parsePriceCents, validContact } from './model'
 
 describe('marketplace prices', () => {
   it.each([['0.01', 1], ['0.29', 29], ['19.90', 1990], ['29', 2900], ['99999.99', 9999999]])('converts %s to exact integer cents', (value, cents) => {
@@ -12,6 +12,22 @@ describe('marketplace prices', () => {
     expect(formatPrice(1)).toBe('0.01')
     expect(formatPrice(1990)).toBe('19.9')
     expect(formatPrice(2900)).toBe('29')
+  })
+})
+
+describe('marketplace listing types', () => {
+  it('reads a shared wanted link and safely defaults malformed query values', () => {
+    expect(listingTypeFromQuery('wanted')).toBe('wanted')
+    for (const value of [undefined, null, 'sell', 'invalid', ['wanted']]) {
+      expect(listingTypeFromQuery(value)).toBe('sell')
+    }
+  })
+  it('presents the shared lifecycle as sale or wanted statuses', () => {
+    expect(listingStatusLabel({ listing_type: 'sell', status: 'on_sale' })).toBe('在售')
+    expect(listingStatusLabel({ listing_type: 'sell', status: 'sold' })).toBe('已售出')
+    expect(listingStatusLabel({ listing_type: 'wanted', status: 'on_sale' })).toBe('求购中')
+    expect(listingStatusLabel({ listing_type: 'wanted', status: 'sold' })).toBe('已求到')
+    expect(listingStatusLabel({ listing_type: 'wanted', status: 'withdrawn' })).toBe('已关闭')
   })
 })
 

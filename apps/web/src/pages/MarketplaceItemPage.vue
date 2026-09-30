@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { campusLabels, contactLabels, formatPrice, getMarketplaceItem, revealSellerContact, statusLabels, updateMarketplaceStatus, type ListingStatus, type MarketplaceItem, type SellerContact } from '@/features/marketplace'
+import { campusLabels, contactLabels, formatPrice, getMarketplaceItem, listingStatusLabel, listingTypeFromQuery, revealSellerContact, updateMarketplaceStatus, type ListingStatus, type MarketplaceItem, type SellerContact } from '@/features/marketplace'
 import { RatingsApiError } from '@/features/ratings'
 import { RatingAvatar, RatingImage, RatingPageHeader, RatingState } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -11,6 +11,9 @@ import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
 const route = useRoute()
 const router = useRouter()
 const item = ref<MarketplaceItem | null>(null)
+const listingType = computed(() => item.value?.listing_type ?? listingTypeFromQuery(route.query.type))
+const wanted = computed(() => listingType.value === 'wanted')
+const contactTitle = computed(() => wanted.value ? '求购者联系方式' : '卖家联系方式')
 const contact = ref<SellerContact | null>(null)
 const contactPanel = ref<HTMLElement | null>(null)
 const loading = ref(true)
@@ -66,43 +69,43 @@ async function copyContact() {
 
 <template>
   <main class="ratings-page marketplace-page marketplace-item-page" :class="{ 'ratings-page--with-action': !item?.is_mine }">
-    <RatingPageHeader title="商品详情" @back="router.push({ name: 'marketplace' })">
-      <RouterLink v-if="item?.is_mine" class="marketplace-text-button" :to="{ name: 'marketplace-mine' }">我的</RouterLink>
+    <RatingPageHeader :title="wanted ? '求购详情' : '商品详情'" @back="router.push({ name: 'marketplace', query: { type: listingType } })">
+      <RouterLink v-if="item?.is_mine" class="marketplace-text-button" :to="{ name: 'marketplace-mine', query: { type: listingType } }">我的</RouterLink>
     </RatingPageHeader>
-    <RatingState v-if="loading" title="正在加载商品" loading />
-    <RatingState v-else-if="error" title="暂时无法查看商品" :description="error" action-label="重新加载" @action="load" />
+    <RatingState v-if="loading" :title="wanted ? '正在加载求购' : '正在加载商品'" loading />
+    <RatingState v-else-if="error" :title="wanted ? '暂时无法查看求购' : '暂时无法查看商品'" :description="error" action-label="重新加载" @action="load" />
     <template v-else-if="item">
       <div class="marketplace-detail">
         <div v-if="item.image_asset" class="marketplace-detail__image"><RatingImage :asset="item.image_asset" :alt="item.title" /></div>
         <section class="marketplace-detail__info">
-          <div class="marketplace-detail__price"><strong class="marketplace-price"><small>¥</small>{{ formatPrice(item.price_cents) }}</strong><span class="marketplace-status">{{ statusLabels[item.status] }}</span></div>
+          <div class="marketplace-detail__price"><strong class="marketplace-price"><small v-if="wanted">预算</small><small>¥</small>{{ formatPrice(item.price_cents) }}</strong><span class="marketplace-status">{{ listingStatusLabel(item) }}</span></div>
           <h1>{{ item.title }}</h1>
           <p class="marketplace-note">{{ campusLabels[item.campus] }} · {{ new Date(item.created_at).toLocaleDateString('zh-CN') }} 发布</p>
           <p class="marketplace-description">{{ item.description }}</p>
-          <div class="marketplace-seller"><RatingAvatar :author="item.seller" /><span>{{ item.seller.display_name }}</span><small>{{ item.is_mine ? '我发布的' : '卖家' }}</small></div>
+          <div class="marketplace-seller"><RatingAvatar :author="item.seller" /><span>{{ item.seller.display_name }}</span><small>{{ item.is_mine ? '我发布的' : wanted ? '求购者' : '卖家' }}</small></div>
         </section>
         <section v-if="contact" ref="contactPanel" class="marketplace-contact" tabindex="-1" aria-labelledby="seller-contact-title">
-          <h2 id="seller-contact-title">卖家联系方式</h2>
+          <h2 id="seller-contact-title">{{ contactTitle }}</h2>
           <div class="marketplace-contact__value">
             <div><span>{{ contactLabels[contact.contact_type] }}</span><strong>{{ contact.contact_value }}</strong></div>
             <button type="button" class="marketplace-secondary-button" @click="copyContact">复制联系方式</button>
           </div>
-          <p role="status">{{ copyMessage || '联系卖家确认商品情况和交易方式。获取联系方式不代表已预订或成交。' }}</p>
+          <p role="status">{{ copyMessage || (wanted ? '联系求购者确认需求和交易方式。获取联系方式不代表已成交。' : '联系卖家确认商品情况和交易方式。获取联系方式不代表已预订或成交。') }}</p>
         </section>
         <section v-if="item.is_mine" class="marketplace-owner-actions">
-          <h2>管理商品</h2>
-          <p class="marketplace-note">{{ item.status === 'sold' ? '商品已售出，不再出现在二手列表中。' : '交易完成后，请标记已售出。' }}</p>
+          <h2>{{ wanted ? '管理求购' : '管理商品' }}</h2>
+          <p class="marketplace-note">{{ wanted ? (item.status === 'sold' ? '已求到物品，不再出现在求购列表中。' : '求到物品后，请标记已求到。') : item.status === 'sold' ? '商品已售出，不再出现在二手列表中。' : '交易完成后，请标记已售出。' }}</p>
           <template v-if="item.status !== 'sold'">
-            <button v-if="item.status === 'on_sale'" type="button" class="marketplace-secondary-button" :disabled="busy" @click="changeStatus('withdrawn')">下架商品</button>
-            <button v-else type="button" class="ratings-primary-button" :disabled="busy" @click="changeStatus('on_sale')">重新上架</button>
-            <button type="button" class="marketplace-secondary-button" :disabled="busy" @click="changeStatus('sold')">标记已售出</button>
+            <button v-if="item.status === 'on_sale'" type="button" class="marketplace-secondary-button" :disabled="busy" @click="changeStatus('withdrawn')">{{ wanted ? '关闭求购' : '下架商品' }}</button>
+            <button v-else type="button" class="ratings-primary-button" :disabled="busy" @click="changeStatus('on_sale')">{{ wanted ? '重新开启求购' : '重新上架' }}</button>
+            <button type="button" class="marketplace-secondary-button" :disabled="busy" @click="changeStatus('sold')">{{ wanted ? '标记已求到' : '标记已售出' }}</button>
           </template>
         </section>
         <p class="marketplace-note">买卖双方自行联系、约定交易。本版本暂不支持在线支付。</p>
         <p v-if="actionError" class="ratings-form-error" role="alert">{{ actionError }}</p>
       </div>
       <GlassToolbar v-if="!item.is_mine" class="marketplace-buy-bar" :corner-radius="24">
-        <button type="button" class="ratings-primary-button" :disabled="busy || item.status !== 'on_sale'" @click="buy">{{ item.status !== 'on_sale' ? statusLabels[item.status] : busy ? '正在获取联系方式…' : contact ? '查看卖家联系方式' : '我想购买' }}</button>
+        <button type="button" class="ratings-primary-button" :disabled="busy || item.status !== 'on_sale'" @click="buy">{{ item.status !== 'on_sale' ? listingStatusLabel(item) : busy ? '正在获取联系方式…' : contact ? `查看${contactTitle}` : wanted ? '我有闲置' : '我想购买' }}</button>
       </GlassToolbar>
     </template>
   </main>

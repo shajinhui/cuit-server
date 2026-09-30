@@ -26,6 +26,9 @@
 .marketplace-section-heading { display: flex; justify-content: space-between; align-items: center; margin: 0; }
 .marketplace-section-heading h2 { margin: 0; font-size: 17px; }
 .marketplace-section-heading button, .marketplace-text-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 8px; color: var(--blue-bright); background: transparent; border: 0; text-decoration: none; font-size: 14px; white-space: nowrap; }
+.marketplace-type-switch { display: inline-flex; width: fit-content; gap: 4px; }
+.marketplace-type-switch button { min-height: 44px; padding: 0 12px; color: var(--text-secondary); background: transparent; border: 0; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 600; }
+.marketplace-type-switch button[aria-pressed='true'] { color: var(--blue-bright); background: var(--control-bg); }
 .marketplace-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .marketplace-card { position: relative; display: flex; min-width: 0; overflow: hidden; flex-direction: column; color: var(--text-primary); background: var(--bg-surface); border-radius: 12px; text-decoration: none; }
 .marketplace-card > .rating-image { display: grid; width: 100%; height: auto; grid-template: minmax(0, 1fr) / minmax(0, 1fr); aspect-ratio: 4 / 3; border-radius: 0; }
@@ -38,6 +41,8 @@
 .marketplace-price small { font-size: 14px; font-weight: 600; }
 .marketplace-status { display: inline-flex; width: fit-content; padding: 4px 8px; color: var(--text-secondary); background: var(--control-bg); border-radius: 8px; font-size: 12px; }
 .marketplace-card__status { position: absolute; top: 8px; right: 8px; max-width: calc(100% - 16px); padding: 3px 6px; color: var(--text-primary); background: var(--bg-surface); border: 0.5px solid var(--line-faint); border-radius: 6px; font-size: 11px; pointer-events: none; }
+.marketplace-card--wanted .marketplace-card__status { position: static; margin: 8px 8px 0; }
+.marketplace-card .marketplace-card__description { display: -webkit-box; overflow: hidden; margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
 .marketplace-editor { padding: 8px 16px 0; }
 .marketplace-editor fieldset { display: grid; min-width: 0; margin: 0; padding: 0; gap: 12px; border: 0; }
 .marketplace-form-section, .marketplace-detail__info, .marketplace-contact, .marketplace-owner-actions { display: grid; min-width: 0; padding: 16px; gap: 12px; background: var(--bg-surface); border-radius: 18px; }
