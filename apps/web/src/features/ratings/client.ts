@@ -22,7 +22,7 @@ export class RatingsApiError extends Error {
   }
 }
 
-export const DEFAULT_RATINGS_API_BASE_URL = 'https://ratings-server.fanxiaogao05.dpdns.org'
+export const DEFAULT_RATINGS_API_BASE_URL = 'https://lehi.top'
 
 const apiBaseURL = (
   import.meta.env.VITE_RATINGS_API_BASE_URL || DEFAULT_RATINGS_API_BASE_URL
