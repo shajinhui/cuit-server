@@ -1,6 +1,6 @@
 export * from './api'
 export { clearRatingAssetCache } from './assetCache'
-export { DEFAULT_RATINGS_API_BASE_URL, isRatingsConfigured, RatingsApiError } from './client'
+export { DEFAULT_RATINGS_API_BASE_URL, isRatingsConfigured, ratingsRequest, RatingsApiError } from './client'
 export {
   clearRatingAccessToken,
   currentRatingAccessToken,

@@ -17,7 +17,7 @@ const defaultItems = [
   { name: 'schedule', label: '课表', icon: scheduleIcon, to: { name: 'schedule' } },
   { name: 'tools', label: '工具', icon: toolsIcon, to: { name: 'tools' } },
   ...(isRatingsConfigured()
-    ? [{ name: 'ratings', label: '评分', icon: ratingsIcon, to: { name: 'ratings' } }]
+    ? [{ name: 'ratings', label: '校园', icon: ratingsIcon, to: { name: 'ratings' } }]
     : []),
   { name: 'profile', label: '我的', icon: profileIcon, to: { name: 'profile' } },
 ] as const
@@ -50,7 +50,7 @@ const emit = defineEmits<{
 }>()
 
 const resolvedItems = computed<readonly NavigationItem[]>(() => props.items ?? defaultItems)
-const resolvedActiveName = computed(() => props.activeName ?? String(route.name ?? ''))
+const resolvedActiveName = computed(() => props.activeName ?? (route.path.startsWith('/marketplace') ? 'ratings' : String(route.name ?? '')))
 const activeIndex = computed(() => {
   const index = resolvedItems.value.findIndex((item) => item.name === resolvedActiveName.value)
   return index < 0 ? 0 : index

@@ -25,6 +25,7 @@
 @import './library.css';
 @import './landing.css';
 @import './ratings.css';
+@import './marketplace.css';
 
 :root {
   font-family:

@@ -8,6 +8,7 @@ import {
   type RatingBoardSort,
 } from '@/features/ratings'
 import { RatingBoardCard, RatingState } from '@/features/ratings/components'
+import CampusHeader from '@/app/components/CampusHeader.vue'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 defineOptions({ name: 'RatingsPage' })
@@ -78,22 +79,11 @@ function deduplicate(items: RatingBoard[]) {
 </script>
 
 <template>
-  <main class="ratings-page ratings-page--with-bottom-navigation">
-    <header class="ratings-home-header">
-      <div>
-        <small>校园社区</small>
-        <h1>友友评分</h1>
-      </div>
-      <RouterLink class="ratings-icon-button" :to="{ name: 'ratings-mine' }" aria-label="我的评分内容">
-        <svg aria-hidden="true" viewBox="0 0 24 24">
-          <circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c.6-4.1 2.8-6.2 6.5-6.2s5.9 2.1 6.5 6.2" />
-        </svg>
-      </RouterLink>
-    </header>
+  <main class="ratings-page campus-page ratings-page--with-bottom-navigation">
+    <CampusHeader active="ratings" />
 
     <section class="ratings-home-intro">
       <div>
-        <span aria-hidden="true">★</span>
         <h2>发现值得讨论的校园事物</h2>
         <p>创建一个主题，邀请大家添加对象并留下真实评分。</p>
       </div>

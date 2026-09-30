@@ -47,6 +47,30 @@ const router = createRouter({
       meta: { requiresAuth: true, ratingAuth: true },
     },
     {
+      path: '/marketplace',
+      name: 'marketplace',
+      component: () => import('@/pages/MarketplacePage.vue'),
+      meta: { requiresAuth: true, ratingAuth: true },
+    },
+    {
+      path: '/marketplace/new',
+      name: 'marketplace-create',
+      component: () => import('@/pages/MarketplaceEditorPage.vue'),
+      meta: { requiresAuth: true, ratingAuth: true },
+    },
+    {
+      path: '/marketplace/mine',
+      name: 'marketplace-mine',
+      component: () => import('@/pages/MarketplacePage.vue'),
+      meta: { requiresAuth: true, ratingAuth: true },
+    },
+    {
+      path: '/marketplace/items/:itemId',
+      name: 'marketplace-item',
+      component: () => import('@/pages/MarketplaceItemPage.vue'),
+      meta: { requiresAuth: true, ratingAuth: true },
+    },
+    {
       path: '/ratings/new',
       name: 'rating-create-board',
       component: () => import('@/pages/RatingEditorPage.vue'),

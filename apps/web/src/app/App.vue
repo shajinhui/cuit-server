@@ -29,7 +29,7 @@ const cachedRatingPageNames = [
 const navigationRoutes = new Set([
   'schedule',
   'tools',
-  ...(isRatingsConfigured() ? ['ratings'] : []),
+  ...(isRatingsConfigured() ? ['ratings', 'marketplace'] : []),
   'profile',
 ])
 const resolvingInitialRoute = computed(() => !route.name)
