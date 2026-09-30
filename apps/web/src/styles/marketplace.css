@@ -51,9 +51,9 @@
 .marketplace-form-section h2, .marketplace-contact h2, .marketplace-owner-actions h2 { margin: 0; font-size: 17px; }
 .marketplace-form-section h2 small { margin-left: 4px; color: var(--text-secondary); font-size: 12px; font-weight: 400; }
 .marketplace-form-section label { display: grid; min-width: 0; gap: 6px; font-size: 14px; }
-.marketplace-form-section input:not([type='file']), .marketplace-form-section textarea, .marketplace-form-section select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; color: var(--text-primary); background: var(--bg-page); border: 1px solid var(--line-faint); border-radius: 12px; font: inherit; font-size: 16px; }
+.marketplace-form-section input:not([type='file']), .marketplace-form-section textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; color: var(--text-primary); background: var(--bg-page); border: 1px solid var(--line-faint); border-radius: 12px; font: inherit; font-size: 16px; }
 .marketplace-form-section textarea { resize: vertical; line-height: 1.5; }
-.marketplace-form-section input:focus-visible, .marketplace-form-section select:focus-visible, .marketplace-form-section textarea:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: 2px; }
+.marketplace-form-section input:focus-visible, .marketplace-form-section textarea:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: 2px; }
 .marketplace-form-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 .marketplace-form-section p, .marketplace-note, .marketplace-contact p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .marketplace-page .ratings-form-error { color: var(--danger); }

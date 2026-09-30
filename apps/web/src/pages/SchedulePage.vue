@@ -28,7 +28,9 @@ import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import GlassPopover from '@/shared/ui/GlassPopover.vue'
 import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
+import SemesterSelect from '@/shared/ui/SemesterSelect.vue'
+import { semesterLabel } from '@/shared/ui/glassSelect'
 import AppShell from '@/shared/ui/AppShell.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
@@ -40,7 +42,6 @@ const profileStore = useProfileStore()
 const session = useSessionStore()
 const notice = ref('')
 const moreMenuOpen = ref(false)
-const semesterListOpen = ref(false)
 const switchingSemester = ref(false)
 const moreMenuRef = ref<HTMLElement | null>(null)
 const addCourseOpen = ref(false)
@@ -98,7 +99,7 @@ onBeforeUnmount(() => {
 
 const selectedSemesterLabel = computed(() => {
   const semester = store.semesters.find((item) => item.ID === store.selectedSemesterID)
-  return semester ? semesterName(semester.SchoolYear, semester.Term) : '选择学期'
+  return semester ? semesterLabel(semester) : '选择学期'
 })
 const selectedWeekday = computed(() => selectedDate.value.getDay() || 7)
 const currentWeekLabel = computed(() =>
@@ -128,12 +129,6 @@ function chooseWeek(value: string | number) {
 
 function toggleMoreMenu() {
   moreMenuOpen.value = !moreMenuOpen.value
-  if (!moreMenuOpen.value) semesterListOpen.value = false
-}
-
-function toggleSemesterList() {
-  if (store.loading || store.semesters.length === 0) return
-  semesterListOpen.value = !semesterListOpen.value
 }
 
 function updateNonCurrentWeekOpacity(event: Event) {
@@ -314,7 +309,6 @@ function closeMoreMenuFromOutside(event: PointerEvent) {
 
 function closeMoreMenu() {
   moreMenuOpen.value = false
-  semesterListOpen.value = false
 }
 
 async function switchSemester(semesterID: string) {
@@ -337,10 +331,6 @@ async function switchSemester(semesterID: string) {
 
   resetWeekSelection()
   showNotice(`已切换至${selectedSemesterLabel.value}`)
-}
-
-function semesterName(schoolYear: string, term: string) {
-  return `${schoolYear} · 第${term}学期`
 }
 
 function showNotice(message: string) {
@@ -377,8 +367,9 @@ async function refreshSchedule() {
             </span>
           </div>
           <p class="schedule-week-control">
-            <AppSelect
+            <GlassSelect
               class="schedule-week-select"
+              variant="inline"
               :model-value="selectedWeek || 1"
               :options="weekSelectOptions"
               title="选择教学周"
@@ -436,55 +427,16 @@ async function refreshSchedule() {
                 class="schedule-more-menu"
                 aria-label="更多课表操作"
               >
-                <button
-                  type="button"
-                  class="schedule-semester-option"
-                  aria-controls="schedule-semester-list"
-                  :aria-expanded="semesterListOpen"
-                  :disabled="store.loading || store.semesters.length === 0"
-                  @click="toggleSemesterList"
-                >
-                  <span>
-                    <strong>切换学期</strong>
-                    <small>{{ selectedSemesterLabel }}</small>
-                  </span>
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 12 12"
-                    :class="{ 'is-open': semesterListOpen }"
-                  >
-                    <path d="m4 2 4 4-4 4" />
-                  </svg>
-                </button>
-
-                <div
-                  v-if="semesterListOpen"
-                  id="schedule-semester-list"
-                  class="schedule-semester-list"
-                  role="listbox"
+                <SemesterSelect
+                  :model-value="store.selectedSemesterID"
+                  :semesters="store.semesters"
+                  title="切换学期"
                   aria-label="选择学期"
-                >
-                  <button
-                    v-for="semester in store.semesters"
-                    :key="semester.ID"
-                    type="button"
-                    class="schedule-semester-list__item"
-                    role="option"
-                    :aria-selected="semester.ID === store.selectedSemesterID"
-                    :class="{ 'is-selected': semester.ID === store.selectedSemesterID }"
-                    :disabled="store.loading"
-                    @click="switchSemester(semester.ID)"
-                  >
-                    <span>{{ semesterName(semester.SchoolYear, semester.Term) }}</span>
-                    <svg
-                      v-if="semester.ID === store.selectedSemesterID"
-                      aria-hidden="true"
-                      viewBox="0 0 16 16"
-                    >
-                      <path d="m3.5 8.5 3 3 6-7" />
-                    </svg>
-                  </button>
-                </div>
+                  variant="menu"
+                  embedded
+                  :disabled="store.loading"
+                  @change="switchSemester"
+                />
 
                 <div class="schedule-display-setting">
                   <div class="schedule-display-setting__heading">
@@ -509,7 +461,7 @@ async function refreshSchedule() {
 
                 <button
                   type="button"
-                  class="schedule-semester-option schedule-calendar-export-option"
+                  class="schedule-calendar-export-option"
                   :disabled="store.loading || !store.table || !store.selectedSemesterID"
                   @click="openCalendarExport"
                 >

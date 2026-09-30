@@ -16,7 +16,7 @@ describe('公共玻璃组件契约', () => {
 
   it('只有材质底座调用库，其他控件共用底座而不复制内部 DOM 修补', () => {
     expect(read('GlassSurface.vue')).toContain("from '@wxperia/liquid-glass-vue'")
-    for (const name of ['GlassSegmented.vue', 'GlassPopover.vue', 'GlassToolbar.vue', 'GlassIconButton.vue']) {
+    for (const name of ['GlassSegmented.vue', 'GlassPopover.vue', 'GlassToolbar.vue', 'GlassIconButton.vue', 'GlassSelect.vue']) {
       expect(read(name), name).toContain('<GlassSurface')
       expect(read(name), name).not.toContain('@wxperia/liquid-glass-vue')
     }
@@ -41,14 +41,16 @@ describe('公共玻璃组件契约', () => {
 
   it('下拉选择器仍暴露实际元素，供尺寸计算、外部点击与焦点恢复使用', () => {
     expect(read('GlassPopover.vue')).toContain('defineExpose({ element })')
-    expect(read('AppSelect.vue')).toContain('popoverRef.value?.element?.offsetHeight')
-    expect(read('AppSelect.vue')).toContain('popoverRef.value?.element?.contains')
-    expect(read('AppSelect.vue')).toContain('triggerRef.value?.focus')
+    expect(read('GlassSelect.vue')).toContain('listRef.value?.scrollHeight')
+    expect(read('GlassSelect.vue')).toContain('popoverElement()?.contains')
+    expect(read('GlassSelect.vue')).toContain('triggerRef.value?.focus')
+    expect(read('AppSelect.vue')).toContain('<GlassSelect')
+    expect(read('AppSelect.vue')).not.toContain('addEventListener')
   })
 
   it('已接入的弹层和工具栏不保留另一套背景滤镜，防止隔断公共材质采样', () => {
     for (const [file, selector] of [
-      ['app-select.css', '.app-select-popover'],
+      ['glass-select.css', '.glass-select-popover'],
       ['schedule.css', '.schedule-more-menu'],
       ['calendar.css', '.calendar-toolbar'],
       ['campus-map.css', '.campus-map-zoom'],

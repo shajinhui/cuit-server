@@ -10,7 +10,7 @@ import {
   useGradesStore,
 } from '@/features/grades'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import SemesterSelect from '@/shared/ui/SemesterSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'GradesPage' })
@@ -22,12 +22,6 @@ usePageTheme('bg-page-warm')
 
 const publishedCount = computed(() => countPublishedGrades(store.grades))
 const failedCount = computed(() => countFailedGrades(store.grades))
-const semesterOptions = computed(() =>
-  store.semesters.map((semester) => ({
-    value: semester.ID,
-    label: `${semester.SchoolYear}学年 第${semester.Term}学期`,
-  })),
-)
 const updateStatus = computed(() => {
   if (store.loading) return '更新中…'
   if (store.error) return '更新失败'
@@ -90,9 +84,10 @@ function chooseSemester(value: string | number) {
 
       <div class="semester-select">
         <span>当前学期</span>
-        <AppSelect
+        <SemesterSelect
+          size="lg"
           :model-value="store.selectedSemesterID"
-          :options="semesterOptions"
+          :semesters="store.semesters"
           title="选择成绩学期"
           aria-label="选择成绩学期"
           :disabled="store.loading"

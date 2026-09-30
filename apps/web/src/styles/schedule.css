@@ -91,37 +91,13 @@
 }
 
 .schedule-week-select {
+  --glass-select-font-size: 17px;
   display: inline-flex;
   max-width: 100%;
   min-width: 0;
   align-items: center;
   min-height: 44px;
   margin: -13px 0;
-}
-
-.schedule-week-select .app-select__trigger {
-  max-width: 100%;
-  min-height: 44px;
-  padding: 0 18px 0 0;
-  color: inherit;
-  font-weight: 500;
-  line-height: 1.1;
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  appearance: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.schedule-week-select .app-select__trigger:active,
-.schedule-week-select .app-select__trigger:disabled {
-  opacity: 0.62;
-}
-
-.schedule-week-select .app-select__chevron {
-  width: 12px;
-  height: 12px;
-  stroke-width: 1.5;
 }
 
 .schedule-header__actions {
@@ -131,7 +107,7 @@
   gap: 4px;
 }
 
-.schedule-header__actions button {
+.schedule-header__actions .glass-icon-button {
   position: relative;
   display: grid;
   width: 44px;
@@ -147,16 +123,16 @@
   transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.schedule-header__actions button:active {
+.schedule-header__actions .glass-icon-button:active {
   transform: scale(0.95);
 }
 
-.schedule-header__actions button:disabled {
+.schedule-header__actions .glass-icon-button:disabled {
   cursor: wait;
   opacity: 0.42;
 }
 
-.schedule-header__actions svg {
+.schedule-header__actions .glass-icon-button svg {
   width: 26px;
   height: 26px;
   fill: none;
@@ -222,7 +198,7 @@
   transform-origin: calc(100% - 22px) 0;
 }
 
-.schedule-header__actions .schedule-semester-option {
+.schedule-header__actions .schedule-calendar-export-option {
   position: relative;
   display: flex;
   align-items: center;
@@ -240,26 +216,31 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.schedule-header__actions .schedule-semester-option:active {
+.schedule-header__actions .schedule-calendar-export-option:active {
   background: var(--bg-glass-faint);
   transform: none;
 }
 
-.schedule-semester-option span {
+.schedule-header__actions .schedule-calendar-export-option:disabled {
+  cursor: wait;
+  opacity: 0.42;
+}
+
+.schedule-calendar-export-option span {
   display: flex;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
 }
 
-.schedule-semester-option strong {
+.schedule-calendar-export-option strong {
   color: var(--schedule-ink);
   font-size: 15px;
   font-weight: 600;
   line-height: 1.2;
 }
 
-.schedule-semester-option small {
+.schedule-calendar-export-option small {
   overflow: hidden;
   color: var(--schedule-muted);
   font-size: 12px;
@@ -268,7 +249,7 @@
   white-space: nowrap;
 }
 
-.schedule-header__actions .schedule-semester-option svg {
+.schedule-header__actions .schedule-calendar-export-option svg {
   position: absolute;
   right: 13px;
   width: 12px;
@@ -276,10 +257,6 @@
   pointer-events: none;
   stroke-width: 1.6;
   transition: transform 180ms var(--ease-out);
-}
-
-.schedule-header__actions .schedule-semester-option svg.is-open {
-  transform: rotate(90deg);
 }
 
 .schedule-header__actions .schedule-calendar-export-option {
@@ -342,66 +319,6 @@
   stroke-linejoin: round;
   stroke-width: 1.6;
   transform: translateY(-50%);
-}
-
-.schedule-semester-list {
-  display: grid;
-  gap: 2px;
-  max-height: min(52dvh, 330px);
-  padding: 4px;
-  overflow-y: auto;
-  border-top: 1px solid var(--map-tint);
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-}
-
-.schedule-semester-list::-webkit-scrollbar {
-  display: none;
-}
-
-.schedule-header__actions .schedule-semester-list__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: auto;
-  min-height: 42px;
-  padding: 9px 10px;
-  color: var(--schedule-muted);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.25;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 10px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.schedule-header__actions .schedule-semester-list__item > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.schedule-header__actions .schedule-semester-list__item:active {
-  background: var(--bg-glass-faint);
-  transform: none;
-}
-
-.schedule-header__actions .schedule-semester-list__item.is-selected {
-  color: var(--blue-strong);
-  font-weight: 600;
-  background: var(--blue-tint-weak);
-}
-
-.schedule-header__actions .schedule-semester-list__item svg {
-  position: static;
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--blue-strong);
-  stroke-width: 2;
 }
 
 .schedule-more-menu-enter-active,
@@ -1404,8 +1321,7 @@
   overflow-wrap: anywhere;
 }
 
-.add-course-form input,
-.add-course-form .app-select__trigger {
+.add-course-form input {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -1429,10 +1345,6 @@
 .add-course-form input:focus {
   outline: 0;
   box-shadow: none;
-}
-
-.add-course-form .app-select__chevron {
-  color: var(--line-heavy);
 }
 
 .add-course-form__split-row {
@@ -1467,10 +1379,6 @@
 
 .add-course-form__split-row label + label {
   box-shadow: inset 0.5px 0 var(--line-medium);
-}
-
-.add-course-form__split-row .app-select__trigger {
-  text-align: left;
 }
 
 .add-course-form__repeat {
@@ -1595,15 +1503,6 @@
 .calendar-export-sheet__setting > span {
   font-size: 15px;
   font-weight: 500;
-}
-
-.calendar-export-sheet__setting .app-select__trigger {
-  min-height: 44px;
-  padding: 0;
-  text-align: right;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
 }
 
 .calendar-export-sheet__note,

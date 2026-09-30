@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
 
 import type {
   CourseEditTarget,
@@ -176,7 +176,9 @@ function repeatForWeeks(weeks: number[]): ManualCourseRepeat {
             <div class="add-course-form__group">
               <label>
                 <span>星期</span>
-                <AppSelect
+                <GlassSelect
+                  variant="inline"
+                  :disabled="saving"
                   v-model="weekday"
                   :options="weekdayOptions"
                   title="选择星期"
@@ -186,7 +188,9 @@ function repeatForWeeks(weeks: number[]): ManualCourseRepeat {
               <div class="add-course-form__split-row">
                 <label>
                   <span>开始节次</span>
-                  <AppSelect
+                  <GlassSelect
+                    variant="inline"
+                    :disabled="saving"
                     v-model="startSection"
                     :options="sectionSelectOptions"
                     title="选择开始节次"
@@ -195,7 +199,9 @@ function repeatForWeeks(weeks: number[]): ManualCourseRepeat {
                 </label>
                 <label>
                   <span>结束节次</span>
-                  <AppSelect
+                  <GlassSelect
+                    variant="inline"
+                    :disabled="saving"
                     v-model="endSection"
                     :options="sectionSelectOptions"
                     title="选择结束节次"
@@ -209,7 +215,9 @@ function repeatForWeeks(weeks: number[]): ManualCourseRepeat {
               <div class="add-course-form__split-row">
                 <label>
                   <span>开始周</span>
-                  <AppSelect
+                  <GlassSelect
+                    variant="inline"
+                    :disabled="saving"
                     v-model="startWeek"
                     :options="weekSelectOptions"
                     title="选择开始周"
@@ -219,7 +227,9 @@ function repeatForWeeks(weeks: number[]): ManualCourseRepeat {
                 </label>
                 <label>
                   <span>结束周</span>
-                  <AppSelect
+                  <GlassSelect
+                    variant="inline"
+                    :disabled="saving"
                     v-model="endWeek"
                     :options="weekSelectOptions"
                     title="选择结束周"

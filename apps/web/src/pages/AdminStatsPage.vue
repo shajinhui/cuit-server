@@ -16,7 +16,7 @@ import {
 } from '@/features/analytics'
 import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
 
 defineOptions({ name: 'AdminStatsPage' })
 
@@ -320,7 +320,8 @@ function selectAdminSection(name: string) {
         <div class="admin-dashboard-actions">
           <label>
             <span class="visually-hidden">统计周期</span>
-            <AppSelect
+            <GlassSelect
+              size="sm"
               v-model="selectedPeriod"
               class="admin-period-select"
               :options="periodOptions"

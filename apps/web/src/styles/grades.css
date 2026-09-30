@@ -82,27 +82,6 @@
   letter-spacing: 0.4px;
 }
 
-.semester-select .app-select__trigger {
-  width: 100%;
-  height: 52px;
-  padding: 0 17px;
-  color: var(--card-ink);
-  font-size: 16px;
-  font-weight: 500;
-  background: var(--bg-nav);
-  border: 0.5px solid var(--edge-highlight-strong);
-  border-radius: 18px;
-  box-shadow:
-    0 0.5px 0 var(--hairline),
-    0 8px 24px rgba(40, 43, 49, 0.055);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
-}
-
-.semester-select .app-select__chevron {
-  color: var(--card-ink-soft);
-}
-
 .grade-summary {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

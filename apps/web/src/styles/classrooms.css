@@ -171,33 +171,6 @@ body:has(.classroom-page) {
   display: block;
 }
 
-.classroom-select-control .app-select__trigger {
-  width: 100%;
-  height: 48px;
-  padding: 0 38px 0 14px;
-  overflow: hidden;
-  color: var(--text-primary);
-  font-size: 15px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: var(--bg-page);
-  border: 0;
-  border-radius: 14px;
-}
-
-.classroom-select-control .app-select__trigger:disabled {
-  color: var(--text-faint);
-  opacity: 0.72;
-}
-
-.classroom-select-control .app-select__chevron {
-  width: 12px;
-  height: 12px;
-  stroke: var(--text-faint);
-  stroke-width: 1.7;
-}
-
 .classroom-weekday-picker,
 .classroom-section-picker {
   min-width: 0;
@@ -778,7 +751,6 @@ body:has(.classroom-page) {
   margin-top: 8px;
 }
 
-.classroom-sheet__fields .classroom-select-control .app-select__trigger,
 .classroom-capacity-input {
   height: 48px;
   background: var(--bg-page);
@@ -951,10 +923,9 @@ body:has(.classroom-page) {
     border: 1px solid var(--line-soft);
   }
 
-  .classroom-weekday-picker button,
-  .classroom-section-picker button,
-  .classroom-select-control .app-select__trigger,
-  .classroom-capacity-input {
+.classroom-weekday-picker button,
+.classroom-section-picker button,
+.classroom-capacity-input {
     border: 1px solid var(--line-soft);
   }
 }

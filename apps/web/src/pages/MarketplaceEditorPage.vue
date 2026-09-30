@@ -6,6 +6,7 @@ import { contactLabels, createMarketplaceItem, listingTypeFromQuery, listingType
 import { createRequestID, uploadRatingAsset } from '@/features/ratings'
 import { RatingPageHeader } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -89,7 +90,7 @@ async function submit() {
           <label><span>{{ wanted ? '需求说明' : '商品描述' }}</span><textarea v-model="description" required maxlength="2000" rows="3" :placeholder="wanted ? '说说想要的型号、成色要求和期望交易地点。' : '说说成色、使用情况、配件和交易地点，如有瑕疵请注明。'" /></label>
           <div class="marketplace-form-row">
             <label><span>{{ wanted ? '预算（元）' : '价格（元）' }}</span><input v-model="price" required inputmode="decimal" maxlength="8" placeholder="0.00" aria-describedby="marketplace-price-help" /></label>
-            <label><span>交易校区</span><select v-model="campus"><option value="airport">航空港校区</option><option value="longquan">龙泉校区</option></select></label>
+            <label><span>交易校区</span><GlassSelect v-model="campus" :options="[{ value: 'airport', label: '航空港校区' }, { value: 'longquan', label: '龙泉校区' }] as const" title="选择交易校区" :disabled="submitting" /></label>
           </div>
           <p id="marketplace-price-help" :class="{ 'ratings-form-error': price && priceCents === null }">{{ wanted ? '预算' : '价格' }}为 0.01–99999.99 元，最多两位小数。</p>
         </section>
@@ -107,7 +108,7 @@ async function submit() {
         <section class="marketplace-form-section">
           <h2>{{ wanted ? '我的联系方式' : '联系卖家' }}</h2>
           <div class="marketplace-contact-fields">
-          <label><span>联系方式</span><select v-model="contactType"><option value="wechat">微信</option><option value="qq">QQ</option><option value="phone">手机号</option></select></label>
+          <label><span>联系方式</span><GlassSelect v-model="contactType" :options="[{ value: 'wechat', label: '微信' }, { value: 'qq', label: 'QQ' }, { value: 'phone', label: '手机号' }] as const" title="选择联系方式" :disabled="submitting" /></label>
           <label><span>{{ contactLabels[contactType] }}</span><input v-model="contactValue" required maxlength="80" :inputmode="contactType === 'wechat' ? 'text' : 'numeric'" :placeholder="`填写${wanted ? '有闲置的同学' : '买家'}可以联系到你的${contactLabels[contactType]}`" autocomplete="off" aria-describedby="marketplace-contact-help" /></label>
           </div>
           <p v-if="contactValue && !contactValid" class="ratings-form-error">请填写有效的{{ contactLabels[contactType] }}，不要包含空格。</p>

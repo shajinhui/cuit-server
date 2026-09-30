@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
 
 defineOptions({ name: 'CalendarExportSheet' })
 
@@ -63,7 +63,8 @@ const reminderOptions = [
 
             <label class="calendar-export-sheet__setting">
               <span>上课提醒</span>
-              <AppSelect
+              <GlassSelect
+                variant="inline"
                 :model-value="reminderMinutes"
                 :options="reminderOptions"
                 title="选择上课提醒时间"

@@ -1,0 +1,126 @@
+.glass-select {
+  --glass-select-radius: 14px;
+  --glass-select-height: 44px;
+  --glass-select-font-size: 15px;
+  display: block;
+  min-width: 0;
+}
+
+.glass-select--sm { --glass-select-font-size: 13px; }
+.glass-select--lg { --glass-select-height: 52px; --glass-select-font-size: 16px; }
+
+.glass-select__trigger {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--glass-select-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--glass-select-font-size);
+  font-weight: 550;
+  line-height: 1.4;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--glass-select-radius);
+  box-shadow: var(--shadow-sm);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.glass-select__trigger > :not(.glass-surface) { position: relative; z-index: 1; }
+.glass-select__trigger:disabled { cursor: default; opacity: .55; }
+.glass-select__trigger:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: 2px; }
+.glass-select__text { display: grid; min-width: 0; gap: 3px; }
+.glass-select__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.glass-select__chevron {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  color: var(--text-secondary);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 150ms ease;
+}
+.glass-select.is-open .glass-select__chevron { transform: rotate(180deg); }
+.glass-select--inline .glass-select__trigger { width: auto; max-width: 100%; padding: 8px 10px; box-shadow: none; }
+.glass-select--menu .glass-select__trigger { min-height: 58px; padding: 9px 12px; box-shadow: none; }
+.glass-select--menu .glass-select__trigger:active { background: var(--control-track-soft); }
+.glass-select__label { font-size: 15px; font-weight: 600; }
+.glass-select--menu .glass-select__value { color: var(--text-secondary); font-size: 12px; font-weight: 400; }
+
+.glass-select-popover {
+  position: fixed;
+  z-index: 200;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: 6px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: var(--shadow-popover);
+}
+.glass-select__options { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.glass-select__options::-webkit-scrollbar { display: none; }
+.glass-select__options button {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.glass-select__options button.is-selected { background: var(--control-track-soft); font-weight: 650; }
+.glass-select__options button:active, .glass-select__options button:focus-visible { background: var(--control-track); }
+.glass-select__options button:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: -2px; }
+.glass-select__options button:disabled { opacity: .45; }
+.glass-select__options button > span { min-width: 0; overflow-wrap: anywhere; }
+.glass-select__options svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  fill: none;
+  stroke: var(--blue-bright);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.glass-select-popover--embedded {
+  position: relative;
+  z-index: auto;
+  max-height: min(330px, 50dvh);
+  padding: 4px 0 0;
+  border-top: 1px solid var(--line-faint);
+  border-radius: 0;
+  box-shadow: none;
+}
+.glass-select-popover-enter-active, .glass-select-popover-leave-active { transition: opacity 150ms ease, transform 150ms ease; }
+.glass-select-popover-leave-active { transition-duration: 110ms; pointer-events: none; }
+.glass-select-popover-enter-from, .glass-select-popover-leave-to { opacity: 0; transform: translateY(-2px) scale(.985); }
+.glass-select-popover--embedded { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .glass-select__chevron, .glass-select-popover-enter-active, .glass-select-popover-leave-active { transition: none; }
+  .glass-select-popover-enter-from, .glass-select-popover-leave-to { transform: none; }
+}

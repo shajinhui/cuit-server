@@ -60,7 +60,7 @@
 }
 
 .admin-lock-button,
-.admin-dashboard-actions button {
+.admin-dashboard-actions > button {
   display: flex;
   height: 40px;
   padding: 0 14px;
@@ -80,13 +80,13 @@
 }
 
 .admin-lock-button:active,
-.admin-dashboard-actions button:active,
+.admin-dashboard-actions > button:active,
 .admin-token-form button:active {
   transform: scale(0.97);
 }
 
 .admin-lock-button svg,
-.admin-dashboard-actions button svg {
+.admin-dashboard-actions > button svg {
   width: 18px;
   height: 18px;
   fill: none;
@@ -236,8 +236,7 @@
 }
 
 .admin-token-form button:disabled,
-.admin-dashboard-actions button:disabled,
-.admin-dashboard-actions .app-select__trigger:disabled {
+.admin-dashboard-actions > button:disabled {
   cursor: default;
   opacity: 0.55;
 }
@@ -313,20 +312,7 @@
   gap: 9px;
 }
 
-.admin-dashboard-actions .admin-period-select .app-select__trigger {
-  width: 100%;
-  height: 44px;
-  padding: 0 13px;
-  color: var(--ink-deep);
-  font-size: 13px;
-  font-weight: 600;
-  background: var(--bg-surface-soft);
-  border: 1px solid var(--chart-grid-soft);
-  border-radius: 12px;
-  box-shadow: 0 3px 10px var(--chart-axis);
-}
-
-.admin-dashboard-actions button {
+.admin-dashboard-actions > button {
   width: 40px;
   padding: 0;
 }

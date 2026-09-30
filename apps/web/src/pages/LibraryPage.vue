@@ -25,7 +25,7 @@ import { usePageTheme } from '@/shared/composables/usePageTheme'
 import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
 import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import AppDateTimePicker from '@/shared/ui/AppDateTimePicker.vue'
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'LibraryPage' })
@@ -450,7 +450,8 @@ function reservationIsDanger(status: number) {
         <section class="library-filter-card" aria-label="座位查询条件">
           <label class="library-field library-field--full">
             <span>预约区域</span>
-            <AppSelect
+            <GlassSelect
+              size="lg"
               :model-value="store.selectedRoomID"
               :options="areaOptions"
               :title="activeTab === 'seat' ? '选择座位区域' : '选择自修室'"
@@ -740,12 +741,14 @@ function reservationIsDanger(status: number) {
           <div v-if="renewalLoading" class="library-renewal-loading">正在读取学校允许的续座时长…</div>
           <label v-else-if="renewalOptions" class="library-modal-field">
             <span>续座时长</span>
-            <select v-model.number="renewalDuration">
-              <option :value="0" disabled>请选择（分钟）</option>
-              <option v-for="duration in renewalOptions.Durations" :key="duration" :value="duration">
-                {{ duration }} 分钟
-              </option>
-            </select>
+            <GlassSelect
+              v-model="renewalDuration"
+              size="lg"
+              :options="renewalOptions.Durations.map(duration => ({ value: duration, label: `${duration} 分钟` }))"
+              title="选择续座时长"
+              placeholder="请选择（分钟）"
+              :disabled="store.mutating"
+            />
           </label>
           <p v-if="renewalError" class="library-inline-error" role="alert">{{ renewalError }}</p>
           <button

@@ -14,7 +14,7 @@ import {
 } from '@/features/exams'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import SemesterSelect from '@/shared/ui/SemesterSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'ExamsPage' })
@@ -30,12 +30,6 @@ const selectedSemester = computed(() =>
 )
 const selectedBatch = computed(() =>
   store.batches.find((batch) => batch.ID === store.selectedBatchID),
-)
-const semesterOptions = computed(() =>
-  store.semesters.map((semester) => ({
-    value: semester.ID,
-    label: `${semester.SchoolYear} · 第${semester.Term}学期`,
-  })),
 )
 const displayGroups = computed(() =>
   groupExamsByDate(store.exams).map((group) => ({
@@ -150,10 +144,10 @@ function creditLabel(credits: string) {
         <section class="exam-filter-card" aria-label="考试筛选条件">
           <label class="exam-semester-field">
             <span>学期</span>
-            <AppSelect
+            <SemesterSelect
               class="exam-select-control"
               :model-value="store.selectedSemesterID"
-              :options="semesterOptions"
+              :semesters="store.semesters"
               title="选择考试学期"
               aria-label="选择考试学期"
               :disabled="store.loadingExams"

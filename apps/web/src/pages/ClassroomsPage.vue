@@ -10,7 +10,8 @@ import {
 } from '@/features/classrooms'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
-import AppSelect from '@/shared/ui/AppSelect.vue'
+import GlassSelect from '@/shared/ui/GlassSelect.vue'
+import SemesterSelect from '@/shared/ui/SemesterSelect.vue'
 import HamsterLoader from '@/shared/ui/HamsterLoader.vue'
 
 defineOptions({ name: 'ClassroomsPage' })
@@ -38,12 +39,6 @@ const sectionPairs = [1, 3, 5, 7, 9, 11]
 usePageTheme('bg-page')
 
 const groupedRooms = computed(() => groupClassroomsByBuilding(store.rooms))
-const semesterOptions = computed(() =>
-  store.semesters.map((semester) => ({
-    value: semester.ID,
-    label: `${semester.SchoolYear} · 第${semester.Term}学期`,
-  })),
-)
 const weekSelectOptions = weekOptions.map((week) => ({ value: week, label: `第 ${week} 周` }))
 const campusOptions = computed(() =>
   store.campuses.map((campus) => ({ value: campus.ID, label: campus.Name })),
@@ -356,10 +351,10 @@ function handleSheetKeydown(event: KeyboardEvent) {
             <div class="classroom-sheet__fields classroom-sheet__fields--primary">
               <label>
                 <span>学期</span>
-                <AppSelect
+                <SemesterSelect
                   class="classroom-select-control"
                   :model-value="store.selectedSemesterID"
-                  :options="semesterOptions"
+                  :semesters="store.semesters"
                   title="选择学期"
                   aria-label="选择学期"
                   :disabled="store.loadingOptions || scheduleBusy"
@@ -370,7 +365,7 @@ function handleSheetKeydown(event: KeyboardEvent) {
               <div class="classroom-sheet__pair">
                 <label>
                   <span>教学周</span>
-                  <AppSelect
+                  <GlassSelect
                     v-model="store.week"
                     class="classroom-select-control"
                     :options="weekSelectOptions"
@@ -382,7 +377,7 @@ function handleSheetKeydown(event: KeyboardEvent) {
 
                 <label>
                   <span>校区</span>
-                  <AppSelect
+                  <GlassSelect
                     class="classroom-select-control"
                     :model-value="store.selectedCampusID"
                     :options="campusOptions"
@@ -417,7 +412,7 @@ function handleSheetKeydown(event: KeyboardEvent) {
             <div class="classroom-sheet__fields">
               <label>
                 <span>教学楼</span>
-                <AppSelect
+                <GlassSelect
                   v-model="store.selectedBuildingID"
                   class="classroom-select-control"
                   :options="buildingOptions"
@@ -429,7 +424,7 @@ function handleSheetKeydown(event: KeyboardEvent) {
 
               <label>
                 <span>教室类型</span>
-                <AppSelect
+                <GlassSelect
                   v-model="store.selectedClassroomTypeID"
                   class="classroom-select-control"
                   :options="classroomTypeOptions"
