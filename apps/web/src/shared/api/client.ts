@@ -1,4 +1,5 @@
 import { clientDeviceHeaders } from '@/shared/device/clientDevice'
+import { requestDemoResponse } from '@/mock/browser'
 
 interface ApiResponse<T> {
   code: number
@@ -17,9 +18,19 @@ export class ApiError extends Error {
   }
 }
 
+function unwrapPayload<T>(payload: ApiResponse<T>, status: number, retryAfterSeconds?: number) {
+  if (status >= 400 || payload.code !== 0) {
+    throw new ApiError(payload.message || '请求失败', status, payload.code, retryAfterSeconds)
+  }
+  return payload.data
+}
+
 const apiBaseURL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const demoResponse = requestDemoResponse(path, options)
+  if (demoResponse) return unwrapPayload(demoResponse.body as ApiResponse<T>, demoResponse.status)
+
   const deviceHeaders = await clientDeviceHeaders()
   const response = await fetch(`${apiBaseURL}${path}`, {
     ...options,
@@ -38,16 +49,12 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   } catch {
     throw new ApiError('服务响应格式异常', response.status, 50000)
   }
-  if (!response.ok || payload.code !== 0) {
-    const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
-    throw new ApiError(
-      payload.message || '请求失败',
-      response.status,
-      payload.code,
-      Number.isInteger(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
-    )
-  }
-  return payload.data
+  const retryAfter = Number.parseInt(response.headers.get('Retry-After') ?? '', 10)
+  return unwrapPayload(
+    payload,
+    response.status,
+    Number.isInteger(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+  )
 }
 
 export async function requestBlob(path: string): Promise<Blob> {

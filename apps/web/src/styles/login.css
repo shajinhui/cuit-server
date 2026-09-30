@@ -418,6 +418,14 @@
   stroke-width: 1.6;
 }
 
+.login-demo-note {
+  margin: 4px 0 0;
+  color: var(--login-muted);
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .login-privacy-consent {
   display: grid;
   margin-top: 14px;

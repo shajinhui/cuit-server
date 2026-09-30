@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { loginSession } from '@/app/sessionLifecycle'
 import { useSessionStore } from '@/features/session'
+import { isDemoAccountEnabled } from '@/mock/browser'
 import { ApiError } from '@/shared/api/client'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
@@ -12,6 +13,7 @@ defineOptions({ name: 'LoginPage' })
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
+const demoAccountEnabled = isDemoAccountEnabled()
 const privacyAcceptanceKey = 'privacy-policy-accepted'
 const privacyPolicyVersion = '2026-07-28'
 const username = ref('')
@@ -195,6 +197,9 @@ function togglePrivacyAcceptance() {
           </svg>
           <span>安全连接学校统一身份认证</span>
         </div>
+        <p v-if="demoAccountEnabled" class="login-demo-note">
+          在线演示账号：20240000 / demo（仅虚拟数据）
+        </p>
       </section>
 
       <div
