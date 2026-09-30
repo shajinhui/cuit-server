@@ -231,6 +231,26 @@ select:focus-visible {
 }
 
 /*
+ * iOS Safari may paint backdrop-filter/filter effects outside an
+ * overflow-hidden ancestor. The library's third fragment is the material
+ * root (class="relative"); clip that fragment itself so the filter cannot
+ * leave the rounded navigation shape as a rectangular plate.
+ */
+.bottom-navigation__glass > .relative {
+  overflow: hidden;
+  border-radius: var(--bottom-navigation-outer-radius);
+  -webkit-clip-path: inset(0 round var(--bottom-navigation-outer-radius));
+  clip-path: inset(0 round var(--bottom-navigation-outer-radius));
+}
+
+.bottom-navigation__selection > .relative {
+  overflow: hidden;
+  border-radius: var(--bottom-navigation-inner-radius);
+  -webkit-clip-path: inset(0 round var(--bottom-navigation-inner-radius));
+  clip-path: inset(0 round var(--bottom-navigation-inner-radius));
+}
+
+/*
  * LiquidGlass 的根节点有明确尺寸，但库内部的 .glass 默认是 inline-flex
  * 的 shrink-to-fit 盒子。导航栏的 slot 只有一个百分比填充层时，它会被算成
  * 0×0，backdrop-filter 自然也就没有可见效果。让库自己的材质面填满根节点，
