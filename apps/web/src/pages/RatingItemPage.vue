@@ -52,6 +52,7 @@ const hasMoreComments = ref(false)
 const reportTarget = ref<{ type: 'item' | 'comment'; id: string } | null>(null)
 const notice = ref('')
 let commentRequestID = createRequestID()
+let commentRequestVersion = 0
 let noticeTimer: number | undefined
 
 const commentLength = computed(() => Array.from(commentBody.value.trim()).length)
@@ -70,11 +71,12 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
 async function loadPage() {
   loading.value = true
   error.value = ''
+  // Comments have their own loading state and must not delay the item or its image.
+  void loadComments(true)
   try {
     const loaded = await getRatingItem(itemID.value)
     item.value = loaded
     selectedStars.value = loaded.my_rating?.status === 'active' ? loaded.my_rating.stars : 0
-    await loadComments(true)
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '评分对象加载失败'
   } finally {
@@ -119,6 +121,7 @@ async function withdrawRating() {
 
 async function loadComments(reset: boolean) {
   if (!reset && !hasMoreComments.value) return
+  const version = ++commentRequestVersion
   commentsLoading.value = true
   commentError.value = ''
   try {
@@ -127,15 +130,17 @@ async function loadComments(reset: boolean) {
       cursor: reset ? undefined : nextCommentCursor.value ?? undefined,
       limit: 20,
     })
+    if (version !== commentRequestVersion) return
     comments.value = reset
       ? page.items
       : Array.from(new Map([...comments.value, ...page.items].map((entry) => [entry.id, entry])).values())
     nextCommentCursor.value = page.next_cursor
     hasMoreComments.value = page.has_more
   } catch (reason) {
+    if (version !== commentRequestVersion) return
     commentError.value = reason instanceof Error ? reason.message : '评论加载失败'
   } finally {
-    commentsLoading.value = false
+    if (version === commentRequestVersion) commentsLoading.value = false
   }
 }
 

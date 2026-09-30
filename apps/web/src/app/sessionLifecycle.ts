@@ -19,6 +19,8 @@ import { useSessionStore } from '@/features/session'
 import {
   clearRatingAccessToken,
   clearRatingAssetCache,
+  getRatingAccessToken,
+  isRatingsConfigured,
   logoutRatingsSession,
 } from '@/features/ratings'
 
@@ -52,6 +54,7 @@ export async function checkSession(force = false) {
   const session = useSessionStore()
   const authenticated = await session.check(hasOfflineUserData, force)
   if (session.status === 'anonymous') await clearUserData()
+  if (authenticated) warmRatingAccess()
   return authenticated
 }
 
@@ -61,6 +64,12 @@ export async function loginSession(username: string, password: string) {
   await useSessionStore().login(username, password)
   // 新账号登录成功后先移除上一会话的本机数据，避免共享设备上串用课表和个人信息。
   await clearUserData()
+  warmRatingAccess()
+}
+
+function warmRatingAccess() {
+  // Share the pending token request with the first ratings page without delaying login.
+  if (isRatingsConfigured()) void getRatingAccessToken().catch(() => undefined)
 }
 
 export async function logoutSession() {
