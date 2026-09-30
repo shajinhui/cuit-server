@@ -21,6 +21,9 @@ export interface WeekDate {
 
 export interface CourseSlotCourse {
   id: string
+  day: number
+  start: number
+  span: number
   name: string
   room: string
   experimentStartTime?: string
@@ -38,9 +41,6 @@ export interface CourseSlotCourse {
 }
 
 export interface CourseBlock extends CourseSlotCourse {
-  day: number
-  start: number
-  span: number
   courses: CourseSlotCourse[]
   conflict: boolean
 }
@@ -443,9 +443,39 @@ function arrangementSignature(arrangements: CourseArrangement[]) {
   return arrangements
     .map(
       (arrangement) =>
-        `${arrangement.room}\u0000${arrangement.teachers.join('\u0000')}\u0000${arrangement.weeks.join(',')}\u0000${arrangement.startTime ?? ''}\u0000${arrangement.endTime ?? ''}`,
+        `${arrangement.room}\u0000${arrangement.teachers.join('\u0000')}\u0000${arrangement.weeks.join(',')}\u0000${arrangement.startTime ?? ''}\u0000${arrangement.endTime ?? ''}\u0000${arrangement.activityType ?? ''}\u0000${arrangement.projectName ?? ''}`,
     )
     .join('\u0001')
+}
+
+function activeArrangementSignature(block: CourseBlock, selectedWeek: number) {
+  const signatures = block.arrangements
+    .filter((arrangement) => isArrangementActive(arrangement, selectedWeek))
+    .map((arrangement) => arrangementSignature([
+      {
+        ...arrangement,
+        room: arrangement.room.trim(),
+        teachers: [...arrangement.teachers].sort(),
+        weeks: [],
+        // Theory sections follow the grid clock; precise experiment sessions
+        // must retain their own time range even when their sections are adjacent.
+        startTime: arrangement.activityType?.includes('实验') ? arrangement.startTime : undefined,
+        endTime: arrangement.activityType?.includes('实验') ? arrangement.endTime : undefined,
+      },
+    ]))
+  return [...new Set(signatures)].sort().join('\u0001')
+}
+
+function areContinuousActiveCourseBlocks(left: CourseBlock, right: CourseBlock, selectedWeek: number) {
+  return (
+    left.source === 'jwxt' &&
+    right.source === 'jwxt' &&
+    left.colorKey === right.colorKey &&
+    left.name === right.name &&
+    left.day === right.day &&
+    left.start + left.span === right.start &&
+    activeArrangementSignature(left, selectedWeek) === activeArrangementSignature(right, selectedWeek)
+  )
 }
 
 function groupCourseSlots(blocks: CourseBlock[], selectedWeek: number) {
@@ -453,7 +483,9 @@ function groupCourseSlots(blocks: CourseBlock[], selectedWeek: number) {
     return exactSlotGroups(blocks).map((slotBlocks) => buildSlotGroup(slotBlocks, selectedWeek))
   }
 
-  const activeGroups = overlappingSlotGroups(blocks.filter((block) => !block.muted))
+  // Join adjacent sections only for display in this week. Keep the original
+  // entries (and their IDs, weeks and times) for course editing and ICS export.
+  const activeGroups = activeSlotGroups(blocks.filter((block) => !block.muted), selectedWeek)
   const remainingInactive: CourseBlock[] = []
   for (const inactive of blocks.filter((block) => block.muted)) {
     const activeGroup = activeGroups.find((group) =>
@@ -485,7 +517,7 @@ function exactSlotGroups(blocks: CourseBlock[]) {
   return [...slots.values()]
 }
 
-function overlappingSlotGroups(blocks: CourseBlock[]) {
+function activeSlotGroups(blocks: CourseBlock[], selectedWeek: number) {
   const groups: CourseBlock[][] = []
   const sorted = [...blocks].sort(
     (left, right) =>
@@ -496,11 +528,20 @@ function overlappingSlotGroups(blocks: CourseBlock[]) {
   )
 
   for (const block of sorted) {
-    const current = groups[groups.length - 1]
-    if (!current || !current.some((candidate) => blocksOverlap(candidate, block))) {
+    const connected = groups.filter((group) => group.some((candidate) =>
+      blocksOverlap(candidate, block) || areContinuousActiveCourseBlocks(candidate, block, selectedWeek),
+    ))
+    const current = connected[0]
+    if (!current) {
       groups.push([block])
     } else {
       current.push(block)
+      // A section can connect its preceding course to a simultaneous conflict.
+      // Combine every connected group so the result is independent of ordering.
+      for (const group of connected.slice(1)) {
+        current.push(...group)
+        groups.splice(groups.indexOf(group), 1)
+      }
     }
   }
   return groups
@@ -583,6 +624,9 @@ function buildSlotGroup(slotBlocks: CourseBlock[], selectedWeek: number): Course
 function toSlotCourse(block: CourseBlock): CourseSlotCourse {
   return {
     id: block.id,
+    day: block.day,
+    start: block.start,
+    span: block.span,
     name: block.name,
     room: block.room,
     experimentStartTime: block.experimentStartTime,

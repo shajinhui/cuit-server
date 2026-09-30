@@ -89,6 +89,36 @@ describe('schedule calendar export', () => {
     expect(result.content).toContain('授课项目：信号采集实验')
   })
 
+  it('exports the original weeks and times of sections joined on the weekly grid', () => {
+    const course = createCourse({
+      Name: '申论B',
+      Activities: [
+        {
+          ...createActivity('H1307', [1, 2]),
+          StartSection: 7, EndSection: 8, StartTime: '15:50', EndTime: '17:30',
+        },
+        {
+          ...createActivity('H1307', [1]),
+          StartSection: 9, EndSection: 9, StartTime: '17:40', EndTime: '18:25',
+        },
+      ],
+    })
+
+    const result = createScheduleCalendarExport({ semester, table: createTable([course]) })
+    const events = result.content.split('BEGIN:VEVENT').slice(1)
+
+    expect(result.courseCount).toBe(1)
+    expect(result.eventCount).toBe(3)
+    expect(events.map((event) => [
+      event.match(/DTSTART;TZID=Asia\/Shanghai:(\d+T\d+)/)?.[1],
+      event.match(/DTEND;TZID=Asia\/Shanghai:(\d+T\d+)/)?.[1],
+    ])).toEqual([
+      ['20260907T155000', '20260907T173000'],
+      ['20260914T155000', '20260914T173000'],
+      ['20260907T174000', '20260907T182500'],
+    ])
+  })
+
   it('includes manual courses and applies saved course overrides', () => {
     const course = createCourse()
     const result = createScheduleCalendarExport({

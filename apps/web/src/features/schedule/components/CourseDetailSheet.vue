@@ -29,9 +29,7 @@ const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '�
 
 const timeLabel = computed(() => {
   if (!props.course) return ''
-  const end = props.course.start + props.course.span - 1
-  const sections = end === props.course.start ? `第 ${props.course.start} 节` : `第 ${props.course.start}–${end} 节`
-  return `${weekdays[props.course.day - 1] ?? '上课日期待定'} · ${sections}`
+  return formatCourseTime(props.course)
 })
 
 const detailRows = computed(() => {
@@ -78,6 +76,9 @@ const removableCourses = computed(() => {
 })
 
 const editableCourses = computed(() => props.course?.courses ?? [])
+const colorCourses = computed(() =>
+  [...new Map(editableCourses.value.map((course) => [course.colorKey, course])).values()],
+)
 
 watch(
   () => props.course?.id,
@@ -131,7 +132,13 @@ function formatSlotCourse(course: CourseSlotCourse) {
     .map(formatArrangement)
     .join('；')
   const teachers = course.teachers.length > 0 ? ` · ${course.teachers.join('、')}` : ''
-  return `${course.name}\n${arrangements}${teachers}`
+  return `${course.name} · ${formatCourseTime(course)}\n${arrangements}${teachers}`
+}
+
+function formatCourseTime(course: CourseSlotCourse) {
+  const end = course.start + course.span - 1
+  const sections = end === course.start ? `第 ${course.start} 节` : `第 ${course.start}–${end} 节`
+  return `${weekdays[course.day - 1] ?? '上课日期待定'} · ${sections}`
 }
 
 function formatArrangement(arrangement: CourseSlotCourse['arrangements'][number]) {
@@ -218,9 +225,9 @@ function formatWeeks(weeks: number[]) {
             </div>
           </dl>
 
-          <div v-if="editableCourses.length > 0" class="course-color-settings">
+          <div v-if="colorCourses.length > 0" class="course-color-settings">
             <div
-              v-for="editableCourse in editableCourses"
+              v-for="editableCourse in colorCourses"
               :key="`color-${editableCourse.id}`"
               class="course-color-setting"
             >
@@ -233,7 +240,7 @@ function formatWeeks(weeks: number[]) {
               >
                 <span>
                   <strong>课程颜色</strong>
-                  <small v-if="editableCourses.length > 1">{{ editableCourse.name }}</small>
+                  <small v-if="colorCourses.length > 1">{{ editableCourse.name }}</small>
                   <small v-else>{{ hasCustomColor(editableCourse) ? '自定义' : '自动分配' }}</small>
                 </span>
                 <i
@@ -322,7 +329,7 @@ function formatWeeks(weeks: number[]) {
               >
                 {{
                   editableCourses.length > 1
-                    ? `修改“${editableCourse.name}”`
+                    ? `修改“${editableCourse.name}”（${formatCourseTime(editableCourse)}）`
                     : '修改课程'
                 }}
               </button>

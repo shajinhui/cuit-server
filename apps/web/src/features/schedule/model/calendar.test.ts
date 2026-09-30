@@ -348,6 +348,176 @@ describe('schedule calendar model', () => {
     expect(buildCourseBlocks([course], 1)).toHaveLength(2)
   })
 
+  it('joins consecutive sections for the selected week and preserves each original schedule', () => {
+    const course = createCourse('申论B', [
+      createActivity({
+        Weekday: 2, StartSection: 7, EndSection: 8, RoomName: 'H1307',
+        Weeks: [1, 2], StartTime: '15:50', EndTime: '17:30',
+      }),
+      createActivity({
+        Weekday: 2, StartSection: 9, EndSection: 9, RoomName: 'H1307',
+        Weeks: [1], StartTime: '17:40', EndTime: '18:25',
+      }),
+    ])
+
+    const blocks = buildCourseBlocks([course], 1)
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]).toMatchObject({
+      name: '申论B', room: 'H1307', day: 2, start: 7, span: 3,
+      muted: false, conflict: false,
+      courses: [
+        { id: '申论B-2-7-8', day: 2, start: 7, span: 2, weeks: [1, 2] },
+        { id: '申论B-2-9-9', day: 2, start: 9, span: 1, weeks: [1] },
+      ],
+    })
+    expect(buildCourseBlocks([course], 2).map(({ start, span, muted }) => ({ start, span, muted })))
+      .toEqual([
+        { start: 7, span: 2, muted: false },
+        { start: 9, span: 1, muted: true },
+      ])
+    expect(buildCourseBlocks([course], 3)).toHaveLength(2)
+    expect(buildCourseBlocks([course], 0)).toHaveLength(2)
+  })
+
+  it('uses the current room arrangement when joining three consecutive sections', () => {
+    const course = createCourse('申论B', [7, 8, 9].flatMap((section) => [
+      createActivity({
+        StartSection: section, EndSection: section, RoomName: 'H1307', Weeks: [1],
+      }),
+      createActivity({
+        StartSection: section, EndSection: section, RoomName: `H220${section}`, Weeks: [2],
+      }),
+    ]))
+
+    expect(buildCourseBlocks([course], 1)).toMatchObject([
+      { start: 7, span: 3, room: 'H1307', conflict: false },
+    ])
+    expect(buildCourseBlocks([course], 2)).toHaveLength(3)
+  })
+
+  it.each([
+    { RoomName: 'H2201' },
+    { Teachers: ['另一位老师'] },
+    { ActivityType: '实验' },
+    { ProjectName: '另一个项目' },
+    { Weekday: 3 },
+  ])('keeps consecutive sections separate when their arrangements differ: %j', (different) => {
+    const course = createCourse('申论B', [
+      createActivity({ StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [1] }),
+      createActivity({
+        StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1], ...different,
+      }),
+    ])
+
+    expect(buildCourseBlocks([course], 1)).toHaveLength(2)
+  })
+
+  it('keeps separate lessons with the same name in separate consecutive cards', () => {
+    const first = createCourse('申论B', [
+      createActivity({ StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [1] }),
+    ])
+    const second = {
+      ...createCourse('申论B', [
+        createActivity({ StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1] }),
+      ]),
+      LessonID: 'another-lesson',
+    }
+
+    expect(buildCourseBlocks([first, second], 1)).toHaveLength(2)
+  })
+
+  it('joins every-week and selected-week sections regardless of teacher ordering', () => {
+    const course = createCourse('申论B', [
+      createActivity({
+        StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [],
+        Teachers: ['张老师', '李老师'],
+      }),
+      createActivity({
+        StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1],
+        Teachers: ['李老师', '张老师'],
+      }),
+    ])
+
+    expect(buildCourseBlocks([course], 1)).toMatchObject([{ start: 7, span: 3, conflict: false }])
+    expect(buildCourseBlocks([course], 2)).toHaveLength(2)
+  })
+
+  it('keeps precise experiment sessions separate when their times differ', () => {
+    const course = createCourse('实验课程', [
+      createActivity({
+        StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [1],
+        ActivityType: '实验', StartTime: '15:50', EndTime: '17:30',
+      }),
+      createActivity({
+        StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1],
+        ActivityType: '实验', StartTime: '17:40', EndTime: '18:25',
+      }),
+    ])
+
+    expect(buildCourseBlocks([course], 1).map(({ experimentStartTime, experimentEndTime }) =>
+      [experimentStartTime, experimentEndTime],
+    )).toEqual([['15:50', '17:30'], ['17:40', '18:25']])
+  })
+
+  it('still marks another course overlapping a joined section as a conflict', () => {
+    const course = createCourse('申论B', [
+      createActivity({ StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [1, 2] }),
+      createActivity({ StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1] }),
+    ])
+    const conflict = createCourse('另一门课', [
+      createActivity({ StartSection: 9, EndSection: 9, Weeks: [1] }),
+    ])
+
+    const blocks = buildCourseBlocks([course, conflict], 1)
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]).toMatchObject({ start: 7, span: 3, conflict: true })
+    expect(blocks[0].courses).toHaveLength(3)
+  })
+
+  it('still applies a saved edit to an individual section after its card is joined', () => {
+    const course = createCourse('申论B', [
+      createActivity({ StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [1, 2] }),
+      createActivity({ StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1] }),
+    ])
+    const joined = buildCourseBlocks([course], 1)
+    expect(joined).toHaveLength(1)
+    const ninthSection = joined[0].courses.find((entry) => entry.id === '申论B-1-9-9')
+    expect(ninthSection).toBeDefined()
+
+    const edited = buildCourseBlocks([course], 1, [], [{
+      targetID: '申论B-1-9-9', semesterID: 'semester-1', name: '申论B', room: 'H2201',
+      weekday: 1, startSection: 9, endSection: 9, weeks: [1],
+    }])
+
+    expect(edited.map(({ start, span, room }) => ({ start, span, room }))).toEqual([
+      { start: 7, span: 2, room: 'H1307' },
+      { start: 9, span: 1, room: 'H2201' },
+    ])
+  })
+
+  it('preserves saved section IDs when teacher lists use different ordering', () => {
+    const course = createCourse('申论B', [
+      createActivity({
+        StartSection: 7, EndSection: 8, RoomName: 'H1307', Weeks: [1],
+        Teachers: ['张老师', '李老师'],
+      }),
+      createActivity({
+        StartSection: 9, EndSection: 9, RoomName: 'H1307', Weeks: [1],
+        Teachers: ['李老师', '张老师'],
+      }),
+    ])
+    const blocks = buildCourseBlocks([course], 1, [], [{
+      targetID: '申论B-1-9-9', semesterID: 'semester-1', name: '申论B', room: 'H2201',
+      weekday: 1, startSection: 9, endSection: 9, weeks: [1],
+    }])
+
+    expect(blocks.map(({ id, room }) => ({ id, room }))).toEqual([
+      { id: '申论B-1-7-8', room: 'H1307' },
+      { id: '申论B-1-9-9', room: 'H2201' },
+    ])
+  })
+
   it('does not draw overlapping inactive schedule variants', () => {
     const course = createCourse('实验 数字电路与逻辑设计B', [
       createActivity({

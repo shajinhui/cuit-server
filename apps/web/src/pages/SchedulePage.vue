@@ -234,9 +234,9 @@ function openCourseEditor(course: CourseSlotCourse) {
     source: course.source,
     name: course.name,
     room: course.room,
-    weekday: courseBlock.day,
-    startSection: courseBlock.start,
-    endSection: courseBlock.start + courseBlock.span - 1,
+    weekday: course.day,
+    startSection: course.start,
+    endSection: course.start + course.span - 1,
     weeks: [...course.weeks],
   }
   selectedCourse.value = null
