@@ -26,15 +26,15 @@ export interface AnnouncementViewState {
 export const ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT = 2
 
 export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
-  id: 'sponsor-workbuddy-2026-09-29',
-  title: '接了个小广告，谢谢支持',
+  id: 'android-apk-1-0-0-2026-10-09',
+  title: '安卓最新版已发布',
   description:
-    '作者维护需要成本，这里打一个小广告，大家动动手指支持作者：点击专属链接进去注册，然后领取积分，谢谢支持。',
+    '安卓用户请下载最新版成信友友，已修复页面布局问题。点击下方链接下载安装包。',
   promotion: {
-    tag: '作者小广告',
-    headline: '点击领取 WorkBuddy 积分，让 AI 替你肝',
-    url: 'https://uv.qq.com/s1gi24WP',
-    actionLabel: '立即领取积分',
+    tag: 'Android 最新版',
+    headline: '成信友友 Android 1.0.0',
+    url: 'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk',
+    actionLabel: '下载最新版',
   },
 }
 

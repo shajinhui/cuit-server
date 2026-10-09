@@ -45,6 +45,9 @@ describe('当前公告内容', () => {
     expect(promotion.tag.trim().length).toBeGreaterThan(0)
     expect(promotion.headline.trim().length).toBeGreaterThan(0)
     expect(promotion.actionLabel.trim().length).toBeGreaterThan(0)
+    expect(promotion.url).toBe(
+      'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk',
+    )
   })
 
   it('公告文案不含占位内容', () => {
