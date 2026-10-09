@@ -23,7 +23,7 @@ const { openInstallGuide } = usePwaInstall()
 const usageChooserVisible = ref(false)
 const heroStage = ref<HTMLElement | null>(null)
 const androidAPKURL =
-  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/v1.0.0/app-release-signed.apk'
+  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk'
 let revealObserver: IntersectionObserver | undefined
 let previousTitle = ''
 
