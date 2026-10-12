@@ -12,6 +12,8 @@
 
 服务端 API 不在公开仓库中；本地开发时通过 `VITE_API_BASE_URL` 或 `VITE_DEV_API_TARGET` 指向已部署的接口。
 
+生产构建未配置 `VITE_API_BASE_URL` 时，教务请求默认使用 `https://api.fanxiaogao05.dpdns.org`，避免登录请求落到静态官网。显式配置仍优先；开发环境未配置时继续通过 Vite 同源代理访问接口。
+
 ## 校园二手接口
 
 评分和二手均通过 `VITE_RATINGS_API_BASE_URL` 连接独立的校园后端 `cuit-ratings-api`，沿用 `/api/v1/auth/ratings-token` 签发的登录凭证。二手请求路径为 `/api/v1/marketplace/*`，图片复用 `/api/v1/ratings/assets`。
@@ -49,4 +51,4 @@ src/styles/    # 全局样式
 
 ## 安全边界
 
-前端不保存教务密码、Cookie 或认证票据；接口地址与真实凭据只通过本地环境变量或部署平台配置提供。Service Worker 只缓存前端静态资源，不缓存接口响应。
+前端不保存教务密码、Cookie 或认证票据；真实凭据不得写入代码或静态构建产物。接口地址可通过本地环境变量或部署平台配置覆盖。Service Worker 只缓存前端静态资源，不缓存接口响应。

@@ -25,7 +25,15 @@ function unwrapPayload<T>(payload: ApiResponse<T>, status: number, retryAfterSec
   return payload.data
 }
 
-const apiBaseURL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const PRODUCTION_API_BASE_URL = 'https://api.fanxiaogao05.dpdns.org'
+
+export function resolveApiBaseURL(configuredBaseURL: string | undefined, production: boolean): string {
+  // Pages 构建漏配地址时不能把登录发回静态官网；开发环境仍保留同源代理。
+  const baseURL = configuredBaseURL?.trim() || (production ? PRODUCTION_API_BASE_URL : '')
+  return baseURL.replace(/\/$/, '')
+}
+
+const apiBaseURL = resolveApiBaseURL(import.meta.env.VITE_API_BASE_URL, import.meta.env.PROD)
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const demoResponse = requestDemoResponse(path, options)
