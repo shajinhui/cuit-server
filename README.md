@@ -6,7 +6,9 @@
 
 - 在线访问：<https://fanxiaogao05.dpdns.org>
 - Android 构建说明：[apps/web/ANDROID.md](apps/web/ANDROID.md)
+- Flutter 鸿蒙适配与 HAP 构建：[flutter/ohos/README.md](flutter/ohos/README.md)
 - Web 开发说明：[apps/web/DEVELOPMENT.md](apps/web/DEVELOPMENT.md)
+- Flutter 移动端：[工程与构建说明](flutter/README.md)、[架构与编码规范](docs/architecture/FLUTTER_ARCHITECTURE.md)（登录、课表、工具、校园、我的和桌面小组件；另提供鸿蒙适配工程）
 
 > 本项目是非官方学生项目，与成都信息工程大学及学校教务系统运营方无隶属或授权关系。
 

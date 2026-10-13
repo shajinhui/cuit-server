@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 大卡片：4×4 格，显示今日最多 5 节课。下限 300dp 保证 3 节课完整，
+     上限 620dp 覆盖 4×6 桌面上 6 行的可用高度。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="240dp" android:minHeight="300dp"
+    android:minResizeWidth="130dp" android:minResizeHeight="300dp"
+    android:maxResizeWidth="480dp" android:maxResizeHeight="620dp"
+    android:targetCellWidth="4" android:targetCellHeight="4"
+    android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
+    android:updatePeriodMillis="1800000" android:initialLayout="@layout/schedule_widget"
+    android:previewLayout="@layout/schedule_widget"
+    android:description="@string/widget_description_large" />

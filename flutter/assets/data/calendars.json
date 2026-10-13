@@ -1,0 +1,8 @@
+[
+  { "schoolYear": "2024-2025", "term": "1", "firstWeekMonday": "2024-09-02", "weekCount": 20, "source": "https://jwc.cuit.edu.cn/xl2024_2025.png" },
+  { "schoolYear": "2024-2025", "term": "2", "firstWeekMonday": "2025-02-24", "weekCount": 20, "source": "https://jwc.cuit.edu.cn/xl2024_2025.png" },
+  { "schoolYear": "2025-2026", "term": "1", "firstWeekMonday": "2025-09-08", "weekCount": 20, "source": "https://jwc.cuit.edu.cn/xl2025_2026.png" },
+  { "schoolYear": "2025-2026", "term": "2", "firstWeekMonday": "2026-03-02", "weekCount": 20, "source": "https://jwc.cuit.edu.cn/xl2025_2026.png" },
+  { "schoolYear": "2026-2027", "term": "1", "firstWeekMonday": "2026-09-07", "weekCount": 19, "source": "https://jwc.cuit.edu.cn/xl2026_2027.png" },
+  { "schoolYear": "2026-2027", "term": "2", "firstWeekMonday": "2027-02-22", "weekCount": 19, "source": "https://jwc.cuit.edu.cn/xl2026_2027.png" }
+]

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小卡片：2×2 格，只显示下一节课。宽度小于 220dp 时
+     ScheduleWidgetProvider 会自动切到窄卡文案，不再另做布局。
+     下限 160dp 与中卡片一致：标题、周次、一节课的时间与地点共需约 156dp，
+     再矮就只能看到被裁切的课程行。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp" android:minHeight="160dp"
+    android:minResizeWidth="110dp" android:minResizeHeight="160dp"
+    android:maxResizeWidth="480dp" android:maxResizeHeight="420dp"
+    android:targetCellWidth="2" android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
+    android:updatePeriodMillis="1800000" android:initialLayout="@layout/schedule_widget"
+    android:previewLayout="@layout/schedule_widget"
+    android:description="@string/widget_description_small" />

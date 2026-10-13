@@ -1,0 +1,338 @@
+{
+  "semesters": [
+    {
+      "ID": "2025-2026-2",
+      "SchoolYear": "2025-2026",
+      "Term": "2",
+      "Current": true
+    },
+    {
+      "ID": "2025-2026-1",
+      "SchoolYear": "2025-2026",
+      "Term": "1"
+    },
+    {
+      "ID": "2024-2025-2",
+      "SchoolYear": "2024-2025",
+      "Term": "2"
+    }
+  ],
+  "table": {
+    "SemesterID": "2025-2026-2",
+    "WeekCount": 18,
+    "SectionsPerDay": 12,
+    "Courses": [
+      {
+        "LessonID": "demo-lesson-001",
+        "Code": "DEMO101",
+        "Name": "数据结构",
+        "Credits": "4.0",
+        "Sequence": "1",
+        "TeachingClass": "数据结构-01班",
+        "Teachers": [
+          "演示老师甲"
+        ],
+        "Activities": [
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师甲"
+            ],
+            "RoomID": "demo-room-h6407",
+            "RoomName": "H6407",
+            "Weekday": 1,
+            "StartSection": 1,
+            "EndSection": 2,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          },
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师甲"
+            ],
+            "RoomID": "demo-room-h6407",
+            "RoomName": "H6407",
+            "Weekday": 3,
+            "StartSection": 3,
+            "EndSection": 4,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          }
+        ]
+      },
+      {
+        "LessonID": "demo-lesson-002",
+        "Code": "DEMO102",
+        "Name": "操作系统原理",
+        "Credits": "3.5",
+        "Sequence": "1",
+        "TeachingClass": "操作系统原理-02班",
+        "Teachers": [
+          "演示老师乙"
+        ],
+        "Activities": [
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师乙"
+            ],
+            "RoomID": "demo-room-h1208",
+            "RoomName": "H1208",
+            "Weekday": 2,
+            "StartSection": 1,
+            "EndSection": 2,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          },
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师乙"
+            ],
+            "RoomID": "demo-room-h1208",
+            "RoomName": "H1208",
+            "Weekday": 4,
+            "StartSection": 5,
+            "EndSection": 6,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          }
+        ]
+      },
+      {
+        "LessonID": "demo-lesson-003",
+        "Code": "DEMO103",
+        "Name": "计算机网络",
+        "Credits": "3.0",
+        "Sequence": "1",
+        "TeachingClass": "计算机网络-01班",
+        "Teachers": [
+          "演示老师丙"
+        ],
+        "Activities": [
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师丙"
+            ],
+            "RoomID": "demo-room-h6502",
+            "RoomName": "H6502",
+            "Weekday": 1,
+            "StartSection": 3,
+            "EndSection": 4,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          },
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师丙"
+            ],
+            "RoomID": "demo-room-lab-b412",
+            "RoomName": "实验楼B412",
+            "Weekday": 5,
+            "StartSection": 5,
+            "EndSection": 8,
+            "Weeks": [
+              3,
+              5,
+              7,
+              9,
+              11
+            ],
+            "StartTime": "14:00",
+            "EndTime": "17:30",
+            "ActivityType": "实验",
+            "ProjectName": "网络协议分析实验"
+          }
+        ]
+      },
+      {
+        "LessonID": "demo-lesson-004",
+        "Code": "DEMO104",
+        "Name": "软件工程",
+        "Credits": "3.0",
+        "Sequence": "1",
+        "TeachingClass": "软件工程-03班",
+        "Teachers": [
+          "演示老师丁"
+        ],
+        "Activities": [
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师丁"
+            ],
+            "RoomID": "demo-room-h4313",
+            "RoomName": "H4313",
+            "Weekday": 3,
+            "StartSection": 5,
+            "EndSection": 6,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          },
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师丁"
+            ],
+            "RoomID": "demo-room-h4313",
+            "RoomName": "H4313",
+            "Weekday": 5,
+            "StartSection": 1,
+            "EndSection": 2,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          }
+        ]
+      },
+      {
+        "LessonID": "demo-lesson-005",
+        "Code": "DEMO105",
+        "Name": "大学英语（四）",
+        "Credits": "2.0",
+        "Sequence": "1",
+        "TeachingClass": "大学英语-05班",
+        "Teachers": [
+          "演示老师戊"
+        ],
+        "Activities": [
+          {
+            "TeacherIDs": null,
+            "Teachers": [
+              "演示老师戊"
+            ],
+            "RoomID": "demo-room-h2205",
+            "RoomName": "H2205",
+            "Weekday": 4,
+            "StartSection": 7,
+            "EndSection": 8,
+            "Weeks": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

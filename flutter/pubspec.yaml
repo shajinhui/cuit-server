@@ -1,0 +1,61 @@
+name: chengxin_youyou
+description: 成信友友 Flutter 移动客户端
+publish_to: none
+version: 0.1.0+2
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+  flutter: '>=3.44.9'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  provider: ^6.1.5
+  go_router: ^17.0.0
+  dio: ^5.9.0
+  dio_cookie_manager: ^3.3.0
+  cookie_jar: ^4.0.8
+  flutter_secure_storage: ^10.0.0
+  path_provider: ^2.1.5
+  shared_preferences: ^2.5.3
+  liquid_glass_easy: 4.3.4
+  share_plus: ^13.3.0
+  url_launcher: ^6.3.3
+  collection: ^1.19.1
+  native_collator:
+    path: packages/native_collator
+  image_picker: ^1.2.3
+  shorebird_code_push: ^2.0.7
+  path_provider_ohos:
+    path: packages/ohos_plugins/path_provider_ohos
+  shared_preferences_ohos:
+    path: packages/ohos_plugins/shared_preferences_ohos
+  url_launcher_ohos:
+    path: packages/ohos_plugins/url_launcher_ohos
+  image_picker_ohos:
+    path: packages/ohos_plugins/image_picker_ohos
+  share_plus_ohos:
+    path: packages/ohos_plugins/share_plus_ohos
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/
+    - assets/data/calendars.json
+    - assets/data/demo_schedule.json
+    - assets/data/past-exams-index.json
+    - assets/icons/navigation/
+    - assets/icons/tools/
+    - assets/maps/
+    - assets/avatars/
+    - assets/data/autorun/
+    - shorebird.yaml

@@ -1,0 +1,13 @@
+{
+  "images" : [
+    {
+      "filename" : "nav-profile-tab.png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

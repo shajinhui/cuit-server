@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 中卡片：桌面小组件列表里的默认项，4×2 格，显示今日课程。
+     上限写死是为了让各家桌面都给出可拖动的范围：框架在 maxResize 缺省时按 0
+     下发给桌面，解释方式因 ROM 而异；420dp 高度正好容纳标题、页脚与 5 节课。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="240dp" android:minHeight="160dp"
+    android:minResizeWidth="130dp" android:minResizeHeight="160dp"
+    android:maxResizeWidth="480dp" android:maxResizeHeight="420dp"
+    android:targetCellWidth="4" android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen"
+    android:updatePeriodMillis="1800000" android:initialLayout="@layout/schedule_widget"
+    android:previewLayout="@layout/schedule_widget"
+    android:description="@string/widget_description" />

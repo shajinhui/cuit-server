@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    # 鸿蒙插件保留上游源码，生成器和其他平台实现按插件自己的工具链检查。
+    # 主工程仍检查 lib/、测试以及实际使用这些插件的调用代码。
+    - packages/ohos_plugins/**

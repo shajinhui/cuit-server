@@ -1,0 +1,21 @@
+name: share_plus_ohos
+description: OpenHarmony implementation for share_plus.
+version: 12.0.1
+repository: https://gitcode.com/openharmony-sig/flutter_plus_plugins
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.35.0"
+
+flutter:
+  plugin:
+    implements: share_plus
+    platforms:
+      ohos:
+        package: dev.fluttercommunity.plus.share
+        pluginClass: SharePlusOhosPlugin
+
+dependencies:
+  flutter:
+    sdk: flutter
+  share_plus_platform_interface: ^7.2.0

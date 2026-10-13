@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "成信友友鸿蒙入口"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "成信友友 Flutter 鸿蒙客户端"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "成信友友"
+    }
+  ]
+}

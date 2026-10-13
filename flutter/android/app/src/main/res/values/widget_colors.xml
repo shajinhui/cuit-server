@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_background">#F1F6FF</color>
+    <color name="widget_accent">#1764CE</color>
+    <color name="widget_text">#15243A</color>
+    <color name="widget_muted">#58677D</color>
+    <!-- 三种尺寸各自注册一个组件，桌面添加列表里才看得到小／中／大可选。 -->
+    <string name="widget_name_small">成信友友 · 下一节课（小）</string>
+    <string name="widget_name">成信友友 · 今日课程（中）</string>
+    <string name="widget_name_large">成信友友 · 今日课程（大）</string>
+    <string name="widget_description_small">小卡片只显示下一节课，点击打开课表。</string>
+    <string name="widget_description">查看今日课程与下一节课，点击打开课表。</string>
+    <string name="widget_description_large">大卡片按高度显示今日最多 5 节课，点击打开课表。</string>
+</resources>
