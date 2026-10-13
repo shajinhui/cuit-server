@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Capacitor } from '@capacitor/core'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
@@ -14,6 +15,7 @@ import landingSchedule from '@/assets/landing/landing-schedule.webp'
 import landingTools from '@/assets/landing/landing-tools.webp'
 import { usePwaInstall } from '@/features/pwa-install'
 import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
+import { ANDROID_DOWNLOAD_URL } from '@/shared/config/downloads'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 defineOptions({ name: 'LandingPage' })
@@ -22,8 +24,6 @@ const router = useRouter()
 const { openInstallGuide } = usePwaInstall()
 const usageChooserVisible = ref(false)
 const heroStage = ref<HTMLElement | null>(null)
-const androidAPKURL =
-  'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk'
 let revealObserver: IntersectionObserver | undefined
 let previousTitle = ''
 
@@ -62,6 +62,11 @@ function openApp() {
 }
 
 function openWebApp() {
+  // 官网未注册应用 Worker；进入网页版时完整导航，让应用正常初始化离线能力。
+  if (!Capacitor.isNativePlatform()) {
+    window.location.assign('/login')
+    return
+  }
   void router.push({ name: 'login' })
 }
 
@@ -379,7 +384,7 @@ function resetHeroPerspective() {
                 </span>
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
               </button>
-              <a class="landing-usage-option landing-usage-option--green" :href="androidAPKURL" rel="noopener noreferrer" download>
+              <a class="landing-usage-option landing-usage-option--green" :href="ANDROID_DOWNLOAD_URL" rel="noopener noreferrer">
                 <span class="landing-usage-option__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M12 3v10M8.5 9.5 12 13l3.5-3.5M6 16v4h12v-4" /></svg>
                 </span>

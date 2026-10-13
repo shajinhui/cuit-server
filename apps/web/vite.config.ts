@@ -4,6 +4,7 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+import { freshNavigationPatterns, freshSiteRuntimeCaching } from './src/app/pwaPolicy'
 import { mockApiPlugin } from './src/mock/vite-plugin'
 
 export default defineConfig(({ mode }) => {
@@ -56,7 +57,8 @@ export default defineConfig(({ mode }) => {
             '**/*.{js,css,html,json,svg,webp,jpg,jpeg,woff,woff2}',
             'assets/**/*.png',
           ],
-          navigateFallbackDenylist: [/^\/api\//, /^\/past-exams\/files\//],
+          navigateFallbackDenylist: [/^\/api\//, /^\/past-exams\/files\//, ...freshNavigationPatterns],
+          runtimeCaching: freshSiteRuntimeCaching,
         },
       }),
     ],

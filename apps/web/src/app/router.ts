@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { createRouter, createWebHistory } from 'vue-router'
 
 import {
@@ -8,6 +9,8 @@ import {
 import { hasUsableRatingAccessToken } from '@/features/ratings'
 import { useSessionStore } from '@/features/session'
 import SchedulePage from '@/pages/SchedulePage.vue'
+
+import { isOfficialPagePath } from './pwaPolicy'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -188,7 +191,12 @@ const router = createRouter({
 
 let backgroundSessionVerification: Promise<void> | undefined
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
+  // 从应用进入官网时走完整网络导航，不复用当前 SPA 里已经加载的旧页面模块。
+  if (isOfficialPagePath(to.path) && from.name && !Capacitor.isNativePlatform()) {
+    window.location.assign(to.fullPath)
+    return false
+  }
   const session = useSessionStore()
   const needsSession = to.name === 'login' || Boolean(to.meta.requiresAuth)
   if (!needsSession) return true

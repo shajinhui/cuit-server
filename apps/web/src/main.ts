@@ -5,6 +5,7 @@ import { registerSW } from 'virtual:pwa-register'
 
 import App from './app/App.vue'
 import { registerNativeRuntime } from './app/nativeRuntime'
+import { isOfficialPagePath } from './app/pwaPolicy'
 import router from './app/router'
 import { registerSessionLifecycle } from './app/sessionLifecycle'
 import { registerAndroidLiveUpdates } from './features/app-updates'
@@ -23,7 +24,16 @@ registerColorSchemeRuntime()
 registerPwaInstall()
 registerNativeRuntime()
 if (!Capacitor.isNativePlatform() && (import.meta.env.PROD || import.meta.env.VITE_PWA_DEV === 'true')) {
-  registerSW({ immediate: true })
+  if (isOfficialPagePath(window.location.pathname)) {
+    // 官网不新建 PWA 缓存；旧用户仍检查已有 Worker 更新，让新缓存边界生效。
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.getRegistration()
+        .then((registration) => registration?.update())
+        .catch(() => undefined)
+    }
+  } else {
+    registerSW({ immediate: true })
+  }
 } else if (!Capacitor.isNativePlatform() && import.meta.env.DEV && 'serviceWorker' in navigator) {
   // A development service worker can reload the app while Vite is starting and make every
   // protected route appear to load twice. Clear registrations left by earlier dev sessions;

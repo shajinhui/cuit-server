@@ -1,3 +1,9 @@
+/official
+  Cache-Control: no-store, max-age=0
+
+/official/
+  Cache-Control: no-store, max-age=0
+
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
 

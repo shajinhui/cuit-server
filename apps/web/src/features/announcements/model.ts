@@ -1,3 +1,5 @@
+import { ANDROID_DOWNLOAD_URL } from '@/shared/config/downloads'
+
 /** 公告里的推广位：作者用来放赞助广告，例如专属注册链接。 */
 export interface AnnouncementPromotion {
   /** 角标文案，说明这是推广内容。 */
@@ -33,7 +35,7 @@ export const ACTIVE_ANNOUNCEMENT: AppAnnouncement = {
   promotion: {
     tag: 'Android 最新版',
     headline: '成信友友 Android 1.0.0',
-    url: 'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk',
+    url: ANDROID_DOWNLOAD_URL,
     actionLabel: '下载最新版',
   },
 }

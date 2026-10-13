@@ -22,6 +22,12 @@
 
 `/marketplace?type=wanted` 可直接进入求购，发布页可切换出售或求购。请求字段 `listing_type` 为 `sell` / `wanted`，`price_cents` 分别表示售价或预算；求购状态显示为“求购中 / 已关闭 / 已求到”。我的发布也按类型筛选。
 
+## 官网与下载更新
+
+`/official` 每次打开或刷新走网络，不使用 PWA 缓存的应用入口，也不注册新的 Service Worker；已有应用 Worker 仍会检查更新。课表等应用页面保持原有离线能力，不清理用户本地数据。
+
+官网、安卓下载提示和公告统一使用固定入口 `https://fanxiaogao05.dpdns.org/downloads/android`。Pages Function 返回不缓存的 `302`，将用户引导到当前 Gitee APK。今后换包只需更新 `src/shared/config/downloads.ts` 的 `LATEST_ANDROID_APK_URL` 并发布，已经打开的旧页面按钮也会获取新的跳转目标。该入口不代理或缓存安装包正文。
+
 ## 本地运行
 
 ```bash

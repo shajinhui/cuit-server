@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { ANDROID_DOWNLOAD_URL } from '@/shared/config/downloads'
+
 import {
   ACTIVE_ANNOUNCEMENT,
   getAnnouncementViewCount,
@@ -45,9 +47,7 @@ describe('当前公告内容', () => {
     expect(promotion.tag.trim().length).toBeGreaterThan(0)
     expect(promotion.headline.trim().length).toBeGreaterThan(0)
     expect(promotion.actionLabel.trim().length).toBeGreaterThan(0)
-    expect(promotion.url).toBe(
-      'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk',
-    )
+    expect(promotion.url).toBe(ANDROID_DOWNLOAD_URL)
   })
 
   it('公告文案不含占位内容', () => {
