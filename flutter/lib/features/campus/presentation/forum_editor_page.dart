@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
@@ -131,6 +132,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   }
 
   Future<void> _submit() async {
+    if (_submitting) return;
     final repository = widget.repository;
     final categoryId = _selectedCategoryId;
     final title = _titleController.text.trim();
@@ -177,12 +179,12 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
         );
       } else {
         // 内容变化后更换幂等键，避免把修改后的内容当成旧请求的重试。
-        final payloadKey = [
+        final payloadKey = jsonEncode([
           categoryId,
           title,
           body,
           ...imageAssetIds,
-        ].join(' ');
+        ]);
         if (_lastPayload.isNotEmpty && _lastPayload != payloadKey) {
           _requestId = createCampusRequestId();
         }
@@ -287,6 +289,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
                 TextField(
                   key: const ValueKey('forum-thread-title'),
                   controller: _titleController,
+                  enabled: !_submitting,
                   maxLength: 50,
                   decoration: const InputDecoration(
                     labelText: '标题',
@@ -296,6 +299,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
                 TextField(
                   key: const ValueKey('forum-thread-body'),
                   controller: _bodyController,
+                  enabled: !_submitting,
                   maxLength: 2000,
                   minLines: 5,
                   maxLines: 12,

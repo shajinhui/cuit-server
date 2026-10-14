@@ -76,10 +76,13 @@ class _ForumMinePageState extends State<ForumMinePage> {
     }
   }
 
-  void _openThread(ForumThread thread) => context.pushNamed(
-    'forum-thread',
-    pathParameters: {'threadId': thread.id},
-  );
+  Future<void> _openThread(ForumThread thread) async {
+    await context.pushNamed(
+      'forum-thread',
+      pathParameters: {'threadId': thread.id},
+    );
+    if (mounted) await _load(reset: true);
+  }
 
   @override
   Widget build(BuildContext context) => PageScaffold(

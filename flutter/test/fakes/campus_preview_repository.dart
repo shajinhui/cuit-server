@@ -204,15 +204,21 @@ class CampusPreviewRepository implements CampusRepository {
   }) async {
     lastForumSort = sort;
     final threads = [
-      const ForumThread(
+      ForumThread(
         id: 'thread-1',
         categoryId: 'cat-general',
         categoryName: '综合讨论',
         title: '图书馆晚上能不能延长闭馆时间',
         body: '期末复习人很多，十点闭馆有点早，大家觉得呢？',
-        author: CampusAuthor(id: 'user-1', displayName: '小高', avatarPreset: 0),
+        author: const CampusAuthor(
+          id: 'user-1',
+          displayName: '小高',
+          avatarPreset: 0,
+        ),
         imageAssetIds: [],
-        replyCount: 2,
+        replyCount: deletedReplyIds.contains('reply-1')
+            ? 0
+            : 2 - deletedReplyIds.toSet().length,
         likeCount: 5,
         isPinned: true,
         isLocked: false,
@@ -368,25 +374,26 @@ class CampusPreviewRepository implements CampusRepository {
   Future<CampusPageResult<ForumReply>> listForumReplies({
     required String threadId,
     String? cursor,
-  }) async => const CampusPageResult(
+  }) async => CampusPageResult(
     items: [
-      ForumReply(
-        id: 'reply-1',
-        threadId: 'thread-1',
-        parentId: null,
-        author: CampusAuthor(
-          id: 'user-2',
-          displayName: '体验同学',
-          avatarPreset: 0,
+      if (!deletedReplyIds.contains('reply-1'))
+        const ForumReply(
+          id: 'reply-1',
+          threadId: 'thread-1',
+          parentId: null,
+          author: CampusAuthor(
+            id: 'user-2',
+            displayName: '体验同学',
+            avatarPreset: 0,
+          ),
+          body: '支持，上次十点被赶出来书还没看完。',
+          likeCount: 3,
+          liked: false,
+          replyCount: 1,
+          version: 1,
+          createdAt: '2026-10-01T01:00:00Z',
+          canDelete: true,
         ),
-        body: '支持，上次十点被赶出来书还没看完。',
-        likeCount: 3,
-        liked: false,
-        replyCount: 1,
-        version: 1,
-        createdAt: '2026-10-01T01:00:00Z',
-        canDelete: true,
-      ),
     ],
     nextCursor: null,
     hasMore: false,

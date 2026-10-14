@@ -208,6 +208,7 @@ void main() {
     expect(repository.deletedThreadIds, ['thread-1']);
     // 删除成功后返回校园页。
     expect(find.text('大家都在聊'), findsOneWidget);
+    expect(find.text('图书馆晚上能不能延长闭馆时间'), findsNothing);
   });
 
   testWidgets('论坛删除自己的回复并同步计数', (tester) async {
@@ -233,7 +234,8 @@ void main() {
 
     expect(repository.deletedReplyIds, ['reply-1']);
     expect(find.text('支持，上次十点被赶出来书还没看完。'), findsNothing);
-    expect(find.text('全部回复 / 1'), findsOneWidget);
+    // 删除主回复同时移除它的楼中楼，由重新读取的服务端计数确认。
+    expect(find.text('全部回复 / 0'), findsOneWidget);
   });
 }
 

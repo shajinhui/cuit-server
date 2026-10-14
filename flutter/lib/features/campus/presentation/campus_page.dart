@@ -251,12 +251,18 @@ class _CampusPageState extends State<CampusPage> {
 
   void _createBoard() => context.pushNamed('rating-create-board');
 
-  void _createThread() => context.pushNamed('forum-create');
+  Future<void> _createThread() async {
+    await context.pushNamed('forum-create');
+    if (mounted) await _load(reset: true);
+  }
 
-  void _openThread(ForumThread thread) => context.pushNamed(
-    'forum-thread',
-    pathParameters: {'threadId': thread.id},
-  );
+  Future<void> _openThread(ForumThread thread) async {
+    await context.pushNamed(
+      'forum-thread',
+      pathParameters: {'threadId': thread.id},
+    );
+    if (mounted) await _load(reset: true);
+  }
 
   void _createListing() => context.pushNamed(
     'marketplace-create',

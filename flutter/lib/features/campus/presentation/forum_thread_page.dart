@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
@@ -30,9 +31,13 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   ForumThreadDetail? _detail;
   List<ForumReply> _replies = [];
   final Map<String, List<ForumReply>> _replyChildren = {};
+  final Map<String, String?> _childCursors = {};
+  final Set<String> _childrenHasMore = {};
+  final Set<String> _childrenLoading = {};
   final Set<String> _expandedReplies = {};
   ForumReply? _replyTarget;
   String _replyRequestId = createCampusRequestId();
+  String? _lastReplyPayload;
   String? _replyCursor;
   String? _error;
   String? _replyError;
@@ -45,7 +50,10 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   bool _replySubmitting = false;
   bool _hasMoreReplies = false;
   int _replyRequestVersion = 0;
+  int _pageRequestVersion = 0;
+  int _childrenRequestVersion = 0;
   final Set<String> _replyLikeSubmitting = {};
+  final Set<String> _replyDeleting = {};
 
   @override
   void initState() {
@@ -57,19 +65,26 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   @override
   void dispose() {
     _replyRequestVersion++;
+    _pageRequestVersion++;
+    _childrenRequestVersion++;
     _replyController.dispose();
     _replyFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _loadPage() async {
+    final version = ++_pageRequestVersion;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final detail = await widget.repository!.getForumThread(widget.threadId);
-      if (!mounted) return;
+      final repository = widget.repository;
+      if (repository == null) {
+        throw const CampusRepositoryException('论坛服务暂时不可用。');
+      }
+      final detail = await repository.getForumThread(widget.threadId);
+      if (!mounted || version != _pageRequestVersion) return;
       setState(() {
         _detail = detail;
         _liked = detail.liked;
@@ -77,9 +92,23 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         _replyCount = detail.thread.replyCount;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted && version == _pageRequestVersion) {
+        setState(() {
+          _error = error.toString();
+          // 明确删除／隐藏时不能继续展示旧正文；断网仍保留当前内容。
+          if (error is CampusRepositoryException && error.statusCode == 404) {
+            _detail = null;
+            _replies.clear();
+            _replyChildren.clear();
+            _expandedReplies.clear();
+            _childrenRequestVersion++;
+          }
+        });
+      }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && version == _pageRequestVersion) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -142,6 +171,12 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
       _replyError = null;
     });
     final replyTarget = _replyTarget;
+    // 相同正文与回复目标沿用幂等键；修改任何字段都属于一次新的提交。
+    final payload = jsonEncode([widget.threadId, replyTarget?.id, body]);
+    if (_lastReplyPayload != null && _lastReplyPayload != payload) {
+      _replyRequestId = createCampusRequestId();
+    }
+    _lastReplyPayload = payload;
     try {
       final created = await repository.createForumReply(
         threadId: widget.threadId,
@@ -150,7 +185,13 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         requestId: _replyRequestId,
       );
       if (!mounted) return;
+      _replyRequestVersion++;
+      _pageRequestVersion++;
+      _childrenRequestVersion++;
       setState(() {
+        _childrenLoading.clear();
+        _loading = false;
+        _repliesLoading = false;
         if (replyTarget case final target?) {
           // 已加载的楼中楼才直接追加；未加载时保持可展开状态。
           if (_replyChildren.containsKey(target.id)) {
@@ -175,6 +216,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         _replyTarget = null;
         _replyController.clear();
         _replyRequestId = createCampusRequestId();
+        _lastReplyPayload = null;
         _replyCount = (_replyCount + 1).clamp(0, 1 << 30);
       });
       if (replyTarget != null && !_replyChildren.containsKey(replyTarget.id)) {
@@ -192,26 +234,89 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
       setState(() {});
       return;
     }
+    setState(() => _expandedReplies.add(reply.id));
     if (!_replyChildren.containsKey(reply.id)) {
-      try {
-        final page = await widget.repository!.listForumReplyChildren(
-          replyId: reply.id,
-        );
-        if (!mounted) return;
-        _replyChildren[reply.id] = page.items;
-      } catch (error) {
-        if (mounted) setState(() => _replyError = error.toString());
-        return;
+      await _loadReplyChildren(reply.id, reset: true);
+    }
+  }
+
+  Future<void> _loadReplyChildren(String replyId, {required bool reset}) async {
+    final repository = widget.repository;
+    if (repository == null || _childrenLoading.contains(replyId)) return;
+    if (!reset && !_childrenHasMore.contains(replyId)) return;
+    final version = _childrenRequestVersion;
+    setState(() {
+      _childrenLoading.add(replyId);
+      _replyError = null;
+    });
+    try {
+      final page = await repository.listForumReplyChildren(
+        replyId: replyId,
+        cursor: reset ? null : _childCursors[replyId],
+      );
+      if (!mounted || version != _childrenRequestVersion) return;
+      final combined = <String, ForumReply>{
+        if (!reset)
+          for (final child in _replyChildren[replyId] ?? []) child.id: child,
+        for (final child in page.items) child.id: child,
+      };
+      setState(() {
+        _replyChildren[replyId] = combined.values.toList()
+          ..sort((a, b) {
+            final time = a.createdAt.compareTo(b.createdAt);
+            return time == 0 ? a.id.compareTo(b.id) : time;
+          });
+        _childCursors[replyId] = page.nextCursor;
+        if (page.hasMore) {
+          _childrenHasMore.add(replyId);
+        } else {
+          _childrenHasMore.remove(replyId);
+        }
+      });
+    } catch (error) {
+      if (mounted && version == _childrenRequestVersion) {
+        setState(() => _replyError = error.toString());
+      }
+    } finally {
+      if (mounted && version == _childrenRequestVersion) {
+        setState(() => _childrenLoading.remove(replyId));
       }
     }
-    if (mounted) setState(() => _expandedReplies.add(reply.id));
+  }
+
+  Future<void> _refresh() async {
+    // 写操作完成前不读取旧快照覆盖乐观状态。
+    if (_replySubmitting ||
+        _likeSubmitting ||
+        _replyLikeSubmitting.isNotEmpty) {
+      return;
+    }
+    _childrenRequestVersion++;
+    _childrenLoading.clear();
+    await Future.wait([_loadPage(), _loadReplies(reset: true)]);
+    if (!mounted || _replyError != null) return;
+    final roots = _replies.map((reply) => reply.id).toSet();
+    setState(() {
+      _expandedReplies.removeWhere((id) => !roots.contains(id));
+      _replyChildren.removeWhere((id, _) => !_expandedReplies.contains(id));
+      _childCursors.clear();
+      _childrenHasMore.clear();
+    });
+    await Future.wait([
+      for (final id in _expandedReplies.toList())
+        _loadReplyChildren(id, reset: true),
+    ]);
   }
 
   Future<void> _toggleLike() async {
     final detail = _detail;
     final repository = widget.repository;
     if (detail == null || repository == null || _likeSubmitting) return;
+    final previousLiked = _liked;
+    final previousLikeCount = _likeCount;
+    _pageRequestVersion++;
     setState(() {
+      _loading = false;
       _likeSubmitting = true;
       _error = null;
     });
@@ -233,8 +338,8 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _liked = detail.liked;
-          _likeCount = detail.thread.likeCount;
+          _liked = previousLiked;
+          _likeCount = previousLikeCount;
           _error = error.toString();
         });
       }
@@ -333,7 +438,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         expectedVersion: detail.thread.version,
       );
       if (!mounted) return;
-      context.pop();
+      context.pop(true);
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     }
@@ -342,7 +447,12 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   /// 删除自己的回复：主楼回复从列表移除，楼中楼从父级移除并同步计数。
   Future<void> _deleteReply(ForumReply reply) async {
     final repository = widget.repository;
-    if (repository == null || !reply.canDelete) return;
+    if (repository == null ||
+        !reply.canDelete ||
+        _replyDeleting.contains(reply.id)) {
+      return;
+    }
+    setState(() => _replyDeleting.add(reply.id));
     try {
       await repository.deleteForumReply(
         replyId: reply.id,
@@ -353,6 +463,10 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         final parentId = reply.parentId;
         if (parentId == null) {
           _replies.removeWhere((item) => item.id == reply.id);
+          _replyChildren.remove(reply.id);
+          _expandedReplies.remove(reply.id);
+          _childCursors.remove(reply.id);
+          _childrenHasMore.remove(reply.id);
         } else {
           final children = _replyChildren[parentId];
           if (children != null) {
@@ -369,10 +483,15 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
             );
           }
         }
-        _replyCount = (_replyCount - 1).clamp(0, 1 << 30);
+        if (_replyTarget?.id == reply.id) _replyTarget = null;
+        final removed = 1 + (parentId == null ? reply.replyCount : 0);
+        _replyCount = (_replyCount - removed).clamp(0, 1 << 30);
       });
+      await _refresh();
     } catch (error) {
       if (mounted) setState(() => _replyError = error.toString());
+    } finally {
+      if (mounted) setState(() => _replyDeleting.remove(reply.id));
     }
   }
 
@@ -450,8 +569,9 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                             ),
                             IconButton(
                               tooltip: '取消回复',
-                              onPressed: () =>
-                                  setState(() => _replyTarget = null),
+                              onPressed: _replySubmitting
+                                  ? null
+                                  : () => setState(() => _replyTarget = null),
                               icon: const Icon(Icons.close_rounded),
                             ),
                           ],
@@ -462,6 +582,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                             child: TextField(
                               key: const ValueKey('forum-reply-input'),
                               controller: _replyController,
+                              enabled: !_replySubmitting,
                               focusNode: _replyFocusNode,
                               minLines: 1,
                               maxLines: 4,
@@ -525,9 +646,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   }
 
   Widget _buildContent(ForumThreadDetail detail) => RefreshIndicator(
-    onRefresh: () async {
-      await Future.wait([_loadPage(), _loadReplies(reset: true)]);
-    },
+    onRefresh: _refresh,
     child: ListView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 28),
       children: [
@@ -723,16 +842,20 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                   label: Text('${reply.likeCount}'),
                 ),
                 TextButton(
-                  onPressed: () {
-                    setState(() => _replyTarget = reply);
-                    _replyFocusNode.requestFocus();
-                  },
+                  onPressed: _replySubmitting
+                      ? null
+                      : () {
+                          setState(() => _replyTarget = reply);
+                          _replyFocusNode.requestFocus();
+                        },
                   child: const Text('回复'),
                 ),
                 if (reply.canDelete)
                   TextButton(
                     key: ValueKey('forum-reply-delete-${reply.id}'),
-                    onPressed: () => _deleteReply(reply),
+                    onPressed: _replyDeleting.contains(reply.id)
+                        ? null
+                        : () => _deleteReply(reply),
                     child: const Text('删除'),
                   ),
                 TextButton(
@@ -761,6 +884,11 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
               padding: const EdgeInsets.only(left: 28),
               child: Column(
                 children: [
+                  if (_childrenLoading.contains(reply.id))
+                    const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(),
+                    ),
                   for (final child in _replyChildren[reply.id] ?? [])
                     ListTile(
                       contentPadding: EdgeInsets.zero,
@@ -802,7 +930,9 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                             IconButton(
                               key: ValueKey('forum-reply-delete-${child.id}'),
                               tooltip: '删除回复',
-                              onPressed: () => _deleteReply(child),
+                              onPressed: _replyDeleting.contains(child.id)
+                                  ? null
+                                  : () => _deleteReply(child),
                               icon: const Icon(Icons.delete_outline, size: 18),
                             ),
                           IconButton(
@@ -812,6 +942,18 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                           ),
                         ],
                       ),
+                    ),
+                  if (_childrenHasMore.contains(reply.id) ||
+                      !_replyChildren.containsKey(reply.id))
+                    TextButton(
+                      key: ValueKey('forum-children-more-${reply.id}'),
+                      onPressed: _childrenLoading.contains(reply.id)
+                          ? null
+                          : () => _loadReplyChildren(
+                              reply.id,
+                              reset: !_replyChildren.containsKey(reply.id),
+                            ),
+                      child: const Text('加载更多回复'),
                     ),
                 ],
               ),
