@@ -119,6 +119,18 @@
   line-height: 1;
 }
 
+.tools-announcement-refresh {
+  display: block;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 8px 12px;
+  color: var(--blue-bright);
+  background: transparent;
+  border: 0;
+}
+
+.tools-announcement-refresh:disabled { color: var(--text-faint); }
+
 .tool-search {
   display: flex;
   align-items: center;

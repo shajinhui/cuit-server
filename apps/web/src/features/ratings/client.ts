@@ -28,6 +28,19 @@ const apiBaseURL = (
   import.meta.env.VITE_RATINGS_API_BASE_URL || DEFAULT_RATINGS_API_BASE_URL
 ).replace(/\/$/, '')
 
+/** 公告等公开数据不申请校园凭证，也不携带任何登录信息。 */
+export async function publicRatingsRequest<T>(path: string): Promise<T> {
+  const response = await fetch(`${apiBaseURL}${path}`, {
+    credentials: 'omit', cache: 'no-store', redirect: 'error',
+    headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(8000),
+  })
+  const payload = await readPayload<T>(response)
+  if (!response.ok || payload.code !== 0) throw new RatingsApiError('公告更新失败', response.status, payload.code)
+  return payload.data
+}
+
+export function ratingsPublicCacheScope() { return apiBaseURL }
+
 export function isRatingsConfigured() {
   return Boolean(apiBaseURL)
 }

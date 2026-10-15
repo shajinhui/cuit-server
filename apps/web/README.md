@@ -26,7 +26,9 @@
 
 `/official` 每次打开或刷新走网络，不使用 PWA 缓存的应用入口，也不注册新的 Service Worker；已有应用 Worker 仍会检查更新。课表等应用页面保持原有离线能力，不清理用户本地数据。
 
-官网、安卓下载提示和公告统一使用固定入口 `https://fanxiaogao05.dpdns.org/downloads/android`。Pages Function 返回不缓存的 `302`，将用户引导到当前 Gitee APK。今后换包只需更新 `src/shared/config/downloads.ts` 的 `LATEST_ANDROID_APK_URL` 并发布，已经打开的旧页面按钮也会获取新的跳转目标。该入口不代理或缓存安装包正文。
+官网、安卓下载提示统一使用固定入口 `https://fanxiaogao05.dpdns.org/downloads/android`；公告中的下载按钮也应使用该入口。Pages Function 返回不缓存的 `302`，将用户引导到当前 Gitee APK。今后换包只需更新 `src/shared/config/downloads.ts` 的 `LATEST_ANDROID_APK_URL` 并发布，已经打开的旧页面按钮也会获取新的跳转目标。该入口不代理或缓存安装包正文。
+
+公告改为在线读取；`/admin/ratings` 提供管理员公告发布、编辑、定时生效和下架入口。与 Flutter 共用服务，阅读次数、缓存边界、上线顺序见 [在线公告](../../docs/ANNOUNCEMENTS.md)。
 
 ## 本地运行
 

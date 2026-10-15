@@ -15,6 +15,7 @@ import {
 } from '@/features/ratings'
 import { RatingPageHeader, RatingState } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
+import { AnnouncementAdminPanel } from '@/features/announcements'
 
 defineOptions({ name: 'RatingAdminPage' })
 
@@ -157,6 +158,7 @@ function statusLabel(value: RatingAdminContent['content']['status']) {
 <template>
   <main class="ratings-page rating-admin-page">
     <RatingPageHeader title="评分内容管理" subtitle="举报与内容状态" @back="router.push({ name: 'ratings' })" />
+    <AnnouncementAdminPanel />
 
     <section class="rating-admin-toolbar" aria-label="举报状态筛选">
       <div class="ratings-segment ratings-segment--three" role="tablist">

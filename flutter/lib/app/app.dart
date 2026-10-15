@@ -51,6 +51,7 @@ class _ChengxinAppState extends State<ChengxinApp> {
     super.initState();
     // 热更新独立于账号和业务初始化，不等待网络检查才展示页面。
     unawaited(widget.dependencies.appUpdate?.checkAndDownload());
+    unawaited(widget.dependencies.announcements?.refresh());
     widget.dependencies.desktopWidgets?.onOpenSchedule = _openWidgetSchedule;
     unawaited(_consumeWidgetLaunch());
   }
@@ -94,6 +95,8 @@ class _ChengxinAppState extends State<ChengxinApp> {
           ].contains(state.uri.path),
           onScheduleActivated: () =>
               widget.dependencies.schedule?.resetWeekSelection(),
+          announcements: widget.dependencies.announcements,
+          allowAnnouncements: !widget.dependencies.session.isDemo,
         ),
         branches: [
           StatefulShellBranch(
@@ -120,7 +123,8 @@ class _ChengxinAppState extends State<ChengxinApp> {
             routes: [
               GoRoute(
                 path: '/tools',
-                builder: (context, state) => const ToolsPage(),
+                builder: (context, state) =>
+                    ToolsPage(announcements: widget.dependencies.announcements),
               ),
               GoRoute(
                 path: '/classrooms',

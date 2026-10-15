@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import calendarIcon from '@/assets/icons/tool-calendar.png'
@@ -11,9 +11,7 @@ import mapIcon from '@/assets/icons/tool-campus-map.png'
 import autoRunIcon from '@/assets/icons/tool-campus-run.svg'
 import pastExamsIcon from '@/assets/icons/tool-past-exams.png'
 import {
-  ACTIVE_ANNOUNCEMENT,
-  activeAnnouncementHasBeenViewed,
-  APP_ANNOUNCEMENT_VIEW_STATE_EVENT,
+  useAnnouncementsStore,
   openActiveAnnouncement,
 } from '@/features/announcements'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -24,7 +22,8 @@ defineOptions({ name: 'ToolsPage' })
 const router = useRouter()
 const query = ref('')
 const notice = ref('')
-const announcementViewed = ref(false)
+const announcements = useAnnouncementsStore()
+const announcementViewed = computed(() => Boolean(announcements.latest && announcements.viewCount(announcements.latest) > 0))
 let noticeTimer: number | undefined
 
 interface ToolItem {
@@ -51,20 +50,14 @@ const filteredTools = computed(() => {
 
 usePageTheme('bg-page')
 
-onMounted(() => {
-  syncAnnouncementViewState()
-  window.addEventListener(APP_ANNOUNCEMENT_VIEW_STATE_EVENT, syncAnnouncementViewState)
-})
-
 onBeforeUnmount(() => {
   window.clearTimeout(noticeTimer)
-  window.removeEventListener(APP_ANNOUNCEMENT_VIEW_STATE_EVENT, syncAnnouncementViewState)
 })
 
-function syncAnnouncementViewState(event?: Event) {
-  announcementViewed.value =
-    (event instanceof CustomEvent && event.detail?.viewed === true) ||
-    activeAnnouncementHasBeenViewed()
+async function openAnnouncement() {
+  announcements.syncTime()
+  if (!announcements.latest) await announcements.refresh(true)
+  if (announcements.latest) openActiveAnnouncement()
 }
 
 function openTool(tool: ToolItem) {
@@ -86,7 +79,7 @@ function openTool(tool: ToolItem) {
         class="tools-announcement-card"
         :class="{ 'is-viewed': announcementViewed }"
         aria-label="查看最新公告"
-        @click="openActiveAnnouncement"
+        @click="openAnnouncement"
       >
         <span class="tools-announcement-card__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24">
@@ -96,11 +89,13 @@ function openTool(tool: ToolItem) {
         </span>
         <span class="tools-announcement-card__copy">
           <small v-if="!announcementViewed">最新公告</small>
-          <strong>{{ ACTIVE_ANNOUNCEMENT.title }}</strong>
-          <span v-if="!announcementViewed">{{ ACTIVE_ANNOUNCEMENT.description }}</span>
+          <strong>{{ announcements.latest?.title || (announcements.loading ? '正在更新公告' : announcements.error ? '公告暂时无法更新' : '暂无公告') }}</strong>
+          <span v-if="!announcementViewed">{{ announcements.latest?.body || announcements.error || '最新消息会显示在这里' }}</span>
+          <small v-if="announcements.latest && announcements.error">离线缓存</small>
         </span>
         <span class="tools-announcement-card__chevron" aria-hidden="true">›</span>
       </button>
+      <button type="button" class="tools-announcement-refresh" :disabled="announcements.loading" @click="announcements.refresh(true)">{{ announcements.loading ? '正在刷新…' : '刷新公告' }}</button>
 
       <label class="tool-search">
         <span aria-hidden="true" />

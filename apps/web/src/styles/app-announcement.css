@@ -61,6 +61,7 @@
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
 
 .app-announcement-dialog__description {
@@ -68,6 +69,23 @@
   color: var(--text-label);
   font-size: 15px;
   line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.app-announcement-history { margin-top: 16px; text-align: left; }
+.app-announcement-history summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.app-announcement-history button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px;
+  color: var(--text-primary);
+  text-align: left;
+  overflow-wrap: anywhere;
+  background: var(--bg-page);
+  border: 0;
+  border-radius: 12px;
 }
 
 .app-announcement-dialog__promotion {

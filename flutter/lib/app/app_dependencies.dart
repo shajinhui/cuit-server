@@ -21,6 +21,7 @@ import '../features/autorun/data/autorun_repository.dart';
 import '../features/app_update/data/shorebird_app_update_repository.dart';
 import '../features/app_update/data/unavailable_app_update_repository.dart';
 import '../features/app_update/presentation/app_update_view_model.dart';
+import '../features/announcements/announcements.dart';
 import '../core/platform/desktop_widgets.dart';
 import '../features/schedule/models/desktop_widget_snapshot.dart';
 import '../features/schedule/presentation/desktop_widget_controller.dart';
@@ -38,6 +39,7 @@ class AppDependencies {
     this.userStorage,
     this.autoRunRepository,
     this.appUpdate,
+    this.announcements,
     this.desktopWidgets,
     ProfileRepository? profileRepository,
   }) : profileRepository =
@@ -56,6 +58,7 @@ class AppDependencies {
   final AutoRunRepository? autoRunRepository;
   final ProfileRepository? profileRepository;
   final AppUpdateViewModel? appUpdate;
+  final AnnouncementViewModel? announcements;
   final DesktopWidgets? desktopWidgets;
   DesktopWidgetController? desktopWidget;
   ProfileAvatar? avatar;
@@ -94,6 +97,18 @@ class AppDependencies {
         isHarmonyOS
             ? const UnavailableAppUpdateRepository()
             : ShorebirdAppUpdateRepository(),
+      ),
+      announcements: AnnouncementViewModel(
+        DefaultAnnouncementRepository(
+          preferences: preferences,
+          platform: kIsWeb
+              ? 'web'
+              : isHarmonyOS
+              ? 'ohos'
+              : defaultTargetPlatform == TargetPlatform.iOS
+              ? 'ios'
+              : 'android',
+        ),
       ),
       userStorage: cacheStorage,
       desktopWidgets: NativeDesktopWidgets.supported
@@ -225,6 +240,7 @@ class AppDependencies {
     session.dispose();
     settings.dispose();
     appUpdate?.dispose();
+    announcements?.dispose();
     api?.dispose();
   }
 }

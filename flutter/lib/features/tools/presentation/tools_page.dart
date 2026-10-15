@@ -1,35 +1,22 @@
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
-import '../../../ui/components/page_dialog.dart';
+import 'package:chengxin_youyou/features/announcements/announcements.dart';
 
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/config/app_settings.dart';
-import '../../../ui/components/glass_surface.dart';
 
 /// 校园工具入口：保留 Vue 版的公告、搜索和八个工具入口。
 class ToolsPage extends StatefulWidget {
-  const ToolsPage({super.key});
+  const ToolsPage({super.key, this.announcements});
+  final AnnouncementViewModel? announcements;
 
   @override
   State<ToolsPage> createState() => _ToolsPageState();
 }
 
 class _ToolsPageState extends State<ToolsPage> {
-  static const _announcementId = 'sponsor-workbuddy-2026-09-29';
-  static const _announcementStorageKey = 'app-announcement-view-state';
-  static const _legacyAnnouncementStorageKey = 'app-announcement-seen-id';
-  static final Uri _promotionUri = Uri.parse('https://uv.qq.com/s1gi24WP');
-  static const _announcementTitle = '接了个小广告，谢谢支持';
-  static const _announcementDescription =
-      '作者维护需要成本，这里打一个小广告，大家动动手指支持作者：点击专属链接进去注册，然后领取积分，谢谢支持。';
-
   static const _tools = <_ToolItem>[
     _ToolItem('classrooms', '查空教室', 'assets/icons/tools/tool-classroom.png'),
     _ToolItem('grades', '查成绩', 'assets/icons/tools/tool-grades.png'),
@@ -43,34 +30,6 @@ class _ToolsPageState extends State<ToolsPage> {
 
   final _searchController = TextEditingController();
   String _query = '';
-  bool _announcementViewed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_loadAnnouncementState());
-  }
-
-  Future<void> _loadAnnouncementState() async {
-    final preferences = await SharedPreferences.getInstance();
-    final saved = preferences.getString(_announcementStorageKey);
-    var viewed =
-        preferences.getString(_legacyAnnouncementStorageKey) == _announcementId;
-    if (saved != null) {
-      try {
-        final state = jsonDecode(saved);
-        viewed =
-            state is Map &&
-            state['id'] == _announcementId &&
-            state['viewCount'] is num &&
-            (state['viewCount'] as num) > 0;
-      } on FormatException {
-        // 无法识别旧状态时，将公告显示为未读。
-      }
-    }
-    if (mounted) setState(() => _announcementViewed = viewed);
-  }
-
   List<_ToolItem> get _filteredTools {
     final keyword = _query.trim();
     if (keyword.isEmpty) return _tools;
@@ -84,94 +43,6 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   void _openTool(_ToolItem tool) => context.pushNamed(tool.id);
-
-  Future<void> _openAnnouncement() async {
-    final openPromotion = await showPageDialog<bool>(
-      context,
-      builder: (dialogContext) => PageAlertDialog(
-        icon: const Icon(Icons.chat_bubble_outline_rounded),
-        title: const Text(_announcementTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(_announcementDescription),
-            const SizedBox(height: 16),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  dialogContext,
-                ).colorScheme.primaryContainer.withValues(alpha: .55),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('作者小广告'),
-                    SizedBox(height: 5),
-                    Text(
-                      '点击领取 WorkBuddy 积分，让 AI 替你肝',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text('QQ群 151247227'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('我知道了'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('立即领取积分'),
-          ),
-        ],
-      ),
-    );
-
-    final preferences = await SharedPreferences.getInstance();
-    final previous = preferences.getString(_announcementStorageKey);
-    var previousCount = 0;
-    if (previous != null) {
-      try {
-        final state = jsonDecode(previous);
-        if (state is Map && state['id'] == _announcementId) {
-          final count = state['viewCount'];
-          if (count is num) previousCount = count.toInt();
-        }
-      } on FormatException {
-        // 从零开始记录本次查看。
-      }
-    }
-    await preferences.setString(
-      _announcementStorageKey,
-      jsonEncode({
-        'id': _announcementId,
-        'viewCount': (previousCount + 1).clamp(0, 2),
-      }),
-    );
-    await preferences.remove(_legacyAnnouncementStorageKey);
-    if (mounted) setState(() => _announcementViewed = true);
-
-    if (openPromotion == true) {
-      final opened = await launchUrl(
-        _promotionUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!opened && mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('暂时无法打开推广链接')));
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -203,10 +74,9 @@ class _ToolsPageState extends State<ToolsPage> {
                 padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _AnnouncementCard(
-                      viewed: _announcementViewed,
+                    AnnouncementTile(
+                      viewModel: widget.announcements,
                       lightweight: lightweight,
-                      onTap: _openAnnouncement,
                     ),
                     const SizedBox(height: 12),
                     _ToolSearchField(
@@ -260,116 +130,6 @@ class _ToolsPageState extends State<ToolsPage> {
                   ),
                 ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AnnouncementCard extends StatelessWidget {
-  const _AnnouncementCard({
-    required this.viewed,
-    required this.lightweight,
-    required this.onTap,
-  });
-
-  final bool viewed;
-  final bool lightweight;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final iconSize = viewed ? 34.0 : 42.0;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(viewed ? 18 : 22),
-      child: GlassSurface(
-        lightweight: lightweight,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            key: const Key('tools-announcement'),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: viewed ? 58 : 82),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: viewed ? 9 : 12,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: iconSize,
-                      height: iconSize,
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        borderRadius: BorderRadius.circular(viewed ? 10 : 13),
-                        boxShadow: viewed
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: scheme.primary.withValues(alpha: .22),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.chat_bubble_outline_rounded,
-                        size: viewed ? 20 : 25,
-                        color: scheme.onPrimary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!viewed)
-                            Text(
-                              '最新公告',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: .4,
-                              ),
-                            ),
-                          Text(
-                            _ToolsPageState._announcementTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (!viewed)
-                            Text(
-                              _ToolsPageState._announcementDescription,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                height: 1.35,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: scheme.onSurfaceVariant.withValues(alpha: .65),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ),
       ),

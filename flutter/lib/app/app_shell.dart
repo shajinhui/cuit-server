@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../features/announcements/announcements.dart';
 
 class AppShell extends StatelessWidget {
   const AppShell({
@@ -12,10 +13,14 @@ class AppShell extends StatelessWidget {
     required this.navigationShell,
     required this.onScheduleActivated,
     this.hideBottomBar = false,
+    this.announcements,
+    this.allowAnnouncements = true,
   });
   final StatefulNavigationShell navigationShell;
   final VoidCallback onScheduleActivated;
   final bool hideBottomBar;
+  final AnnouncementViewModel? announcements;
+  final bool allowAnnouncements;
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
@@ -50,11 +55,19 @@ class AppShell extends StatelessWidget {
       );
     }
 
-    return Scaffold(
+    final scaffold = Scaffold(
       extendBody: true,
       body: navigationShell,
       // 功能详情页使用返回栏；校园跑有自己的三个导航入口。
       bottomNavigationBar: hideBottomBar ? null : bottomBar,
     );
+    final vm = announcements;
+    return vm == null
+        ? scaffold
+        : AnnouncementPresenter(
+            viewModel: vm,
+            allowed: allowAnnouncements && !hideBottomBar,
+            child: scaffold,
+          );
   }
 }

@@ -5,6 +5,7 @@ import 'package:chengxin_youyou/core/network/api_exception.dart';
 import 'package:chengxin_youyou/features/session/session.dart';
 import 'package:chengxin_youyou/features/schedule/schedule.dart';
 import 'package:chengxin_youyou/features/app_update/presentation/app_update_view_model.dart';
+import 'package:chengxin_youyou/features/announcements/announcements.dart';
 
 class RejectedSession implements SessionRepository {
   @override
@@ -19,6 +20,7 @@ class RejectedSession implements SessionRepository {
 Future<AppDependencies> testDependencies({
   AppUpdateViewModel? appUpdate,
   CampusRepository? campusRepository,
+  AnnouncementViewModel? announcements,
 }) async {
   await DemoScheduleRepository.prepare();
   final session = SessionViewModel(RejectedSession());
@@ -30,5 +32,6 @@ Future<AppDependencies> testDependencies({
     createScheduleRepository: (_) => DemoScheduleRepository(),
     appUpdate: appUpdate,
     campusRepository: campusRepository,
+    announcements: announcements,
   );
 }

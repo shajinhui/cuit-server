@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ANDROID_DOWNLOAD_URL } from '@/shared/config/downloads'
-
 import {
-  ACTIVE_ANNOUNCEMENT,
   getAnnouncementViewCount,
   recordAnnouncementPresentation,
   shouldAutoPresentAnnouncement,
@@ -34,25 +31,5 @@ describe('announcement presentation state', () => {
     expect(once).toEqual({ id: 'announcement-2', viewCount: 1 })
     expect(twice).toEqual({ id: 'announcement-2', viewCount: 2 })
     expect(capped).toEqual({ id: 'announcement-2', viewCount: 2 })
-  })
-})
-
-describe('当前公告内容', () => {
-  it('推广位使用 HTTPS 专属链接并补齐按钮文案', () => {
-    const { promotion } = ACTIVE_ANNOUNCEMENT
-    expect(promotion).toBeDefined()
-    if (!promotion) return
-
-    expect(promotion.url.startsWith('https://')).toBe(true)
-    expect(promotion.tag.trim().length).toBeGreaterThan(0)
-    expect(promotion.headline.trim().length).toBeGreaterThan(0)
-    expect(promotion.actionLabel.trim().length).toBeGreaterThan(0)
-    expect(promotion.url).toBe(ANDROID_DOWNLOAD_URL)
-  })
-
-  it('公告文案不含占位内容', () => {
-    expect(ACTIVE_ANNOUNCEMENT.id.trim().length).toBeGreaterThan(0)
-    expect(ACTIVE_ANNOUNCEMENT.title.trim().length).toBeGreaterThan(0)
-    expect(ACTIVE_ANNOUNCEMENT.description.trim().length).toBeGreaterThan(0)
   })
 })
