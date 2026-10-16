@@ -24,6 +24,8 @@
 
 ## 官网与下载更新
 
+官网按实际能力介绍教务工具、校园评分／二手、新版原生客户端论坛、桌面小组件与应用内公告，并在功能和下载区标注平台／版本边界。网页入口继续使用 Vue；当前公开 APK 仍是原版客户端，新 Flutter 基础包的构建或补丁发布不会自动替换官网下载目标。iOS PWA 不等于 App Store 原生版，原生鸿蒙尚在验证；本机头像和课程自定义不宣传为跨设备资料同步。
+
 `/official` 每次打开或刷新走网络，不使用 PWA 缓存的应用入口，也不注册新的 Service Worker；已有应用 Worker 仍会检查更新。课表等应用页面保持原有离线能力，不清理用户本地数据。
 
 官网、安卓下载提示统一使用固定入口 `https://fanxiaogao05.dpdns.org/downloads/android`；公告中的下载按钮也应使用该入口。Pages Function 返回不缓存的 `302`，将用户引导到当前 Gitee APK。今后换包只需更新 `src/shared/config/downloads.ts` 的 `LATEST_ANDROID_APK_URL` 并发布，已经打开的旧页面按钮也会获取新的跳转目标。该入口不代理或缓存安装包正文。
