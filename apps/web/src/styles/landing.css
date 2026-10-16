@@ -339,6 +339,7 @@
   font-size: 16px;
   font-weight: 680;
   cursor: pointer;
+  text-decoration: none;
   border: 0;
   border-radius: 20px;
   transition:
@@ -864,7 +865,7 @@
   box-shadow: 0 28px 70px rgba(58, 73, 98, 0.12);
 }
 
-.landing-platform__copy .landing-button { margin-top: 32px; }
+.landing-platform-actions { display: flex; margin-top: 32px; flex-wrap: wrap; gap: 12px; }
 .landing-platform__note { display: block; margin-top: 24px; color: var(--landing-muted); font-size: 12px; line-height: 1.7; }
 .landing-platform-options { display: grid; min-width: 0; gap: 24px; }
 .landing-platform-options article { padding: 24px 0 0; border-top: 1px solid var(--landing-line); }

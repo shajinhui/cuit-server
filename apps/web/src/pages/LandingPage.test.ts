@@ -21,13 +21,28 @@ describe('官网能力与发布边界', () => {
     expect(campus).toContain('不处理支付或担保交易')
   })
 
-  it('下载区区分当前公开 APK、新版基础包和 iOS PWA，不许诺未提供的原生分发', () => {
+  it('下载区优先推荐 iOS TestFlight，PWA 为备用，不误称 App Store 正式上架', () => {
     const platforms = section('landing-platforms')
+    const firstOption = platforms.slice(platforms.indexOf('<article>'), platforms.indexOf('</article>'))
+    expect(firstOption).toContain('iOS 推荐安装方式 · 测试版')
+    expect(firstOption).toContain(':href="IOS_TESTFLIGHT_URL"')
+    expect(firstOption).toContain('先安装 Apple TestFlight')
+    expect(platforms).toContain('iPhone / iPad PWA 备用指引')
     expect(platforms).toContain(':href="ANDROID_DOWNLOAD_URL"')
     expect(platforms).toContain('当前入口仍为原版客户端')
     expect(platforms).toContain('首次仍需安装对应基础包')
-    expect(platforms).toContain('iOS 暂未提供 App Store / TestFlight 公开分发')
+    expect(platforms).toContain('TestFlight 测试不等于 App Store 正式上架')
+    expect(platforms).not.toContain('暂未提供 App Store / TestFlight 公开分发')
     expect(platforms).toContain('原生鸿蒙仍在验证中')
+  })
+
+  it('安装弹窗将 TestFlight 排在首位，保留 iOS PWA 备用入口', () => {
+    const chooser = source.slice(source.indexOf('<div class="landing-usage-options">'))
+    expect(chooser).toMatch(/landing-usage-options">\s*<a[^>]*:href="IOS_TESTFLIGHT_URL"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/)
+    expect(chooser).toContain('iOS TestFlight 测试（推荐）')
+    expect(chooser).toContain('iPhone / iPad PWA（备用）')
+    expect(source.match(/:href="IOS_TESTFLIGHT_URL"/g)).toHaveLength(3)
+    expect(source).not.toContain('https://testflight.apple.com/join/')
   })
 
   it('下载按钮只使用不缓存的固定入口，不将包地址写死在页面', () => {

@@ -15,7 +15,7 @@ import landingSchedule from '@/assets/landing/landing-schedule.webp'
 import landingTools from '@/assets/landing/landing-tools.webp'
 import { usePwaInstall } from '@/features/pwa-install'
 import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
-import { ANDROID_DOWNLOAD_URL } from '@/shared/config/downloads'
+import { ANDROID_DOWNLOAD_URL, IOS_TESTFLIGHT_URL } from '@/shared/config/downloads'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 defineOptions({ name: 'LandingPage' })
@@ -176,7 +176,7 @@ function resetHeroPerspective() {
             看看能做什么
           </button>
         </div>
-        <p class="landing-hero__note landing-hero__item">网页 / PWA · Android 安装包 · 新版原生客户端持续完善</p>
+        <p class="landing-hero__note landing-hero__item">iOS TestFlight 测试 · Android 安装包 · 网页 / PWA</p>
       </div>
 
       <div
@@ -418,17 +418,27 @@ function resetHeroPerspective() {
       <div class="landing-platform__copy landing-reveal">
         <p class="landing-eyebrow">选择适合你的入口</p>
         <h2 id="landing-platform-title">先用起来，<br />再选择怎么安装。</h2>
-        <p>电脑直接用网页；iPhone / iPad 可将 PWA 添加到主屏幕；Android 可选择 PWA 或安装包。</p>
-        <button class="landing-button landing-button--primary" type="button" @click="openWebApp">体验网页版</button>
+        <p>iPhone / iPad 推荐通过 TestFlight 安装测试版，PWA 作为备用方式；电脑直接用网页，Android 可选择安装包或 PWA。</p>
+        <div class="landing-platform-actions">
+          <a class="landing-button landing-button--primary" :href="IOS_TESTFLIGHT_URL" target="_blank" rel="noopener noreferrer">iOS TestFlight 测试</a>
+          <button class="landing-button landing-button--secondary" type="button" @click="openWebApp">体验网页版</button>
+        </div>
         <small class="landing-platform__note">展示界面为示意，不同平台与版本的布局和功能可能略有差异。</small>
       </div>
       <div class="landing-platform-options landing-reveal">
         <article>
-          <span class="landing-capability-label">无需安装</span>
+          <span class="landing-capability-label landing-capability-label--native">iOS 推荐安装方式 · 测试版</span>
+          <h3>iPhone / iPad · TestFlight</h3>
+          <p>先安装 Apple TestFlight，再接受邀请安装成信友友测试版。</p>
+          <a class="landing-platform-download" :href="IOS_TESTFLIGHT_URL" target="_blank" rel="noopener noreferrer">加入 iOS TestFlight 测试 <span aria-hidden="true">↗</span></a>
+          <small>测试名额、设备兼容性和可安装版本以 TestFlight 页面为准。无法加入时，可使用下方的 PWA 备用方式。</small>
+        </article>
+        <article>
+          <span class="landing-capability-label">无需安装 · iOS 备用方式</span>
           <h3>网页 / PWA</h3>
-          <p>课表与校园工具、评分、二手等功能。主屏幕安装方式按设备提供指引。</p>
+          <p>课表与校园工具、评分、二手等功能。PWA 添加到主屏幕后使用，不等同于 TestFlight 原生客户端。</p>
           <div class="landing-platform-links">
-            <button type="button" @click="chooseInstallGuide('ios')">iPhone / iPad 安装指引</button>
+            <button type="button" @click="chooseInstallGuide('ios')">iPhone / iPad PWA 备用指引</button>
             <button type="button" @click="chooseInstallGuide('android-pwa')">Android PWA 安装指引</button>
           </div>
         </article>
@@ -443,7 +453,7 @@ function resetHeroPerspective() {
           <span class="landing-capability-label landing-capability-label--native">新版客户端进展</span>
           <h3>Android / iOS 原生版</h3>
           <p>论坛、桌面小组件与原生交互已实现。Android 新版支持补丁更新，首次仍需安装对应基础包。</p>
-          <small>新版正式下载另行公告；iOS 暂未提供 App Store / TestFlight 公开分发，当前可使用 PWA。原生鸿蒙仍在验证中。</small>
+          <small>iOS 通过上方 TestFlight 参与测试，Android 新版正式下载另行公告；TestFlight 测试不等于 App Store 正式上架。原生鸿蒙仍在验证中。</small>
         </article>
       </div>
     </section>
@@ -491,8 +501,18 @@ function resetHeroPerspective() {
             </button>
             <p class="landing-eyebrow">选择你的使用方式</p>
             <h2 id="landing-usage-title">安装成信友友</h2>
-            <p class="landing-usage-dialog__intro">网页 / PWA 现在即可使用；不同安装包的功能以实际版本为准。</p>
+            <p class="landing-usage-dialog__intro">iPhone / iPad 推荐 TestFlight 测试版，PWA 保留为备用方式；功能以实际版本为准。</p>
             <div class="landing-usage-options">
+              <a class="landing-usage-option landing-usage-option--blue" :href="IOS_TESTFLIGHT_URL" target="_blank" rel="noopener noreferrer">
+                <span class="landing-usage-option__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v10M8.5 9.5 12 13l3.5-3.5M6 16v4h12v-4" /></svg>
+                </span>
+                <span class="landing-usage-option__copy">
+                  <strong>iOS TestFlight 测试（推荐）</strong>
+                  <small>iPhone / iPad：通过 Apple TestFlight 安装测试版</small>
+                </span>
+                <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
+              </a>
               <button class="landing-usage-option landing-usage-option--blue" type="button" @click="openWebApp">
                 <span class="landing-usage-option__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 9h18M6 6.5h.1M9 6.5h.1" /></svg>
@@ -508,8 +528,8 @@ function resetHeroPerspective() {
                   <svg viewBox="0 0 24 24"><path d="M12 14V3M8.5 6.5 12 3l3.5 3.5M6 12v9h12v-9" /></svg>
                 </span>
                 <span class="landing-usage-option__copy">
-                  <strong>iPhone / iPad PWA</strong>
-                  <small>添加到主屏幕，不是 App Store 原生安装包</small>
+                  <strong>iPhone / iPad PWA（备用）</strong>
+                  <small>无法使用 TestFlight 时，可添加网页到主屏幕</small>
                 </span>
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
               </button>
@@ -534,7 +554,7 @@ function resetHeroPerspective() {
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
               </a>
             </div>
-            <p class="landing-usage-dialog__footnote">Android 安装时可能需要允许“安装未知来源应用”。论坛、桌面小组件需对应新版客户端。</p>
+            <p class="landing-usage-dialog__footnote">iOS 需先安装 TestFlight，测试名额与可用版本以邀请页面为准。Android 安装时可能需要允许“安装未知来源应用”。</p>
           </section>
         </div>
       </Transition>

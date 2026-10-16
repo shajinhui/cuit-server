@@ -2,7 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { onRequestGet, onRequestHead } from '../../../functions/downloads/android'
 
-import { ANDROID_DOWNLOAD_URL, LATEST_ANDROID_APK_URL } from './downloads'
+import { ANDROID_DOWNLOAD_URL, IOS_TESTFLIGHT_URL, LATEST_ANDROID_APK_URL } from './downloads'
+
+describe('iOS TestFlight 安装入口', () => {
+  it('使用指定的 Apple TestFlight 邀请链接', () => {
+    expect(IOS_TESTFLIGHT_URL).toBe('https://testflight.apple.com/join/rzDV8bN5')
+    expect(new URL(IOS_TESTFLIGHT_URL).hostname).toBe('testflight.apple.com')
+  })
+})
 
 describe('安卓最新版固定下载入口', () => {
   afterEach(() => {
