@@ -34,16 +34,24 @@ class CampusAuthor {
     required this.id,
     required this.displayName,
     required this.avatarPreset,
+    this.avatarAssetId,
+    this.profileVersion = 1,
   });
 
   final String id;
   final String displayName;
   final int avatarPreset;
+  final String? avatarAssetId;
+  final int profileVersion;
 
   factory CampusAuthor.fromJson(Map<String, dynamic>? json) => CampusAuthor(
     id: _string(json?['id']),
     displayName: _string(json?['display_name'], fallback: '校园同学'),
     avatarPreset: _integer(json?['avatar_preset']),
+    avatarAssetId: json?['avatar_asset_id'] as String?,
+    profileVersion: json?['profile_version'] is num
+        ? (json!['profile_version'] as num).toInt()
+        : 1,
   );
 }
 

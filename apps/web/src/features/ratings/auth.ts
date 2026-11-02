@@ -16,6 +16,12 @@ interface ActiveRatingToken {
 let activeToken: ActiveRatingToken | null = null
 let tokenRequest: Promise<string> | null = null
 let sessionGeneration = 0
+const sessionClearListeners = new Set<() => void>()
+
+export function onRatingSessionCleared(listener: () => void) {
+  sessionClearListeners.add(listener)
+  return () => { sessionClearListeners.delete(listener) }
+}
 const tokenRefreshMargin = 30_000
 const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('ratings-auth')
 
@@ -62,6 +68,7 @@ export function clearRatingAccessToken(broadcast = false) {
   activeToken = null
   tokenRequest = null
   sessionGeneration += 1
+  for (const listener of sessionClearListeners) listener()
   if (broadcast) channel?.postMessage('clear')
 }
 

@@ -21,9 +21,10 @@ Future<AppDependencies> testDependencies({
   AppUpdateViewModel? appUpdate,
   CampusRepository? campusRepository,
   AnnouncementViewModel? announcements,
+  SessionRepository? sessionRepository,
 }) async {
   await DemoScheduleRepository.prepare();
-  final session = SessionViewModel(RejectedSession());
+  final session = SessionViewModel(sessionRepository ?? RejectedSession());
   await session.restore();
   return AppDependencies(
     session: session,

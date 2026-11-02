@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
+import { ANNOUNCEMENT_QQ_GROUP_NAME, ANNOUNCEMENT_QQ_GROUP_URL } from '@/shared/config/community'
 import { APP_ANNOUNCEMENT_OPEN_EVENT } from '../presentation'
 import { useAnnouncementsStore } from '../store'
 import type { OnlineAnnouncement } from '../api'
@@ -123,7 +123,7 @@ function handleKeydown(event: KeyboardEvent) { if (event.key === 'Escape' && vis
             <summary>其他公告</summary>
             <button v-for="item in store.items" :key="item.id" type="button" @click="selectAnnouncement(item)">{{ item.title }}</button>
           </details>
-          <p class="app-announcement-dialog__group">QQ群 {{ QQ_GROUP_NUMBER }}</p>
+          <p class="app-announcement-dialog__group">{{ ANNOUNCEMENT_QQ_GROUP_NAME }}</p>
 
           <div class="app-announcement-dialog__actions">
             <button type="button" @click="closeAnnouncement">我知道了</button>
@@ -138,7 +138,7 @@ function handleKeydown(event: KeyboardEvent) { if (event.key === 'Escape' && vis
             </a>
             <a
               v-else
-              :href="QQ_GROUP_URL"
+              :href="ANNOUNCEMENT_QQ_GROUP_URL"
               target="_blank"
               rel="noopener noreferrer"
               @click="closeAnnouncement"

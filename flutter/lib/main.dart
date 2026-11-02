@@ -1,24 +1,67 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
-import 'ui/components/brand_mark.dart';
 import 'ui/theme/app_theme.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const _Bootstrap());
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  // 本机初始化完成后直接提交实际页面，省去额外的品牌图标和转圈过渡。
+  binding.deferFirstFrame();
+  runApp(AppBootstrap(onInitialized: binding.allowFirstFrame));
 }
 
-class _Bootstrap extends StatefulWidget {
-  const _Bootstrap();
+class AppBootstrap extends StatefulWidget {
+  const AppBootstrap({super.key, this.createDependencies, this.onInitialized});
+
+  final Future<AppDependencies> Function()? createDependencies;
+  final VoidCallback? onInitialized;
+
   @override
-  State<_Bootstrap> createState() => _BootstrapState();
+  State<AppBootstrap> createState() => _AppBootstrapState();
 }
 
-class _BootstrapState extends State<_Bootstrap> {
-  late Future<AppDependencies> _initialization = AppDependencies.create();
+class _AppBootstrapState extends State<AppBootstrap> {
   AppDependencies? _dependencies;
+  bool _initializing = true;
+  bool _failed = false;
+  bool _firstFrameReleased = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_initialize());
+  }
+
+  Future<void> _initialize() async {
+    try {
+      final dependencies =
+          await (widget.createDependencies ?? AppDependencies.create)();
+      if (!mounted) {
+        dependencies.dispose();
+        return;
+      }
+      setState(() {
+        _dependencies = dependencies;
+        _initializing = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _failed = true;
+        _initializing = false;
+      });
+    }
+  }
+
+  void _releaseFirstFrame() {
+    if (_firstFrameReleased) return;
+    _firstFrameReleased = true;
+    widget.onInitialized?.call();
+  }
+
   @override
   void dispose() {
     _dependencies?.dispose();
@@ -26,13 +69,14 @@ class _BootstrapState extends State<_Bootstrap> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<AppDependencies>(
-    future: _initialization,
-    builder: (context, snapshot) {
-      if (snapshot.hasData) {
-        _dependencies = snapshot.data;
-        return ChengxinApp(dependencies: snapshot.requireData);
-      }
+  Widget build(BuildContext context) {
+    final dependencies = _dependencies;
+    if (dependencies != null) {
+      _releaseFirstFrame();
+      return ChengxinApp(dependencies: dependencies);
+    }
+    if (_failed) {
+      _releaseFirstFrame();
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.build(Brightness.light),
@@ -43,29 +87,24 @@ class _BootstrapState extends State<_Bootstrap> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const BrandMark(),
-                  const SizedBox(height: 24),
-                  if (snapshot.hasError) ...[
-                    const Text('启动未完成，请重试。'),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => setState(() {
-                        _initialization = AppDependencies.create();
-                      }),
-                      child: const Text('重新打开'),
-                    ),
-                  ] else
-                    const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                  const Text('启动未完成，请重试。'),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _initializing
+                        ? null
+                        : () {
+                            setState(() => _initializing = true);
+                            unawaited(_initialize());
+                          },
+                    child: Text(_initializing ? '正在重试…' : '重新打开'),
+                  ),
                 ],
               ),
             ),
           ),
         ),
       );
-    },
-  );
+    }
+    return const SizedBox.shrink();
+  }
 }

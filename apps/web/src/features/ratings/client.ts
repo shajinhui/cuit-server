@@ -52,9 +52,10 @@ export async function ratingsRequest<T>(
 ): Promise<T> {
   if (!apiBaseURL) throw new RatingsApiError('评分服务尚未配置', 503, 50300)
 
-  const token = await getRatingAccessToken()
   const generation = currentRatingSessionGeneration()
+  const token = await getRatingAccessToken()
   const deviceHeaders = await clientDeviceHeaders()
+  if (generation !== currentRatingSessionGeneration()) throw new RatingsApiError('账号已切换，请重新操作', 409, 40907)
   const response = await fetch(`${apiBaseURL}${path}`, {
     ...options,
     credentials: 'omit',
@@ -79,6 +80,7 @@ export async function ratingsRequest<T>(
   }
 
   const payload = await readPayload<T>(response)
+  if (generation !== currentRatingSessionGeneration()) throw new RatingsApiError('账号已切换，请重新操作', 409, 40907)
   if (!response.ok || payload.code !== 0) {
     throw new RatingsApiError(payload.message || '请求失败', response.status, payload.code)
   }
@@ -87,8 +89,9 @@ export async function ratingsRequest<T>(
 
 export async function ratingsBlob(path: string) {
   if (!apiBaseURL) throw new RatingsApiError('评分服务尚未配置', 503, 50300)
-  const token = await getRatingAccessToken()
   const generation = currentRatingSessionGeneration()
+  const token = await getRatingAccessToken()
+  if (generation !== currentRatingSessionGeneration()) throw new RatingsApiError('账号已切换，请重新操作', 409, 40907)
   const response = await fetch(`${apiBaseURL}${path}`, {
     credentials: 'omit',
     headers: { Accept: 'image/*', Authorization: `Bearer ${token}` },

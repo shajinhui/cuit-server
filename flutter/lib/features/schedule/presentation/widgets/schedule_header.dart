@@ -27,7 +27,8 @@ class ScheduleHeader extends StatelessWidget {
   static const double _dateLine = 24;
 
   /// 周次胶囊高度。
-  static const double _capsuleHeight = 44;
+  static const double _capsuleHeight = 32;
+  static const double _capsuleTapHeight = 44;
 
   @override
   Widget build(BuildContext context) {
@@ -51,14 +52,18 @@ class ScheduleHeader extends StatelessWidget {
     );
     final badgeText = '当前为第 ${vm.currentWeek} 周';
     final weekText = '第 ${vm.selectedWeek} 周';
-    const capsuleStyle = TextStyle(fontSize: 17, fontWeight: FontWeight.w500);
+    const capsuleStyle = TextStyle(
+      fontSize: 15,
+      height: 1,
+      fontWeight: FontWeight.w500,
+    );
     final statusStyle = TextStyle(
       fontSize: size.height <= 740 ? 15 : 17,
       height: 1.1,
       color: muted,
     );
-    // 胶囊固定占位：左右 padding 10、间距 6、箭头 14。
-    final capsuleWidth = _textWidth(weekText, capsuleStyle) + 40;
+    // 胶囊固定占位：左右 padding 8、间距 4、箭头 12。
+    final capsuleWidth = _textWidth(weekText, capsuleStyle) + 32;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         gutter,
@@ -73,7 +78,7 @@ class ScheduleHeader extends StatelessWidget {
               builder: (context, constraints) {
                 final height =
                     _dateLine +
-                    _capsuleHeight -
+                    _capsuleTapHeight -
                     scheduleStripTopGap(size.height);
                 // 「当前为第 N 周」只在放得下时显示（最多容忍 20% 的缩放）：
                 // 更窄时优先保证日期完整可读，而不是把两者都缩成一团。
@@ -138,27 +143,34 @@ class ScheduleHeader extends StatelessWidget {
                               onTap: vm.isLoading && !vm.hasData
                                   ? null
                                   : onWeek,
-                              child: _HeaderGlass(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                  ),
-                                  child: SizedBox(
-                                    height: _capsuleHeight,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          weekText,
-                                          key: const Key('selected-week'),
-                                          style: capsuleStyle,
+                              // 视觉缩小，保留原来的触摸高度。
+                              child: SizedBox(
+                                height: _capsuleTapHeight,
+                                child: Center(
+                                  widthFactor: 1,
+                                  child: _HeaderGlass(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                      child: SizedBox(
+                                        height: _capsuleHeight,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              weekText,
+                                              key: const Key('selected-week'),
+                                              style: capsuleStyle,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                              Icons.keyboard_arrow_down,
+                                              size: 12,
+                                            ),
+                                          ],
                                         ),
-                                        const SizedBox(width: 6),
-                                        const Icon(
-                                          Icons.keyboard_arrow_down,
-                                          size: 14,
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),

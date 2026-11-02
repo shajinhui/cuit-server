@@ -8,13 +8,13 @@ fi
 # hooks_runner 会过滤 DEVELOPER_DIR；局部包装 xcrun，避免修改全局 xcode-select。
 if [[ "$(uname -s)" == Darwin && -d /Applications/Xcode.app/Contents/Developer ]]; then
   export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-  mkdir -p .dart_tool/local_toolchain
-  cat > .dart_tool/local_toolchain/xcrun <<WRAPPER
+  mkdir -p .build/local_toolchain
+  cat > .build/local_toolchain/xcrun <<WRAPPER
 #!/bin/sh
 exec env DEVELOPER_DIR="$DEVELOPER_DIR" /usr/bin/xcrun "\$@"
 WRAPPER
-  chmod +x .dart_tool/local_toolchain/xcrun
-  export PATH="$PWD/.dart_tool/local_toolchain:$PATH"
+  chmod +x .build/local_toolchain/xcrun
+  export PATH="$PWD/.build/local_toolchain:$PATH"
 fi
 if [[ -n "${FLUTTER_BIN:-}" ]]; then
   exec "$FLUTTER_BIN" "$@"

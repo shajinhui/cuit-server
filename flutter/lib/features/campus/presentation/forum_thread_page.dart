@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../ui/components/page_layout.dart';
 import 'campus_report_dialog.dart';
 import 'campus_widgets.dart';
+import '../../community/data/community_repository.dart';
 
 /// 帖子详情：主楼、楼中楼回复、点赞与举报。数据只在页面内存中保存，不做本机缓存。
 class ForumThreadPage extends StatefulWidget {
@@ -16,10 +17,12 @@ class ForumThreadPage extends StatefulWidget {
     super.key,
     required this.repository,
     required this.threadId,
+    this.focusReplyId,
   });
 
   final CampusRepository? repository;
   final String threadId;
+  final String? focusReplyId;
 
   @override
   State<ForumThreadPage> createState() => _ForumThreadPageState();
@@ -54,12 +57,102 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   int _childrenRequestVersion = 0;
   final Set<String> _replyLikeSubmitting = {};
   final Set<String> _replyDeleting = {};
+  bool _favorited = false,
+      _favoriteKnown = false,
+      _favoriteBusy = false,
+      _favoriteSupported = true;
+  ForumReply? _focusedReply, _focusedParent;
+  String? _focusError;
+  CommunityRepository? get _community =>
+      widget.repository is CommunityRepository
+      ? widget.repository as CommunityRepository
+      : null;
 
   @override
   void initState() {
     super.initState();
     unawaited(_loadPage());
     unawaited(_loadReplies(reset: true));
+    unawaited(_loadFavorite());
+    unawaited(_loadFocus());
+  }
+
+  Future<void> _loadFavorite() async {
+    final repository = _community;
+    if (repository == null) return;
+    try {
+      final value = await repository.getForumFavorite(widget.threadId);
+      if (mounted) {
+        setState(() {
+          _favorited = value;
+          _favoriteKnown = true;
+        });
+      }
+    } catch (error) {
+      if (mounted &&
+          error is CampusRepositoryException &&
+          error.statusCode == 404) {
+        setState(() => _favoriteSupported = false);
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final repository = _community;
+    if (repository == null || _favoriteBusy) return;
+    setState(() => _favoriteBusy = true);
+    try {
+      if (!_favoriteKnown) {
+        final value = await repository.getForumFavorite(widget.threadId);
+        if (!mounted) return;
+        setState(() {
+          _favorited = value;
+          _favoriteKnown = true;
+        });
+      }
+      final value = await repository.setForumFavorite(
+        widget.threadId,
+        !_favorited,
+      );
+      if (mounted) {
+        setState(() => _favorited = value);
+        _showMessage(value ? '已加入我的收藏' : '已取消收藏');
+      }
+    } catch (error) {
+      if (mounted) _showMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => _favoriteBusy = false);
+    }
+  }
+
+  Future<void> _loadFocus() async {
+    final repository = _community;
+    final id = widget.focusReplyId;
+    if (repository == null || id == null) return;
+    try {
+      final reply = await repository.getForumReply(id);
+      if (reply.threadId != widget.threadId) {
+        throw const CampusRepositoryException('回复不属于这个帖子。');
+      }
+      final parent = reply.parentId == null
+          ? null
+          : await repository.getForumReply(reply.parentId!);
+      if (mounted) {
+        setState(() {
+          _focusedReply = reply;
+          _focusedParent = parent;
+          _focusError = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _focusedReply = null;
+          _focusedParent = null;
+          _focusError = '消息中的回复已删除、隐藏或暂时无法加载。';
+        });
+      }
+    }
   }
 
   @override
@@ -293,7 +386,12 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     }
     _childrenRequestVersion++;
     _childrenLoading.clear();
-    await Future.wait([_loadPage(), _loadReplies(reset: true)]);
+    await Future.wait([
+      _loadPage(),
+      _loadReplies(reset: true),
+      _loadFocus(),
+      _loadFavorite(),
+    ]);
     if (!mounted || _replyError != null) return;
     final roots = _replies.map((reply) => reply.id).toSet();
     setState(() {
@@ -521,7 +619,17 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     final detail = _detail;
     return PageScaffold(
       title: '帖子详情',
+      backgroundColor: Theme.of(context).colorScheme.surface,
       actions: [
+        if (detail != null && _community != null && _favoriteSupported)
+          IconButton(
+            key: const ValueKey('forum-thread-favorite'),
+            tooltip: _favorited ? '取消收藏' : '收藏帖子',
+            onPressed: _favoriteBusy ? null : _toggleFavorite,
+            icon: Icon(
+              _favorited ? Icons.star_rounded : Icons.star_outline_rounded,
+            ),
+          ),
         if (detail?.thread.canEdit == true)
           IconButton(
             key: const ValueKey('forum-thread-edit'),
@@ -648,21 +756,79 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   Widget _buildContent(ForumThreadDetail detail) => RefreshIndicator(
     onRefresh: _refresh,
     child: ListView(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 28),
+      padding: const EdgeInsets.only(bottom: 28),
       children: [
         _buildMainPost(detail),
+        if (_focusedReply != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: PageCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '消息中的回复',
+                    style: TextStyle(
+                      color: pageAccent(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      CampusAuthorAvatar(
+                        author: _focusedReply!.author,
+                        radius: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: CampusAuthorName(author: _focusedReply!.author),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_focusedReply!.body),
+                  if (detail.canReply)
+                    TextButton(
+                      onPressed: () {
+                        setState(
+                          () => _replyTarget = _focusedParent ?? _focusedReply,
+                        );
+                        _replyFocusNode.requestFocus();
+                      },
+                      child: const Text('回复这条讨论'),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        if (_focusError != null)
+          Padding(padding: const EdgeInsets.all(16), child: Text(_focusError!)),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
               _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
-        const SizedBox(height: 16),
-        Text(
-          '全部回复 / $_replyCount',
-          style: Theme.of(context).textTheme.titleMedium,
+        Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: .65),
+                width: .6,
+              ),
+            ),
+          ),
+          child: Text(
+            '全部回复 / $_replyCount',
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
         ),
         if (_replyError != null)
           Padding(
@@ -695,273 +861,470 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   Widget _buildMainPost(ForumThreadDetail detail) {
     final thread = detail.thread;
     final theme = Theme.of(context);
-    return Card(
+    final colors = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: pageBackground(context), width: 7),
+        ),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (thread.categoryName.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(
-                  thread.categoryName,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: pageAccent(context),
-                  ),
-                ),
-              ),
-            Text(
-              thread.title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 10),
             Row(
               children: [
-                CampusAuthorAvatar(author: thread.author, radius: 13),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    thread.author.displayName,
-                    style: theme.textTheme.titleSmall,
-                  ),
+                CampusAuthorAvatar(
+                  author: thread.author,
+                  radius: 20,
+                  repository: widget.repository,
                 ),
-                Text(
-                  campusFormatTime(thread.createdAt),
-                  style: theme.textTheme.labelSmall,
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CampusAuthorName(
+                        author: thread.author,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        campusFormatTime(thread.createdAt),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // 帖子正文保持服务端原始换行，不做富文本渲染。
-            Text(
-              thread.body,
-              style: const TextStyle(fontSize: 15, height: 1.6),
-            ),
-            if (thread.imageAssetIds.isNotEmpty) ...[
+            if (thread.title.isNotEmpty) ...[
               const SizedBox(height: 12),
-              SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: thread.imageAssetIds.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) => CampusAssetImage(
-                    assetId: thread.imageAssetIds[index],
-                    repository: widget.repository,
-                    height: 160,
-                    width: 160,
-                    radius: 12,
-                    fallback: Icons.image_outlined,
-                  ),
+              Text(
+                thread.title,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  height: 1.45,
                 ),
               ),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                FilledButton.tonalIcon(
-                  key: const ValueKey('forum-thread-like'),
-                  onPressed: _likeSubmitting ? null : _toggleLike,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(44, 44),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+            if (thread.body.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              // 帖子正文保持服务端原始换行，不做富文本渲染。
+              Text(
+                thread.body,
+                style: const TextStyle(fontSize: 16, height: 1.7),
+              ),
+            ],
+            if (thread.imageAssetIds.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Builder(
+                builder: (context) {
+                  final ids = thread.imageAssetIds.take(3).toList();
+                  if (ids.length == 1) {
+                    return CampusAssetImage(
+                      assetId: ids.single,
+                      repository: widget.repository,
+                      width: 320,
+                      height: 360,
+                      radius: 8,
+                      adaptive: true,
+                      fallback: Icons.image_outlined,
+                    );
+                  }
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 118,
+                    child: Row(
+                      children: [
+                        for (var index = 0; index < ids.length; index++) ...[
+                          if (index > 0) const SizedBox(width: 4),
+                          Expanded(
+                            child: CampusAssetImage(
+                              assetId: ids[index],
+                              repository: widget.repository,
+                              height: 118,
+                              radius: 8,
+                              fallback: Icons.image_outlined,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+            if (thread.categoryName.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                '# ${thread.categoryName}',
+                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
+              ),
+            ],
+            const SizedBox(height: 5),
+            SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceAround,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton.icon(
+                    key: const ValueKey('forum-thread-like'),
+                    onPressed: _likeSubmitting ? null : _toggleLike,
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(44, 44),
+                      foregroundColor: _liked
+                          ? pageAccent(context)
+                          : colors.onSurfaceVariant,
+                    ),
+                    icon: Icon(
+                      _liked
+                          ? Icons.thumb_up_alt_rounded
+                          : Icons.thumb_up_alt_outlined,
+                      size: 20,
+                    ),
+                    label: Text('$_likeCount'),
                   ),
-                  icon: Icon(
-                    _liked
-                        ? Icons.thumb_up_alt_rounded
-                        : Icons.thumb_up_alt_outlined,
-                  ),
-                  label: Text('$_likeCount'),
-                ),
-                if (thread.isLocked) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '帖子已锁定，无法回复',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 19,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$_replyCount',
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
+            if (thread.isLocked)
+              Text(
+                '帖子已锁定，无法回复',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildReply(ForumReply reply) => Card(
-    margin: const EdgeInsets.only(bottom: 10),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CampusAuthorAvatar(author: reply.author, radius: 14),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  reply.author.displayName,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              Text(
-                campusFormatTime(reply.createdAt),
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ],
+  Widget _buildReply(ForumReply reply) {
+    final colors = Theme.of(context).colorScheme;
+    final isThreadAuthor = _detail?.thread.author.id == reply.author.id;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: .65),
+            width: .6,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(38, 8, 0, 4),
-            child: Text(reply.body),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 30),
-            child: Wrap(
-              spacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 13, 10, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton.icon(
+                CampusAuthorAvatar(
+                  author: reply.author,
+                  radius: 15,
+                  repository: widget.repository,
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          CampusAuthorName(
+                            author: reply.author,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                          if (isThreadAuthor)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: pageAccent(
+                                  context,
+                                ).withValues(alpha: .1),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                              child: Text(
+                                '作者',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  height: 1.6,
+                                  color: pageAccent(context),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        reply.body,
+                        style: const TextStyle(fontSize: 14, height: 1.55),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                              campusFormatTime(reply.createdAt),
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _replySubmitting
+                                ? null
+                                : () {
+                                    setState(() => _replyTarget = reply);
+                                    _replyFocusNode.requestFocus();
+                                  },
+                            style: _replyActionStyle,
+                            child: const Text('回复'),
+                          ),
+                          if (reply.canDelete)
+                            TextButton(
+                              key: ValueKey('forum-reply-delete-${reply.id}'),
+                              onPressed: _replyDeleting.contains(reply.id)
+                                  ? null
+                                  : () => _deleteReply(reply),
+                              style: _replyActionStyle,
+                              child: const Text('删除'),
+                            ),
+                          TextButton(
+                            onPressed: () => _report('forum_reply', reply.id),
+                            style: _replyActionStyle,
+                            child: const Text('举报'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
                   key: ValueKey('forum-reply-like-${reply.id}'),
                   onPressed: _replyLikeSubmitting.contains(reply.id)
                       ? null
                       : () => _toggleReplyLike(reply),
-                  icon: Icon(
-                    reply.liked
-                        ? Icons.thumb_up_alt_rounded
-                        : Icons.thumb_up_alt_outlined,
-                    size: 16,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(40, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    foregroundColor: reply.liked
+                        ? pageAccent(context)
+                        : colors.onSurfaceVariant,
                   ),
-                  label: Text('${reply.likeCount}'),
-                ),
-                TextButton(
-                  onPressed: _replySubmitting
-                      ? null
-                      : () {
-                          setState(() => _replyTarget = reply);
-                          _replyFocusNode.requestFocus();
-                        },
-                  child: const Text('回复'),
-                ),
-                if (reply.canDelete)
-                  TextButton(
-                    key: ValueKey('forum-reply-delete-${reply.id}'),
-                    onPressed: _replyDeleting.contains(reply.id)
-                        ? null
-                        : () => _deleteReply(reply),
-                    child: const Text('删除'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        reply.liked
+                            ? Icons.thumb_up_alt_rounded
+                            : Icons.thumb_up_alt_outlined,
+                        size: 16,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${reply.likeCount}',
+                        style: const TextStyle(fontSize: 9),
+                      ),
+                    ],
                   ),
-                TextButton(
-                  onPressed: () => _report('forum_reply', reply.id),
-                  child: const Text('举报'),
+                ),
+              ],
+            ),
+            if (reply.replyCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 39),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _toggleReplyChildren(reply),
+                    style: _replyActionStyle,
+                    icon: Icon(
+                      _expandedReplies.contains(reply.id)
+                          ? Icons.expand_less
+                          : Icons.expand_more,
+                      size: 17,
+                    ),
+                    label: Text(
+                      _expandedReplies.contains(reply.id)
+                          ? '收起回复'
+                          : '查看 ${reply.replyCount} 条回复',
+                    ),
+                  ),
+                ),
+              ),
+            if (_expandedReplies.contains(reply.id))
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(left: 39, top: 4),
+                padding: const EdgeInsets.fromLTRB(10, 4, 6, 7),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest.withValues(alpha: .45),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    if (_childrenLoading.contains(reply.id))
+                      const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(),
+                      ),
+                    for (final child in _replyChildren[reply.id] ?? [])
+                      _buildChildReply(child),
+                    if (_childrenHasMore.contains(reply.id) ||
+                        !_replyChildren.containsKey(reply.id))
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          key: ValueKey('forum-children-more-${reply.id}'),
+                          onPressed: _childrenLoading.contains(reply.id)
+                              ? null
+                              : () => _loadReplyChildren(
+                                  reply.id,
+                                  reset: !_replyChildren.containsKey(reply.id),
+                                ),
+                          style: _replyActionStyle,
+                          child: const Text('加载更多回复'),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ButtonStyle get _replyActionStyle => TextButton.styleFrom(
+    minimumSize: const Size(40, 40),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    textStyle: const TextStyle(fontSize: 10),
+    foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+  );
+
+  Widget _buildChildReply(ForumReply child) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CampusAuthorAvatar(
+            author: child.author,
+            radius: 12,
+            repository: widget.repository,
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CampusAuthorName(
+                  author: child.author,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  child.body,
+                  style: const TextStyle(fontSize: 12, height: 1.5),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      campusFormatTime(child.createdAt),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    TextButton.icon(
+                      key: ValueKey('forum-reply-like-${child.id}'),
+                      onPressed: _replyLikeSubmitting.contains(child.id)
+                          ? null
+                          : () => _toggleReplyLike(child),
+                      style: _replyActionStyle,
+                      icon: Icon(
+                        child.liked
+                            ? Icons.thumb_up_alt_rounded
+                            : Icons.thumb_up_alt_outlined,
+                        size: 14,
+                      ),
+                      label: Text('${child.likeCount}'),
+                    ),
+                    if (child.canDelete)
+                      IconButton(
+                        key: ValueKey('forum-reply-delete-${child.id}'),
+                        tooltip: '删除回复',
+                        onPressed: _replyDeleting.contains(child.id)
+                            ? null
+                            : () => _deleteReply(child),
+                        icon: const Icon(Icons.delete_outline, size: 17),
+                      ),
+                    IconButton(
+                      tooltip: '举报回复',
+                      onPressed: () => _report('forum_reply', child.id),
+                      icon: const Icon(Icons.flag_outlined, size: 17),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          if (reply.replyCount > 0)
-            TextButton.icon(
-              onPressed: () => _toggleReplyChildren(reply),
-              icon: Icon(
-                _expandedReplies.contains(reply.id)
-                    ? Icons.expand_less
-                    : Icons.expand_more,
-              ),
-              label: Text(
-                _expandedReplies.contains(reply.id)
-                    ? '收起回复'
-                    : '查看 ${reply.replyCount} 条回复',
-              ),
-            ),
-          if (_expandedReplies.contains(reply.id))
-            Padding(
-              padding: const EdgeInsets.only(left: 28),
-              child: Column(
-                children: [
-                  if (_childrenLoading.contains(reply.id))
-                    const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: CircularProgressIndicator(),
-                    ),
-                  for (final child in _replyChildren[reply.id] ?? [])
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CampusAuthorAvatar(
-                        author: child.author,
-                        radius: 12,
-                      ),
-                      title: Text(child.author.displayName),
-                      subtitle: Text(
-                        '${child.body}\n${campusFormatTime(child.createdAt)}',
-                      ),
-                      isThreeLine: true,
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          InkWell(
-                            key: ValueKey('forum-reply-like-${child.id}'),
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: _replyLikeSubmitting.contains(child.id)
-                                ? null
-                                : () => _toggleReplyLike(child),
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    child.liked
-                                        ? Icons.thumb_up_alt_rounded
-                                        : Icons.thumb_up_alt_outlined,
-                                    size: 15,
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text('${child.likeCount}'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (child.canDelete)
-                            IconButton(
-                              key: ValueKey('forum-reply-delete-${child.id}'),
-                              tooltip: '删除回复',
-                              onPressed: _replyDeleting.contains(child.id)
-                                  ? null
-                                  : () => _deleteReply(child),
-                              icon: const Icon(Icons.delete_outline, size: 18),
-                            ),
-                          IconButton(
-                            tooltip: '举报回复',
-                            onPressed: () => _report('forum_reply', child.id),
-                            icon: const Icon(Icons.flag_outlined, size: 18),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (_childrenHasMore.contains(reply.id) ||
-                      !_replyChildren.containsKey(reply.id))
-                    TextButton(
-                      key: ValueKey('forum-children-more-${reply.id}'),
-                      onPressed: _childrenLoading.contains(reply.id)
-                          ? null
-                          : () => _loadReplyChildren(
-                              reply.id,
-                              reset: !_replyChildren.containsKey(reply.id),
-                            ),
-                      child: const Text('加载更多回复'),
-                    ),
-                ],
-              ),
-            ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 ForumReply _copyReply(

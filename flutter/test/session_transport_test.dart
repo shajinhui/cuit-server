@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chengxin_youyou/core/network/api_client.dart';
@@ -27,6 +29,86 @@ void main() {
 
   DefaultSessionRepository repository(ApiClient client, AppStorage storage) =>
       DefaultSessionRepository(client, storage, clearUserData: (_) async {});
+
+  Future<ApiClient> savedSession(
+    MemoryAppStorage storage,
+    _SessionAdapter adapter,
+  ) async {
+    adapter.handler = (request) async => request.method == 'POST'
+        ? _loginResponse()
+        : FakeApi.response(Student.demo.toJson());
+    final first = await createClient(storage, adapter);
+    await repository(first, storage).login('20260001', 'test-only-password');
+    adapter.requests.clear();
+    return createClient(storage, adapter);
+  }
+
+  test('启动从安全存储恢复本机身份，不等待会话或个人信息接口', () async {
+    final storage = MemoryAppStorage();
+    final adapter = _SessionAdapter();
+    final client = await savedSession(storage, adapter);
+    adapter.handler = (_) => Completer<ResponseBody>().future;
+    final session = SessionViewModel(repository(client, storage));
+    addTearDown(session.dispose);
+
+    await session.restore(cacheOnly: true).timeout(const Duration(seconds: 1));
+
+    expect(session.student?.number, Student.demo.number);
+    expect(session.isOffline, isTrue);
+    expect(session.isRestoring, isFalse);
+    expect(adapter.requests, isEmpty);
+  });
+
+  test('仅有缓存身份但没有可用 Cookie 时，不恢复为已登录页面', () async {
+    final storage = MemoryAppStorage();
+    await storage.write('profile:$origin', jsonEncode(Student.demo.toJson()));
+    final adapter = _SessionAdapter();
+    final client = await createClient(storage, adapter);
+
+    expect(await repository(client, storage).restoreCached(), isNull);
+    expect(adapter.requests, isEmpty);
+  });
+
+  test('启动读取 Cookie 失败时，不伪装成可用的离线登录', () async {
+    final storage = _FailingStorage();
+    final adapter = _SessionAdapter();
+    final client = await savedSession(storage, adapter);
+    storage.failCookieReads = true;
+
+    await expectLater(
+      repository(client, storage).restoreCached(),
+      throwsA(
+        isA<ApiException>().having((e) => e.kind, 'kind', FailureKind.storage),
+      ),
+    );
+    expect(adapter.requests, isEmpty);
+  });
+
+  test('缓存先显示后，受保护的请求仍拒绝 401，过期退出清理身份', () async {
+    final storage = MemoryAppStorage();
+    final adapter = _SessionAdapter();
+    final client = await savedSession(storage, adapter);
+    final session = SessionViewModel(repository(client, storage));
+    addTearDown(session.dispose);
+    await session.restore(cacheOnly: true);
+    adapter.handler = (_) async => FakeApi.response(null, status: 401);
+
+    await expectLater(
+      client.request('/api/v1/jwxt/semesters'),
+      throwsA(
+        isA<ApiException>().having(
+          (e) => e.kind,
+          'kind',
+          FailureKind.authentication,
+        ),
+      ),
+    );
+    await session.logout(expired: true);
+
+    expect(session.student, isNull);
+    expect(session.error, '登录已过期，请重新登录。');
+    expect(storage.values, isEmpty);
+  });
 
   test('原生登录 Cookie 用于读取个人信息，重建客户端后仍可恢复，退出会清理', () async {
     final storage = MemoryAppStorage();

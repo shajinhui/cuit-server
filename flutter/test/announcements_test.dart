@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:chengxin_youyou/features/announcements/announcements.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:chengxin_youyou/app/app.dart';
@@ -44,6 +45,61 @@ class FakeAnnouncements implements AnnouncementRepository {
 }
 
 void main() {
+  testWidgets('公告默认进入二群，有专属按钮时仍打开专属链接', (tester) async {
+    const channel = MethodChannel('plugins.flutter.io/url_launcher');
+    final opened = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      if (call.method == 'launch') {
+        opened.add((call.arguments as Map)['url'] as String);
+        return true;
+      }
+      return null;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+
+    final promotion = AppAnnouncement(
+      id: 'promotion-test',
+      revision: 1,
+      title: '带专属按钮的测试公告',
+      body: '用于验证专属链接不会被进群链接覆盖。',
+      autoShow: true,
+      actionLabel: '查看详情',
+      actionUrl: Uri.parse('https://example.invalid/promotion'),
+    );
+    for (final notice in [message, promotion]) {
+      final repo = FakeAnnouncements()..remote = [notice];
+      final vm = AnnouncementViewModel(repo);
+      await vm.refresh();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AnnouncementTile(viewModel: vm, lightweight: true),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('tools-announcement')));
+      await tester.pumpAndSettle();
+      expect(find.text('成信友友二群'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('announcement-action')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      vm.dispose();
+    }
+    expect(opened, [
+      'https://qm.qq.com/q/oY2MdsQgco',
+      'https://example.invalid/promotion',
+    ]);
+  });
+
   test('再次刷新期间不自动弹旧消息，确认下架后删除旧候选', () async {
     final repo = FakeAnnouncements();
     final vm = AnnouncementViewModel(repo);

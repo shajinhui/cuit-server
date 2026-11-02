@@ -37,6 +37,8 @@ import 'package:provider/provider.dart';
 import 'app_dependencies.dart';
 import 'app_shell.dart';
 import '../features/schedule/presentation/desktop_widget_page.dart';
+import '../features/community/presentation/community_scope.dart';
+import '../features/community/presentation/community_pages.dart';
 
 class ChengxinApp extends StatefulWidget {
   const ChengxinApp({super.key, required this.dependencies});
@@ -46,11 +48,19 @@ class ChengxinApp extends StatefulWidget {
 }
 
 class _ChengxinAppState extends State<ChengxinApp> {
+  late final AppLifecycleListener _appLifecycle;
+
   @override
   void initState() {
     super.initState();
     // 热更新独立于账号和业务初始化，不等待网络检查才展示页面。
-    unawaited(widget.dependencies.appUpdate?.checkAndDownload());
+    unawaited(widget.dependencies.appUpdate?.checkInBackground());
+    _appLifecycle = AppLifecycleListener(
+      onResume: () {
+        unawaited(widget.dependencies.appUpdate?.checkInBackground());
+        unawaited(widget.dependencies.community?.refreshUnread());
+      },
+    );
     unawaited(widget.dependencies.announcements?.refresh());
     widget.dependencies.desktopWidgets?.onOpenSchedule = _openWidgetSchedule;
     unawaited(_consumeWidgetLaunch());
@@ -188,6 +198,31 @@ class _ChengxinAppState extends State<ChengxinApp> {
                 },
                 routes: [
                   GoRoute(
+                    path: 'community/profile/edit',
+                    name: 'community-profile-edit',
+                    builder: (context, state) => CommunityProfileEditorPage(
+                      localAvatar: widget.dependencies.avatar,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'community/profiles/:profileId',
+                    name: 'community-profile',
+                    builder: (context, state) => CommunityProfilePage(
+                      profileId: state.pathParameters['profileId']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'community/notifications',
+                    name: 'community-notifications',
+                    builder: (context, state) => const CommunityListPage(),
+                  ),
+                  GoRoute(
+                    path: 'community/favorites',
+                    name: 'community-favorites',
+                    builder: (context, state) =>
+                        const CommunityListPage(favorites: true),
+                  ),
+                  GoRoute(
                     path: 'ratings/new',
                     name: 'rating-create-board',
                     builder: (context, state) => RatingEditorPage(
@@ -271,6 +306,7 @@ class _ChengxinAppState extends State<ChengxinApp> {
                     builder: (context, state) => ForumThreadPage(
                       repository: widget.dependencies.campusRepository,
                       threadId: state.pathParameters['threadId']!,
+                      focusReplyId: state.uri.queryParameters['reply'],
                     ),
                   ),
                   GoRoute(
@@ -368,6 +404,7 @@ class _ChengxinAppState extends State<ChengxinApp> {
   );
   @override
   void dispose() {
+    _appLifecycle.dispose();
     widget.dependencies.desktopWidgets?.onOpenSchedule = null;
     _router.dispose();
     super.dispose();
@@ -391,6 +428,20 @@ class _ChengxinAppState extends State<ChengxinApp> {
         locale: const Locale('zh', 'CN'),
         supportedLocales: const [Locale('zh', 'CN')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        builder: (context, child) => ListenableBuilder(
+          listenable: widget.dependencies.session,
+          builder: (context, _) => CommunityScope(
+            model: widget.dependencies.community,
+            child: KeyedSubtree(
+              key: ValueKey(
+                widget.dependencies.session.student == null
+                    ? 'anonymous'
+                    : 'community-session-${widget.dependencies.session.generation}:${widget.dependencies.session.student!.number}:${widget.dependencies.session.isDemo}',
+              ),
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        ),
       ),
     ),
   );

@@ -586,8 +586,8 @@ class _RatingItemPageState extends State<RatingItemPage> {
               CampusAuthorAvatar(author: comment.author, radius: 14),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  comment.author.displayName,
+                child: CampusAuthorName(
+                  author: comment.author,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
@@ -656,7 +656,7 @@ class _RatingItemPageState extends State<RatingItemPage> {
                         author: reply.author,
                         radius: 12,
                       ),
-                      title: Text(reply.author.displayName),
+                      title: CampusAuthorName(author: reply.author),
                       subtitle: Text(
                         '${reply.body}\n${campusFormatTime(reply.createdAt)}',
                       ),

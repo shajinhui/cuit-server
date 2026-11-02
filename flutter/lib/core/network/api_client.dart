@@ -5,10 +5,15 @@ import 'api_exception.dart';
 import 'session_transport.dart';
 
 class ApiClient {
-  ApiClient(this.dio, this.clearCookies);
+  ApiClient(
+    this.dio,
+    this.clearCookies, {
+    Future<bool> Function()? hasStoredCookies,
+  }) : _hasStoredCookies = hasStoredCookies;
 
   final Dio dio;
   final Future<void> Function() clearCookies;
+  final Future<bool> Function()? _hasStoredCookies;
   CancelToken _cancelToken = CancelToken();
 
   static Future<ApiClient> create(
@@ -32,8 +37,17 @@ class ApiClient {
         headers: {'Accept': 'application/json'},
       ),
     );
-    return ApiClient(dio, await configureSessionTransport(dio, secureStorage));
+    final transport = await configureSessionTransport(dio, secureStorage);
+    return ApiClient(
+      dio,
+      transport.clearCookies,
+      hasStoredCookies: transport.hasStoredCookies,
+    );
   }
+
+  /// 只检查本机凭证是否可读且未过期，不发送网络请求。
+  Future<bool> hasStoredCookies() async =>
+      await _hasStoredCookies?.call() ?? false;
 
   /// 统一解开已有服务端的 code / message / data 响应结构。
   Future<Object?> request(

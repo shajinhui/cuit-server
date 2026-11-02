@@ -334,14 +334,18 @@ class PageSegmentedControl<T> extends StatelessWidget {
     required this.values,
     required this.selected,
     required this.onChanged,
+    this.compact = false,
   });
   final Map<T, String> values;
   final T selected;
   final ValueChanged<T>? onChanged;
+
+  /// 紧凑工具栏使用较小字号和更少装饰留白，但点击区域仍至少 44 高。
+  final bool compact;
   @override
   Widget build(BuildContext context) => PageCard(
-    radius: 24,
-    padding: const EdgeInsets.all(4),
+    radius: compact ? 22 : 24,
+    padding: EdgeInsets.all(compact ? 0 : 4),
     child: Row(
       children: [
         for (final item in values.entries)
@@ -354,9 +358,12 @@ class PageSegmentedControl<T> extends StatelessWidget {
                     : () => onChanged!(item.key),
                 style: TextButton.styleFrom(
                   minimumSize: const Size(44, 44),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 10,
+                  tapTargetSize: compact
+                      ? MaterialTapTargetSize.shrinkWrap
+                      : null,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 4 : 6,
+                    vertical: compact ? 6 : 10,
                   ),
                   foregroundColor: Theme.of(context).colorScheme.onSurface,
                   backgroundColor: selected == item.key
@@ -369,8 +376,8 @@ class PageSegmentedControl<T> extends StatelessWidget {
                 child: Text(
                   item.value,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: TextStyle(
+                    fontSize: compact ? 13 : 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

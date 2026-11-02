@@ -187,7 +187,13 @@ async function callAutoRunApi<T>(
       // while still preserving auth/business errors verbatim.
       const upstreamUnavailable =
         (response.status >= 500 && response.status < 600 && /上游|upstream/i.test(message)) ||
-        (payload.code >= 50200 && payload.code < 50300)
+        // The relay uses 50200 for both transport failures and upstream
+        // business responses (for example, invalid login credentials). Only
+        // coerce opaque 50200 responses for schedule operations, where the
+        // backend may not have a more specific message.
+        ((action === 'club_schedule_get' || action === 'club_schedule_set') &&
+          payload.code >= 50200 &&
+          payload.code < 50300)
       throw new AutoRunApiError(
         upstreamUnavailable
           ? '校园跑上游服务暂时不可用，请稍后重试'

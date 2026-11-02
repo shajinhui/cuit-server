@@ -29,6 +29,7 @@ import { usePageTheme } from '@/shared/composables/usePageTheme'
 import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
 import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
+import RatingAuthorName from '@/features/ratings/components/RatingAuthorName.vue'
 
 defineOptions({ name: 'RatingItemPage' })
 
@@ -249,7 +250,7 @@ function showNotice() {
         <RatingImage :asset="item.image_asset" :alt="item.name" />
         <div>
           <h1>{{ item.name }}</h1>
-          <span><RatingAvatar :author="item.creator" />{{ item.creator.display_name }} 添加</span>
+          <span><RatingAvatar :author="item.creator" /><RatingAuthorName :author="item.creator" /> 添加</span>
           <RouterLink :to="{ name: 'rating-board', params: { boardId: item.board.id } }">{{ item.board.title }} ›</RouterLink>
         </div>
         <p v-if="item.description" class="rating-hero-description">{{ item.description }}</p>
@@ -290,7 +291,7 @@ function showNotice() {
               <RatingAvatar :author="comment.author" />
               <div>
                 <header>
-                  <strong>{{ comment.author.display_name }}</strong>
+                  <strong><RatingAuthorName :author="comment.author" /></strong>
                   <span v-if="comment.stars_snapshot" class="rating-comment__stars" role="img" :aria-label="`发言时评分 ${comment.stars_snapshot * 2} 分`"><span aria-hidden="true">{{ '★'.repeat(comment.stars_snapshot) }}<span class="rating-comment__empty-stars">{{ '★'.repeat(5 - comment.stars_snapshot) }}</span></span></span>
                 </header>
                 <p>{{ comment.body }}</p>
@@ -304,7 +305,7 @@ function showNotice() {
                 <div v-if="expandedReplies.has(comment.id)" class="rating-replies">
                   <article v-for="reply in replies[comment.id] ?? []" :key="reply.id">
                     <RatingAvatar :author="reply.author" />
-                    <div><strong>{{ reply.author.display_name }}</strong><p>{{ reply.body }}</p><footer><time>{{ formatRatingTime(reply.created_at) }}</time><button type="button" @click="reportTarget = { type: 'comment', id: reply.id }">举报</button><button v-if="reply.capabilities?.can_delete" type="button" @click="removeComment(reply, comment.id)">删除</button></footer></div>
+                    <div><strong><RatingAuthorName :author="reply.author" /></strong><p>{{ reply.body }}</p><footer><time>{{ formatRatingTime(reply.created_at) }}</time><button type="button" @click="reportTarget = { type: 'comment', id: reply.id }">举报</button><button v-if="reply.capabilities?.can_delete" type="button" @click="removeComment(reply, comment.id)">删除</button></footer></div>
                   </article>
                 </div>
               </div>
@@ -315,7 +316,7 @@ function showNotice() {
       </div>
 
       <GlassToolbar as="form" class="rating-comment-composer" :corner-radius="24" @submit.prevent="submitComment">
-        <div v-if="replyTarget" class="rating-comment-composer__reply">回复 {{ replyTarget.author.display_name }}<button type="button" aria-label="取消回复" @click="replyTarget = null">×</button></div>
+        <div v-if="replyTarget" class="rating-comment-composer__reply">回复 <RatingAuthorName :author="replyTarget.author" /><button type="button" aria-label="取消回复" @click="replyTarget = null">×</button></div>
         <div>
           <textarea id="rating-comment-input" v-model="commentBody" rows="1" maxlength="1000" :placeholder="replyTarget ? '写下回复…' : '写下你的看法…'" aria-label="评论内容" />
           <button type="submit" :disabled="!canSubmitComment">{{ commentSubmitting ? '发送中' : '发送' }}</button>

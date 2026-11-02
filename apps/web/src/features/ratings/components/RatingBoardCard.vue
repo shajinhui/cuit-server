@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RatingBoard } from '../model'
 import RatingAvatar from './RatingAvatar.vue'
+import RatingAuthorName from './RatingAuthorName.vue'
 import RatingImage from './RatingImage.vue'
 
 defineOptions({ name: 'RatingBoardCard' })
@@ -16,7 +17,7 @@ defineProps<{ board: RatingBoard }>()
       <span>{{ board.description || '这个评分板块还没有介绍' }}</span>
       <small>
         <RatingAvatar :author="board.creator" />
-        {{ board.creator.display_name }}
+        <RatingAuthorName :author="board.creator" />
       </small>
     </span>
     <span class="rating-board-card__meta">

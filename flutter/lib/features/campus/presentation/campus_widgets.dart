@@ -3,8 +3,11 @@ import 'dart:typed_data';
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_image_preview.dart';
+import '../../community/presentation/community_scope.dart';
 
 /// 板块与评分对象使用原版的小封面、标题、作者和下方介绍。
 class CampusHero extends StatelessWidget {
@@ -62,11 +65,16 @@ class CampusHero extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      CampusAuthorAvatar(author: author, radius: 10),
+                      CampusAuthorAvatar(
+                        author: author,
+                        radius: 10,
+                        repository: repository,
+                      ),
                       const SizedBox(width: 7),
                       Expanded(
-                        child: Text(
-                          '${author.displayName} $authorSuffix',
+                        child: CampusAuthorName(
+                          author: author,
+                          suffix: ' $authorSuffix',
                           style: const TextStyle(fontSize: 12),
                         ),
                       ),
@@ -107,6 +115,7 @@ class CampusAssetImage extends StatefulWidget {
     this.width,
     this.radius = 16,
     this.fit = BoxFit.cover,
+    this.adaptive = false,
   });
 
   final String? assetId;
@@ -117,12 +126,19 @@ class CampusAssetImage extends StatefulWidget {
   final double radius;
   final BoxFit fit;
 
+  /// 按图片实际宽高比布局；此时 [width] 和 [height] 是最大边界。
+  final bool adaptive;
+
   @override
   State<CampusAssetImage> createState() => _CampusAssetImageState();
 }
 
 class _CampusAssetImageState extends State<CampusAssetImage> {
   Future<Uint8List?>? _image;
+  Uint8List? _sizeBytes;
+  ImageStream? _sizeStream;
+  ImageStreamListener? _sizeListener;
+  double? _aspectRatio;
 
   @override
   void initState() {
@@ -136,35 +152,187 @@ class _CampusAssetImageState extends State<CampusAssetImage> {
     if (oldWidget.assetId != widget.assetId ||
         oldWidget.repository != widget.repository) {
       _load();
+    } else if (oldWidget.adaptive != widget.adaptive) {
+      _resetIntrinsicSize();
     }
   }
 
-  void _load() {
+  @override
+  void dispose() {
+    _removeIntrinsicSizeListener();
+    super.dispose();
+  }
+
+  void _load({bool refresh = false}) {
+    _resetIntrinsicSize();
     // 输入或筛选触发重建时沿用已有 Future，避免封面重复请求和闪回占位图。
-    _image = widget.assetId == null || widget.repository == null
+    _image =
+        widget.assetId == null ||
+            widget.assetId!.isEmpty ||
+            widget.repository == null
         ? null
-        : widget.repository!.loadAsset(widget.assetId!);
+        : widget.repository!.loadAsset(
+            widget.assetId!,
+            refresh: refresh,
+            thumbnail: true,
+          );
   }
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.radius),
-      child: SizedBox(
-        height: widget.height,
-        width: widget.width,
-        child: _image == null
-            ? _placeholder(context)
-            : FutureBuilder<Uint8List?>(
-                key: ValueKey(widget.assetId),
-                future: _image,
-                builder: (context, snapshot) => snapshot.data == null
-                    ? _placeholder(context)
-                    : Image.memory(snapshot.data!, fit: widget.fit),
-              ),
-      ),
+      child: widget.adaptive
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                final maxWidth = widget.width == null
+                    ? constraints.maxWidth
+                    : widget.width!.clamp(0, constraints.maxWidth).toDouble();
+                final maxHeight = widget.height ?? 240;
+                final ratio = _aspectRatio ?? 4 / 3;
+                final width = maxWidth.clamp(0, maxHeight * ratio).toDouble();
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: SizedBox(
+                    width: width,
+                    height: width / ratio,
+                    child: _buildImage(context),
+                  ),
+                );
+              },
+            )
+          : SizedBox(
+              height: widget.height,
+              width: widget.width,
+              child: _buildImage(context),
+            ),
     );
   }
+
+  Widget _buildImage(BuildContext context) {
+    return _image == null
+        ? _placeholder(context)
+        : FutureBuilder<Uint8List?>(
+            key: ValueKey(_image),
+            future: _image,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return ColoredBox(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: .08),
+                  child: const Center(
+                    child: SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                );
+              }
+              final bytes = snapshot.data;
+              if (snapshot.hasError || bytes == null || bytes.isEmpty) {
+                return _retry(context);
+              }
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  // 列表只解码缩略图所需的像素，大图预览仍使用完整图片。
+                  final width = widget.adaptive
+                      ? constraints.maxWidth
+                      : widget.width ?? constraints.maxWidth;
+                  final cacheWidth = width.isFinite && width > 0
+                      ? (width * MediaQuery.devicePixelRatioOf(context))
+                            .ceil()
+                            .clamp(1, 2048)
+                      : null;
+                  final provider = ResizeImage.resizeIfNeeded(
+                    cacheWidth,
+                    null,
+                    MemoryImage(bytes),
+                  );
+                  if (widget.adaptive) _resolveIntrinsicSize(bytes, provider);
+                  return Semantics(
+                    button: true,
+                    label: '查看大图',
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        final repository = widget.repository!;
+                        final assetId = widget.assetId!;
+                        showCampusImagePreview(
+                          context,
+                          bytes,
+                          loadOriginal: (refresh) =>
+                              repository.loadAsset(assetId, refresh: refresh),
+                        );
+                      },
+                      child: Image(
+                        image: provider,
+                        fit: widget.adaptive ? BoxFit.contain : widget.fit,
+                        errorBuilder: (_, _, _) => _retry(context),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+  }
+
+  void _resolveIntrinsicSize(Uint8List bytes, ImageProvider<Object> provider) {
+    if (identical(_sizeBytes, bytes)) return;
+    _removeIntrinsicSizeListener();
+    _sizeBytes = bytes;
+    final stream = provider.resolve(ImageConfiguration.empty);
+    final listener = ImageStreamListener((info, _) {
+      final ratio = info.image.width / info.image.height;
+      info.image.dispose();
+      if (!ratio.isFinite) return;
+      // 图片命中缓存时监听可能在 build 中同步回调，统一延后更新布局。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !identical(_sizeBytes, bytes)) return;
+        if (_aspectRatio != ratio) setState(() => _aspectRatio = ratio);
+      });
+    }, onError: (_, _) {});
+    _sizeStream = stream;
+    _sizeListener = listener;
+    stream.addListener(listener);
+  }
+
+  void _resetIntrinsicSize() {
+    _removeIntrinsicSizeListener();
+    _sizeBytes = null;
+    _aspectRatio = null;
+  }
+
+  void _removeIntrinsicSizeListener() {
+    final stream = _sizeStream;
+    final listener = _sizeListener;
+    if (stream != null && listener != null) stream.removeListener(listener);
+    _sizeStream = null;
+    _sizeListener = null;
+  }
+
+  Widget _retry(BuildContext context) => Semantics(
+    button: true,
+    label: '图片加载失败，点击重试',
+    child: InkWell(
+      onTap: () => setState(() => _load(refresh: true)),
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: .08),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.refresh_rounded, size: 22),
+              Text('重试', style: TextStyle(fontSize: 10)),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
   Widget _placeholder(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -178,30 +346,99 @@ class _CampusAssetImageState extends State<CampusAssetImage> {
 }
 
 class CampusAuthorAvatar extends StatelessWidget {
-  const CampusAuthorAvatar({super.key, required this.author, this.radius = 16});
+  const CampusAuthorAvatar({
+    super.key,
+    required this.author,
+    this.radius = 16,
+    this.repository,
+    this.linkToProfile = true,
+  });
   final CampusAuthor author;
   final double radius;
+  final CampusRepository? repository;
+  final bool linkToProfile;
 
   @override
   Widget build(BuildContext context) {
+    final model = CommunityScope.maybeOf(context);
+    final resolved = model?.resolveAuthor(author) ?? author;
     final colors = Theme.of(context).colorScheme;
-    final initial = author.displayName.isEmpty
+    final initial = resolved.displayName.isEmpty
         ? '?'
-        : author.displayName.characters.first;
-    return CircleAvatar(
+        : resolved.displayName.characters.first;
+    final fallback = CircleAvatar(
       radius: radius,
       backgroundColor: colors.primary.withValues(alpha: .12),
       foregroundColor: colors.primary,
-      backgroundImage: author.avatarPreset >= 1 && author.avatarPreset <= 15
+      backgroundImage: resolved.avatarPreset >= 1 && resolved.avatarPreset <= 15
           ? AssetImage(
-              'assets/avatars/avatar-${author.avatarPreset.toString().padLeft(2, '0')}.jpg',
+              'assets/avatars/avatar-${resolved.avatarPreset.toString().padLeft(2, '0')}.jpg',
             )
           : null,
-      child: author.avatarPreset >= 1 && author.avatarPreset <= 15
+      child: resolved.avatarPreset >= 1 && resolved.avatarPreset <= 15
           ? null
           : Text(initial, style: TextStyle(fontSize: radius * .9)),
     );
+    final source = repository ?? model?.campus;
+    final image = resolved.avatarAssetId == null || source == null
+        ? fallback
+        : ClipOval(
+            child: FutureBuilder<Uint8List?>(
+              future: source.loadAsset(
+                resolved.avatarAssetId!,
+                thumbnail: true,
+              ),
+              builder: (context, snapshot) => snapshot.data == null
+                  ? fallback
+                  : Image.memory(
+                      snapshot.data!,
+                      width: radius * 2,
+                      height: radius * 2,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => fallback,
+                    ),
+            ),
+          );
+    if (!linkToProfile || resolved.id.isEmpty || model == null) return image;
+    return Semantics(
+      label: '查看${resolved.displayName}的个人主页',
+      button: true,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => context.pushNamed(
+          'community-profile',
+          pathParameters: {'profileId': resolved.id},
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          child: Center(widthFactor: 1, heightFactor: 1, child: image),
+        ),
+      ),
+    );
   }
+}
+
+class CampusAuthorName extends StatelessWidget {
+  const CampusAuthorName({
+    super.key,
+    required this.author,
+    this.suffix = '',
+    this.style,
+    this.maxLines = 1,
+    this.overflow = TextOverflow.ellipsis,
+  });
+  final CampusAuthor author;
+  final String suffix;
+  final TextStyle? style;
+  final int? maxLines;
+  final TextOverflow overflow;
+  @override
+  Widget build(BuildContext context) => Text(
+    '${(CommunityScope.maybeOf(context)?.resolveAuthor(author) ?? author).displayName}$suffix',
+    style: style,
+    maxLines: maxLines,
+    overflow: overflow,
+  );
 }
 
 class CampusPageState extends StatelessWidget {

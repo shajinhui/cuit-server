@@ -96,6 +96,33 @@ class ShorebirdScriptTest(unittest.TestCase):
             ["patch", "ios", "--release-version=0.1.0+2", "--track", "staging"],
         )
 
+    @unittest.skipUnless(
+        sys.platform == "darwin" and Path("/Applications/Xcode.app").exists(),
+        "requires the local Xcode toolchain",
+    )
+    def test_ios_toolchain_survives_shorebird_cleaning_dart_tool(self):
+        self.configure()
+        self.environment["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
+        (self.root / ".dart_tool").mkdir()
+        self.cli.write_text(
+            f"#!{sys.executable}\n"
+            "import os, shutil, subprocess\n"
+            "from pathlib import Path\n"
+            "wrapper = Path(shutil.which('xcrun'))\n"
+            "shutil.rmtree('.dart_tool')\n"
+            "assert wrapper.exists(), 'Shorebird removed the xcrun wrapper'\n"
+            "environment = dict(os.environ)\n"
+            "environment.pop('DEVELOPER_DIR', None)\n"
+            "sdk = subprocess.check_output(['xcrun', '--show-sdk-path', '--sdk', 'iphoneos'], env=environment, text=True)\n"
+            "Path('sdk-path.txt').write_text(sdk)\n"
+        )
+        result = self.run_script("release", "ios")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/",
+            (self.root / "sdk-path.txt").read_text(),
+        )
+
     def test_patch_rejects_implicit_or_latest_release(self):
         self.configure()
         for version in [[], ["latest"], ["--track"], ["0.1.0"]]:

@@ -189,7 +189,8 @@ void main() {
     // 周日没有演示课，避免与当日默认的第 1–2 节课程合并成冲突时段。
     await tester.tap(find.byKey(const ValueKey('星期')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('周日'));
+    // 当天恰好是周日时，收起值也显示“周日”，这里明确点击展开的菜单项。
+    await tester.tap(find.widgetWithText(DropdownMenuItem<int>, '周日'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('save-course')));
     await tester.pumpAndSettle();

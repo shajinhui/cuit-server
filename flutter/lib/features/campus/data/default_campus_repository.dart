@@ -5,8 +5,10 @@ import 'package:dio/dio.dart';
 
 import '../models/campus_models.dart';
 import 'campus_repository.dart';
+import '../../community/data/community_repository.dart';
+import '../../community/models/community_models.dart';
 
-class DefaultCampusRepository implements CampusRepository {
+class DefaultCampusRepository implements CampusRepository, CommunityRepository {
   DefaultCampusRepository(
     this._api, {
     Dio? dio,
@@ -34,6 +36,139 @@ class DefaultCampusRepository implements CampusRepository {
   int _sessionGeneration = 0;
   CancelToken _cancelToken = CancelToken();
   final Map<String, Future<Uint8List?>> _assetCache = {};
+  final Set<CancelToken> _assetRequests = {};
+  final Map<String, int> _assetSizes = {};
+  int _cachedAssetBytes = 0;
+  static const _maxCachedAssets = 64;
+  static const _maxCachedAssetBytes = 32 * 1024 * 1024;
+  static const _assetLoadTimeout = Duration(seconds: 30);
+
+  static const _community = '/api/v1/ratings/community';
+
+  @override
+  Future<CampusAuthor> getCommunityProfile({String? profileId}) async =>
+      CampusAuthor.fromJson(
+        _asMap(
+          await _request(
+            profileId == null
+                ? '$_community/me/profile'
+                : '$_community/profiles/${_path(profileId)}',
+          ),
+        ),
+      );
+
+  @override
+  Future<CampusAuthor> updateCommunityProfile({
+    required String displayName,
+    required int avatarPreset,
+    required int expectedVersion,
+    String? avatarAssetId,
+  }) async => CampusAuthor.fromJson(
+    _asMap(
+      await _request(
+        '$_community/me/profile',
+        method: 'PATCH',
+        body: {
+          'display_name': displayName,
+          'avatar_preset': avatarPreset,
+          'avatar_asset_id': avatarAssetId,
+          'expected_version': expectedVersion,
+        },
+      ),
+    ),
+  );
+
+  @override
+  Future<CampusPageResult<ForumThread>> listProfileThreads(
+    String profileId, {
+    String? cursor,
+  }) async => CampusPageResult.fromJson(
+    _asMap(
+      await _request(
+        '$_community/profiles/${_path(profileId)}/threads',
+        query: {'cursor': cursor, 'limit': 20},
+      ),
+    ),
+    ForumThread.fromJson,
+  );
+
+  @override
+  Future<CommunityInbox> listNotifications({String? cursor}) async =>
+      CommunityInbox.fromJson(
+        _asMap(
+          await _request(
+            '$_community/me/notifications',
+            query: {'cursor': cursor, 'limit': 20},
+          ),
+        ),
+      );
+
+  @override
+  Future<int> getUnreadCount() async =>
+      (_asMap(
+                await _request('$_community/me/notifications/unread'),
+              )['unread_count']
+              as num?)
+          ?.toInt() ??
+      0;
+
+  @override
+  Future<void> readNotification(String id) async {
+    await _request(
+      '$_community/me/notifications/${_path(id)}/read',
+      method: 'PUT',
+    );
+  }
+
+  @override
+  Future<int> readAllNotifications(String watermark) async =>
+      (_asMap(
+                await _request(
+                  '$_community/me/notifications/read-all',
+                  method: 'PUT',
+                  body: {'read_watermark': watermark},
+                ),
+              )['unread_count']
+              as num?)
+          ?.toInt() ??
+      0;
+
+  @override
+  Future<CampusPageResult<CommunityFavorite>> listFavorites({
+    String? cursor,
+  }) async => CampusPageResult.fromJson(
+    _asMap(
+      await _request(
+        '$_community/me/favorites',
+        query: {'cursor': cursor, 'limit': 20},
+      ),
+    ),
+    CommunityFavorite.fromJson,
+  );
+
+  @override
+  Future<bool> getForumFavorite(String threadId) async =>
+      _asMap(
+        await _request(
+          '$_community/me/favorites/forum-threads/${_path(threadId)}',
+        ),
+      )['favorited'] ==
+      true;
+
+  @override
+  Future<bool> setForumFavorite(String threadId, bool favorited) async =>
+      _asMap(
+        await _request(
+          '$_community/me/favorites/forum-threads/${_path(threadId)}',
+          method: favorited ? 'PUT' : 'DELETE',
+        ),
+      )['favorited'] ==
+      true;
+
+  @override
+  Future<ForumReply> getForumReply(String replyId) async => ForumReply.fromJson(
+    _asMap(await _request('/api/v1/forum/replies/${_path(replyId)}')),
+  );
 
   @override
   Future<CampusPageResult<CampusBoard>> listBoards({
@@ -523,24 +658,57 @@ class DefaultCampusRepository implements CampusRepository {
   }
 
   @override
-  Future<Uint8List?> loadAsset(String assetId) {
-    final cached = _assetCache[assetId];
-    if (cached != null) return cached;
+  Future<Uint8List?> loadAsset(
+    String assetId, {
+    bool refresh = false,
+    bool thumbnail = false,
+  }) {
+    // 小图与原图分别缓存，预览不能误用列表的小图。
+    final cacheKey = '${thumbnail ? 'thumbnail' : 'original'}:$assetId';
+    if (refresh) _removeCachedAsset(cacheKey);
+    final cached = _assetCache.remove(cacheKey);
+    if (cached != null) {
+      // 移到末尾，优先保留最近浏览的图片；同一图片的并发请求共用 Future。
+      _assetCache[cacheKey] = cached;
+      return cached;
+    }
     late final Future<Uint8List?> task;
-    task = _loadAsset(assetId).then(
+    task = _loadAsset(assetId, thumbnail: thumbnail).then(
       (bytes) {
-        if (bytes == null && identical(_assetCache[assetId], task)) {
-          _assetCache.remove(assetId);
+        if (identical(_assetCache[cacheKey], task)) {
+          if (bytes == null || bytes.isEmpty) {
+            _removeCachedAsset(cacheKey);
+          } else {
+            _assetSizes[cacheKey] = bytes.length;
+            _cachedAssetBytes += bytes.length;
+            _trimAssetCache();
+          }
         }
         return bytes;
       },
       onError: (Object error, StackTrace stack) {
-        if (identical(_assetCache[assetId], task)) _assetCache.remove(assetId);
+        if (identical(_assetCache[cacheKey], task)) {
+          _removeCachedAsset(cacheKey);
+        }
         Error.throwWithStackTrace(error, stack);
       },
     );
-    _assetCache[assetId] = task;
+    _assetCache[cacheKey] = task;
     return task;
+  }
+
+  void _removeCachedAsset(String assetId) {
+    _assetCache.remove(assetId);
+    _cachedAssetBytes -= _assetSizes.remove(assetId) ?? 0;
+  }
+
+  void _trimAssetCache() {
+    while (_assetCache.length > _maxCachedAssets ||
+        _cachedAssetBytes > _maxCachedAssetBytes) {
+      final completed = _assetCache.keys.where(_assetSizes.containsKey);
+      if (completed.isEmpty) return;
+      _removeCachedAsset(completed.first);
+    }
   }
 
   void _checkSession(int generation) {
@@ -575,7 +743,7 @@ class DefaultCampusRepository implements CampusRepository {
       );
       _checkSession(generation);
       if (response.statusCode == 401 && retryAuthentication) {
-        _expireToken();
+        _expireToken(rejectedToken: token);
         return await _request(
           path,
           method: method,
@@ -596,7 +764,7 @@ class DefaultCampusRepository implements CampusRepository {
     } on DioException catch (error) {
       _checkSession(generation);
       if (error.response?.statusCode == 401 && retryAuthentication) {
-        _expireToken();
+        _expireToken(rejectedToken: token);
         return _request(
           path,
           method: method,
@@ -613,15 +781,47 @@ class DefaultCampusRepository implements CampusRepository {
     }
   }
 
-  Future<Uint8List?> _loadAsset(String assetId) async {
+  Future<Uint8List?> _loadAsset(
+    String assetId, {
+    required bool thumbnail,
+  }) async {
+    final cancelToken = CancelToken();
+    _assetRequests.add(cancelToken);
+    try {
+      // receiveTimeout 只检查断流；另设总时限，覆盖取凭证、401 重试和完整下载。
+      // 超时也要取消网络传输，不能只让界面停止转圈而继续占用带宽。
+      return await _downloadAsset(
+        assetId,
+        cancelToken,
+        thumbnail: thumbnail,
+      ).timeout(
+        _assetLoadTimeout,
+        onTimeout: () {
+          cancelToken.cancel('图片加载超时');
+          return null;
+        },
+      );
+    } finally {
+      _assetRequests.remove(cancelToken);
+    }
+  }
+
+  Future<Uint8List?> _downloadAsset(
+    String assetId,
+    CancelToken cancelToken, {
+    required bool thumbnail,
+  }) async {
     final generation = _sessionGeneration;
     for (var attempt = 0; attempt < 2; attempt++) {
       final token = await _getToken();
       _checkSession(generation);
+      // 鉴权晚于图片总时限返回时，不再发起已经过期的图片下载。
+      if (cancelToken.isCancelled) return null;
       try {
         final response = await _dio.get<List<int>>(
           '/api/v1/ratings/assets/${_path(assetId)}/content',
-          cancelToken: _cancelToken,
+          queryParameters: thumbnail ? {'variant': 'thumbnail'} : null,
+          cancelToken: cancelToken,
           options: Options(
             responseType: ResponseType.bytes,
             headers: {'Accept': 'image/*', 'Authorization': 'Bearer $token'},
@@ -629,17 +829,25 @@ class DefaultCampusRepository implements CampusRepository {
         );
         _checkSession(generation);
         if (response.statusCode == 401 && attempt == 0) {
-          _expireToken();
+          _expireToken(rejectedToken: token);
           continue;
         }
         final bytes = response.data;
-        return response.statusCode == 200 && bytes != null
-            ? Uint8List.fromList(bytes)
-            : null;
+        final contentType =
+            (response.headers.value(Headers.contentTypeHeader) ?? '')
+                .toLowerCase();
+        // 网关有时返回 200 的错误页面，不把它当作图片长期缓存。
+        if (contentType.contains('json') || contentType.contains('text/html')) {
+          return null;
+        }
+        if (response.statusCode != 200 || bytes == null || bytes.isEmpty) {
+          return null;
+        }
+        return bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
       } on DioException catch (error) {
         _checkSession(generation);
         if (error.response?.statusCode == 401 && attempt == 0) {
-          _expireToken();
+          _expireToken(rejectedToken: token);
           continue;
         }
         return null;
@@ -685,7 +893,9 @@ class DefaultCampusRepository implements CampusRepository {
     return token;
   }
 
-  void _expireToken() {
+  void _expireToken({String? rejectedToken}) {
+    // 多张图片同时返回旧凭证的 401 时，不清掉刚刷新的新凭证。
+    if (rejectedToken != null && _token != rejectedToken) return;
     _token = null;
     _tokenExpiresAt = null;
   }
@@ -714,20 +924,33 @@ class DefaultCampusRepository implements CampusRepository {
     _sessionGeneration++;
     _cancelToken.cancel();
     _cancelToken = CancelToken();
+    _cancelAssetRequests();
     _token = null;
     _tokenExpiresAt = null;
     _tokenRequest = null;
     _assetCache.clear();
+    _assetSizes.clear();
+    _cachedAssetBytes = 0;
   }
 
   @override
   void dispose() {
     _sessionGeneration++;
     _cancelToken.cancel();
+    _cancelAssetRequests();
     _dio.close(force: true);
     _assetCache.clear();
+    _assetSizes.clear();
+    _cachedAssetBytes = 0;
     _token = null;
     _tokenExpiresAt = null;
+  }
+
+  void _cancelAssetRequests() {
+    for (final request in _assetRequests) {
+      request.cancel('校园会话已结束');
+    }
+    _assetRequests.clear();
   }
 }
 

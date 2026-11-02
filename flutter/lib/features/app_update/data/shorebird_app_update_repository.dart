@@ -3,7 +3,8 @@ import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'app_update_repository.dart';
 
 class ShorebirdAppUpdateRepository implements AppUpdateRepository {
-  ShorebirdAppUpdateRepository() : _updater = ShorebirdUpdater();
+  ShorebirdAppUpdateRepository({ShorebirdUpdater? updater})
+    : _updater = updater ?? ShorebirdUpdater();
 
   final ShorebirdUpdater _updater;
 
@@ -18,14 +19,7 @@ class ShorebirdAppUpdateRepository implements AppUpdateRepository {
   }
 
   @override
-  Future<AppPatchStatus> checkForUpdate() async =>
-      switch (await _updater.checkForUpdate()) {
-        UpdateStatus.unavailable => AppPatchStatus.unavailable,
-        UpdateStatus.upToDate => AppPatchStatus.upToDate,
-        UpdateStatus.outdated => AppPatchStatus.outdated,
-        UpdateStatus.restartRequired => AppPatchStatus.restartRequired,
-      };
-
-  @override
-  Future<void> downloadUpdate() => _updater.update();
+  // checkForUpdate 的 native bool 返回值会将网络失败折叠为没有更新。
+  // update 会检查并下载，并通过结果接口将网络错误转为 UpdateException。
+  Future<void> checkAndDownload() => _updater.update();
 }

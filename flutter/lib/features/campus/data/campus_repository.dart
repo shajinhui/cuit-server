@@ -183,7 +183,12 @@ abstract interface class CampusRepository {
     String? requestId,
   });
 
-  Future<Uint8List?> loadAsset(String assetId);
+  /// 列表传 thumbnail: true；点开预览时再下载原图，两种规格分别缓存。
+  Future<Uint8List?> loadAsset(
+    String assetId, {
+    bool refresh = false,
+    bool thumbnail = false,
+  });
 
   void clearSession();
 

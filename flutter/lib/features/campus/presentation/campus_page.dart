@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:go_router/go_router.dart';
 
 import 'campus_widgets.dart';
 import 'forum_widgets.dart';
 import '../../../ui/components/page_layout.dart';
+import '../../community/presentation/community_scope.dart';
 
 /// 校园入口包含评分广场、二手市场和论坛，详情流程由独立路由承载。
 class CampusPage extends StatefulWidget {
@@ -49,6 +51,18 @@ class _CampusPageState extends State<CampusPage> {
   void initState() {
     super.initState();
     unawaited(_load(reset: true));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final community = CommunityScope.maybeOf(context);
+    if (community != null) {
+      scheduleMicrotask(() {
+        unawaited(community.loadProfile());
+        unawaited(community.refreshUnread());
+      });
+    }
   }
 
   @override
@@ -210,6 +224,23 @@ class _CampusPageState extends State<CampusPage> {
     unawaited(_load(reset: true));
   }
 
+  void _openForumShortcut(List<String> keywords, String fallbackQuery) {
+    String? categoryId;
+    for (final category in _forumCategories) {
+      if (keywords.any(category.name.contains)) {
+        categoryId = category.id;
+        break;
+      }
+    }
+    setState(() {
+      _forumCategoryId = categoryId;
+      _submittedQuery = categoryId == null ? fallbackQuery : '';
+      _searchController.text = _submittedQuery;
+      _nextCursor = null;
+    });
+    unawaited(_load(reset: true));
+  }
+
   void _submitSearch(String value) {
     setState(() {
       _submittedQuery = value.trim();
@@ -300,77 +331,118 @@ class _CampusPageState extends State<CampusPage> {
       bottom: false,
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '校园',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                SizedBox(
-                  width: (MediaQuery.sizeOf(context).width * .52).clamp(
-                    198,
-                    216,
-                  ),
-                  child: PageSegmentedControl<String>(
-                    key: const ValueKey('campus-area-segment'),
-                    values: const {
-                      'ratings': '评分',
-                      'marketplace': '二手',
-                      'forum': '论坛',
-                    },
-                    selected: _area,
-                    onChanged: _changeArea,
-                  ),
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      key: const ValueKey('campus-mine'),
-                      tooltip: _area == 'ratings'
-                          ? '我的评分内容'
-                          : _area == 'forum'
-                          ? '我的帖子'
-                          : '我的二手发布',
-                      onPressed: _openMine,
-                      icon: const Icon(Icons.person_outline_rounded),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildHeader(),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => _load(reset: true),
-              child: ListView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                children: [
-                  if (_area == 'ratings') _buildRatingIntro(scheme),
-                  _buildSearch(),
-                  if (_area == 'ratings') ...[
-                    _buildRatingHeading(),
-                    ..._buildRatingContent(),
-                  ] else if (_area == 'forum') ...[
-                    _buildForumCategoryChips(),
-                    _buildForumHeading(),
-                    ..._buildForumContent(),
-                  ] else ...[
-                    _buildMarketplaceHeading(),
-                    ..._buildMarketplaceContent(),
-                  ],
-                ],
+            child: ColoredBox(
+              color: _area == 'forum' ? scheme.surface : Colors.transparent,
+              child: RefreshIndicator(
+                onRefresh: () => _load(reset: true),
+                child: _area == 'marketplace'
+                    ? _buildMarketplaceList()
+                    : ListView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: _area == 'forum'
+                            ? const EdgeInsets.only(bottom: 120)
+                            : const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                        children: [
+                          if (_area == 'ratings') _buildRatingIntro(scheme),
+                          _buildSearch(),
+                          if (_area == 'ratings') ...[
+                            _buildRatingHeading(),
+                            ..._buildRatingContent(),
+                          ] else if (_area == 'forum') ...[
+                            _buildForumFilters(),
+                            _buildForumShortcuts(),
+                            ..._buildForumContent(),
+                          ],
+                        ],
+                      ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final community = CommunityScope.maybeOf(context);
+    final tabs = PageSegmentedControl<String>(
+      key: const ValueKey('campus-area-segment'),
+      compact: true,
+      values: const {'ratings': '评分', 'marketplace': '二手', 'forum': '论坛'},
+      selected: _area,
+      onChanged: _changeArea,
+    );
+    const title = Text(
+      '校园',
+      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+    );
+    final mine = IconButton(
+      key: const ValueKey('campus-mine'),
+      tooltip: _area == 'ratings'
+          ? '我的评分内容'
+          : _area == 'forum'
+          ? '我的帖子'
+          : '我的二手发布',
+      onPressed: _openMine,
+      icon: const Icon(Icons.person_outline_rounded, size: 20),
+    );
+    final controls = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (community != null && community.supported != false)
+          IconButton(
+            key: const ValueKey('campus-notifications'),
+            tooltip: community.unreadCount > 0
+                ? '互动消息，${community.unreadCount}条未读'
+                : '互动消息',
+            onPressed: () => context.pushNamed('community-notifications'),
+            icon: Badge(
+              isLabelVisible: community.unreadCount > 0,
+              label: Text(
+                community.unreadCount > 99 ? '99+' : '${community.unreadCount}',
+              ),
+              child: const Icon(Icons.campaign_outlined, size: 20),
+            ),
+          ),
+        mine,
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      // 大字体让栏目独占一行，不压缩系统文字或把点击区域缩小。
+      child:
+          MediaQuery.textScalerOf(context).scale(13) > 18 ||
+              (community != null &&
+                  community.supported != false &&
+                  MediaQuery.sizeOf(context).width < 380)
+          ? Column(
+              children: [
+                Row(
+                  children: [
+                    const Expanded(child: title),
+                    controls,
+                  ],
+                ),
+                const SizedBox(height: 4),
+                tabs,
+              ],
+            )
+          : Row(
+              children: [
+                const Expanded(child: title),
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width * .52).clamp(
+                    198,
+                    216,
+                  ),
+                  child: tabs,
+                ),
+                controls,
+              ],
+            ),
     );
   }
 
@@ -447,13 +519,16 @@ class _CampusPageState extends State<CampusPage> {
         ? '搜索帖子'
         : '搜索评分板块';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: forum
+          ? const EdgeInsets.fromLTRB(16, 4, 16, 4)
+          : const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               key: const ValueKey('campus-search'),
               controller: _searchController,
+              style: forum ? const TextStyle(fontSize: 14, height: 1.3) : null,
               maxLength: 50,
               buildCounter:
                   (
@@ -467,7 +542,18 @@ class _CampusPageState extends State<CampusPage> {
               decoration: InputDecoration(
                 fillColor: Theme.of(context).colorScheme.surface,
                 hintText: hint,
-                prefixIcon: const Icon(Icons.search_rounded),
+                isDense: forum,
+                contentPadding: forum
+                    ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+                    : null,
+                constraints: forum ? const BoxConstraints(minHeight: 44) : null,
+                prefixIconConstraints: forum
+                    ? const BoxConstraints(minWidth: 40, minHeight: 44)
+                    : null,
+                suffixIconConstraints: forum
+                    ? const BoxConstraints(minWidth: 44, minHeight: 44)
+                    : null,
+                prefixIcon: Icon(Icons.search_rounded, size: forum ? 20 : 24),
                 suffixIcon: _searchController.text.isEmpty
                     ? null
                     : IconButton(
@@ -496,7 +582,22 @@ class _CampusPageState extends State<CampusPage> {
             FilledButton.tonalIcon(
               key: const ValueKey('campus-create-thread'),
               onPressed: _createThread,
-              icon: const Icon(Icons.add_rounded),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(76, 44),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(13),
+                ),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('发帖'),
             ),
           ],
@@ -615,96 +716,133 @@ class _CampusPageState extends State<CampusPage> {
     ];
   }
 
-  List<Widget> _buildMarketplaceContent() {
-    if (_loading && _listings.isEmpty) {
-      return [
-        CampusPageState(
-          title: _listingType == 'wanted' ? '正在加载求购' : '正在加载商品',
-          loading: true,
-        ),
-      ];
-    }
-    if (_error != null && _listings.isEmpty) {
-      return [
-        CampusPageState(
-          title: '暂时无法加载校园二手',
-          description: _error,
-          actionLabel: '重新加载',
-          onAction: () => _load(reset: true),
-        ),
-      ];
-    }
-    if (_listings.isEmpty) {
-      final wanted = _listingType == 'wanted';
-      return [
-        CampusPageState(
-          title: wanted ? '暂时没有求购' : '二手小铺等待开张',
-          description: wanted ? '写下想要的物品，让有闲置的同学联系你。' : '整理一下闲置，让它们继续派上用场。',
-          actionLabel: wanted ? '发布第一条求购' : '发布第一件闲置',
-          onAction: _createListing,
-        ),
-      ];
-    }
-    return [
-      if (_error != null)
+  Widget _buildMarketplaceList() {
+    final headers = <Widget>[
+      _buildSearch(),
+      _buildMarketplaceHeading(),
+      if (_listings.isEmpty)
+        _buildMarketplaceEmptyState()
+      else if (_error != null)
         _InlineError(message: _error!, onRetry: () => _load(reset: true)),
-      LayoutBuilder(
-        builder: (context, constraints) {
-          // 正常字号保留两列；大字体改为单列，卡片按内容自然增高。
-          final columns = MediaQuery.textScalerOf(context).scale(15) > 20
-              ? 1
-              : 2;
-          final cardWidth =
-              (constraints.maxWidth - 8 * (columns - 1)) / columns;
-          return Wrap(
-            key: const ValueKey('campus-listings'),
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final listing in _listings)
-                SizedBox(
-                  width: cardWidth,
-                  child: _MarketplaceCard(
-                    listing: listing,
-                    repository: widget.repository,
-                    onTap: () => _openListing(listing),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-      if (_hasMore)
-        _LoadMoreButton(
-          loading: _loadingMore,
-          onPressed: () => _load(reset: false),
-        ),
     ];
+    // 每行按需创建，避免 Wrap 把屏幕外的商品图片也同时下载，抢占首屏带宽。
+    // 普通字号仍为两列；大字体改为单列，卡片高度由内容决定。
+    final columns = MediaQuery.textScalerOf(context).scale(15) > 20 ? 1 : 2;
+    final rowCount = (_listings.length + columns - 1) ~/ columns;
+    return ListView.builder(
+      key: const ValueKey('campus-listings'),
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 120),
+      scrollCacheExtent: const ScrollCacheExtent.pixels(200),
+      itemCount: headers.length + rowCount + (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index < headers.length) return headers[index];
+        final row = index - headers.length;
+        if (row == rowCount) {
+          return _LoadMoreButton(
+            loading: _loadingMore,
+            onPressed: () => _load(reset: false),
+          );
+        }
+        final first = row * columns;
+        return Padding(
+          key: ValueKey(_listings[first].id),
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var column = 0; column < columns; column++) ...[
+                if (column > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: first + column < _listings.length
+                      ? _buildMarketplaceCard(_listings[first + column])
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  /// 版块筛选条：内容可能较多，用横向滚动避免挤压列表空间。
+  Widget _buildMarketplaceCard(CampusListing listing) => _MarketplaceCard(
+    listing: listing,
+    repository: widget.repository,
+    onTap: () => _openListing(listing),
+  );
+
+  Widget _buildMarketplaceEmptyState() {
+    if (_loading) {
+      return CampusPageState(
+        title: _listingType == 'wanted' ? '正在加载求购' : '正在加载商品',
+        loading: true,
+      );
+    }
+    if (_error != null) {
+      return CampusPageState(
+        title: '暂时无法加载校园二手',
+        description: _error,
+        actionLabel: '重新加载',
+        onAction: () => _load(reset: true),
+      );
+    }
+    final wanted = _listingType == 'wanted';
+    return CampusPageState(
+      title: wanted ? '暂时没有求购' : '二手小铺等待开张',
+      description: wanted ? '写下想要的物品，让有闲置的同学联系你。' : '整理一下闲置，让它们继续派上用场。',
+      actionLabel: wanted ? '发布第一条求购' : '发布第一件闲置',
+      onAction: _createListing,
+    );
+  }
+
+  /// 分类只占一行；外层保留 44 的点击区域，视觉标签不再使用厚重边框。
   Widget _buildForumCategoryChips() {
     final colors = Theme.of(context).colorScheme;
     Widget chip(String value, String label) {
       final active = _forumCategoryId == (value.isEmpty ? null : value);
       return Padding(
-        padding: const EdgeInsets.only(right: 8),
-        child: ChoiceChip(
-          label: Text(label),
+        padding: const EdgeInsets.only(right: 4),
+        child: Semantics(
           selected: active,
-          onSelected: (_) => _changeForumCategory(value),
-          showCheckmark: false,
-          selectedColor: colors.primaryContainer,
-          labelStyle: TextStyle(
-            color: active ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+          child: TextButton(
+            onPressed: () => _changeForumCategory(value),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: active
+                    ? pageAccent(context).withValues(alpha: .1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.3,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  color: active ? pageAccent(context) : colors.onSurfaceVariant,
+                ),
+              ),
+            ),
           ),
         ),
       );
     }
 
     return SizedBox(
-      height: 40,
+      height: (MediaQuery.textScalerOf(context).scale(12) * 1.3 + 12).clamp(
+        44,
+        double.infinity,
+      ),
       child: ListView(
+        key: const ValueKey('campus-forum-categories'),
         scrollDirection: Axis.horizontal,
         children: [
           chip('', '全部'),
@@ -715,41 +853,134 @@ class _CampusPageState extends State<CampusPage> {
     );
   }
 
-  Widget _buildForumHeading() => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _submittedQuery.isEmpty ? '校园论坛' : '搜索结果',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+  Widget _buildForumFilters() {
+    final sort = SizedBox(
+      width: 108,
+      child: PageSegmentedControl<String>(
+        key: const ValueKey('campus-forum-sort-segment'),
+        compact: true,
+        values: const {'latest': '最新', 'active': '活跃'},
+        selected: _forumSort,
+        onChanged: _changeForumSort,
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (MediaQuery.textScalerOf(context).scale(13) > 18) {
+                return Column(
+                  children: [
+                    _buildForumCategoryChips(),
+                    Align(alignment: Alignment.centerRight, child: sort),
+                  ],
+                );
+              }
+              return Row(
+                key: const ValueKey('campus-forum-filter-row'),
+                children: [
+                  Expanded(child: _buildForumCategoryChips()),
+                  const SizedBox(width: 8),
+                  sort,
+                ],
+              );
+            },
+          ),
+          if (_submittedQuery.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '搜索：$_submittedQuery',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
-              Text(
-                _submittedQuery.isEmpty ? '大家都在聊' : _submittedQuery,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildForumShortcuts() {
+    Widget shortcut({
+      required String key,
+      required IconData icon,
+      required String label,
+      required List<String> keywords,
+      required String fallbackQuery,
+    }) {
+      return TextButton.icon(
+        key: ValueKey(key),
+        onPressed: () => _openForumShortcut(keywords, fallbackQuery),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+          foregroundColor: pageAccent(context),
+        ),
+        icon: Icon(icon, size: 16),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        SizedBox(
-          width: 132,
-          child: PageSegmentedControl<String>(
-            key: const ValueKey('campus-forum-sort-segment'),
-            values: const {'latest': '最新', 'active': '活跃'},
-            selected: _forumSort,
-            onChanged: _changeForumSort,
-          ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: pageBackground(context), width: 6),
         ),
-      ],
-    ),
-  );
+      ),
+      child: SingleChildScrollView(
+        key: const ValueKey('campus-forum-shortcuts'),
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        child: Row(
+          children: [
+            shortcut(
+              key: 'forum-shortcut-study',
+              icon: Icons.menu_book_outlined,
+              label: '课程讨论',
+              keywords: const ['学习', '课程'],
+              fallbackQuery: '课程',
+            ),
+            shortcut(
+              key: 'forum-shortcut-team',
+              icon: Icons.groups_outlined,
+              label: '竞赛组队',
+              keywords: const ['竞赛', '组队'],
+              fallbackQuery: '竞赛',
+            ),
+            shortcut(
+              key: 'forum-shortcut-lost',
+              icon: Icons.location_on_outlined,
+              label: '失物招领',
+              keywords: const ['失物'],
+              fallbackQuery: '失物',
+            ),
+            shortcut(
+              key: 'forum-shortcut-help',
+              icon: Icons.help_outline_rounded,
+              label: '本校问答',
+              keywords: const ['求助', '问答'],
+              fallbackQuery: '求助',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   List<Widget> _buildForumContent() {
     if (_loading && _threads.isEmpty) {
@@ -787,6 +1018,7 @@ class _CampusPageState extends State<CampusPage> {
         ForumThreadCard(
           thread: thread,
           repository: widget.repository,
+          showCategory: true,
           onTap: () => _openThread(thread),
         ),
       if (_hasMore)
@@ -854,11 +1086,15 @@ class _RatingBoardCard extends StatelessWidget {
                     const SizedBox(height: 7),
                     Row(
                       children: [
-                        CampusAuthorAvatar(author: board.creator, radius: 9),
+                        CampusAuthorAvatar(
+                          author: board.creator,
+                          radius: 9,
+                          repository: repository,
+                        ),
                         const SizedBox(width: 5),
                         Expanded(
-                          child: Text(
-                            board.creatorName,
+                          child: CampusAuthorName(
+                            author: board.creator,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall,

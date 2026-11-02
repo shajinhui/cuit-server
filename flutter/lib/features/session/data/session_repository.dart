@@ -20,7 +20,11 @@ abstract interface class SessionRepository {
   Future<void> logout();
 }
 
-class DefaultSessionRepository implements SessionRepository {
+abstract interface class CachedSessionRepository implements SessionRepository {
+  Future<RestoredSession?> restoreCached();
+}
+
+class DefaultSessionRepository implements CachedSessionRepository {
   DefaultSessionRepository(
     this.api,
     this.storage, {
@@ -31,8 +35,7 @@ class DefaultSessionRepository implements SessionRepository {
   final String _profileKey;
   final Future<void> Function(String account) clearUserData;
 
-  @override
-  Future<RestoredSession?> restore() async {
+  Future<Student?> _readSavedStudent() async {
     final saved = await storage.read(_profileKey);
     if (saved == null) return null;
     Student student;
@@ -45,6 +48,21 @@ class DefaultSessionRepository implements SessionRepository {
       await _clear();
       return null;
     }
+    return student;
+  }
+
+  @override
+  Future<RestoredSession?> restoreCached() async {
+    final student = await _readSavedStudent();
+    if (student == null || !await api.hasStoredCookies()) return null;
+    // 先显示上次验证过的本机内容；受保护的联网请求仍由服务端校验。
+    return RestoredSession(student, offline: true);
+  }
+
+  @override
+  Future<RestoredSession?> restore() async {
+    final student = await _readSavedStudent();
+    if (student == null) return null;
     try {
       final status = await api.request('/api/v1/jwxt/session');
       if (status is! Map || status['authenticated'] != true) {

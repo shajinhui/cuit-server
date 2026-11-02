@@ -1,5 +1,3 @@
-enum AppPatchStatus { unavailable, upToDate, outdated, restartRequired }
-
 class AppPatchInfo {
   const AppPatchInfo({this.currentPatch, this.nextPatch});
 
@@ -14,6 +12,7 @@ class AppPatchInfo {
 abstract interface class AppUpdateRepository {
   bool get isAvailable;
   Future<AppPatchInfo> readPatches();
-  Future<AppPatchStatus> checkForUpdate();
-  Future<void> downloadUpdate();
+
+  /// 检查并下载可用补丁；检查或下载失败时抛出异常。
+  Future<void> checkAndDownload();
 }

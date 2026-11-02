@@ -21,6 +21,7 @@ import { usePageTheme } from '@/shared/composables/usePageTheme'
 import GlassIconButton from '@/shared/ui/GlassIconButton.vue'
 import GlassSegmented from '@/shared/ui/GlassSegmented.vue'
 import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
+import RatingAuthorName from '@/features/ratings/components/RatingAuthorName.vue'
 
 defineOptions({ name: 'RatingBoardPage' })
 
@@ -119,7 +120,7 @@ function showNotice() {
         <RatingImage :asset="board.cover_asset" :alt="board.title" />
         <div class="rating-board-hero__copy">
           <h1>{{ board.title }}</h1>
-          <span><RatingAvatar :author="board.creator" />{{ board.creator.display_name }} 创建</span>
+          <span><RatingAvatar :author="board.creator" /><RatingAuthorName :author="board.creator" /> 创建</span>
           <p class="rating-board-hero__stats">{{ board.item_count }} 个对象 · {{ board.rating_count }} 人次评分</p>
         </div>
         <p v-if="board.description" class="rating-hero-description">{{ board.description }}</p>

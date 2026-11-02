@@ -165,6 +165,22 @@ describe('校园跑 API 客户端', () => {
     )
   })
 
+  it('保留登录失败的业务提示，不把账号密码错误改成上游故障', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json(
+          { code: 50200, msg: '登录失败：请确认学校，账号，密码是否有误！', response: {} },
+          { status: 502 },
+        ),
+      ),
+    )
+
+    await expect(loginToAutoRun('13800000000', 'wrong-password')).rejects.toEqual(
+      new AutoRunApiError('登录失败：请确认学校，账号，密码是否有误！', 502, 50200),
+    )
+  })
+
   it('拒绝非 JSON 响应和业务错误响应', async () => {
     const fetchMock = vi
       .fn()

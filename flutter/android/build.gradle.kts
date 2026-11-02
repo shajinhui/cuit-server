@@ -1,5 +1,12 @@
 allprojects {
     repositories {
+        // 可选的官方引擎离线缓存，避免受限网络反复下载同一基础版本。
+        System.getenv("SHOREBIRD_MAVEN_CACHE")?.takeIf { file(it).isDirectory }?.let { cache ->
+            maven {
+                url = uri(cache)
+                content { includeGroup("io.flutter") }
+            }
+        }
         google()
         mavenCentral()
     }

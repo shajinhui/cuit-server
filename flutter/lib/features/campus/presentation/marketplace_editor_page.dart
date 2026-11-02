@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_image_picker.dart';
 import '../../../ui/components/page_selection.dart';
 import 'campus_widgets.dart';
 
@@ -41,6 +42,7 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
   String _requestId = '';
   String _lastPayload = '';
   bool _submitting = false;
+  bool _pickingImage = false;
 
   @override
   void initState() {
@@ -64,40 +66,29 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
       isCampusContactValid(_contactType, _contactController.text);
 
   Future<void> _pickImage() async {
+    if (_pickingImage || _submitting) return;
+    setState(() => _pickingImage = true);
     try {
-      final file = await _picker.pickImage(
-        source: ImageSource.gallery,
-        requestFullMetadata: false,
-      );
-      if (file == null) return;
-      final mime = file.mimeType ?? _mimeFromName(file.name);
-      if (mime != 'image/jpeg' && mime != 'image/png') {
-        setState(() {
-          _imageBytes = null;
-          _filename = null;
-          _uploadedAssetId = null;
-          _imageError = '请选择 JPG 或 PNG 图片';
-        });
-        return;
-      }
-      final bytes = await file.readAsBytes();
-      if (bytes.length > 5 * 1024 * 1024) {
-        setState(() {
-          _imageBytes = null;
-          _filename = null;
-          _uploadedAssetId = null;
-          _imageError = '图片不能超过 5 MB';
-        });
-        return;
-      }
+      final file = await pickCampusImage(_picker);
+      if (file == null || !mounted) return;
+      final image = await readCampusUploadImage(file);
+      if (!mounted) return;
       setState(() {
-        _imageBytes = bytes;
-        _filename = file.name;
+        _imageBytes = image.bytes;
+        _filename = image.filename;
         _uploadedAssetId = null;
         _imageError = null;
       });
     } catch (error) {
-      setState(() => _imageError = '无法读取图片：$error');
+      if (mounted) {
+        setState(
+          () => _imageError = error is CampusImageException
+              ? error.message
+              : '无法读取图片，请重新选择。',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _pickingImage = false);
     }
   }
 
@@ -109,6 +100,7 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
   }
 
   Future<void> _submit() async {
+    if (_submitting || _pickingImage) return;
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
     final price = _priceCents;
@@ -267,7 +259,7 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
                 const SizedBox(height: 10),
                 InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: _submitting ? null : _pickImage,
+                  onTap: _submitting || _pickingImage ? null : _pickImage,
                   child: Container(
                     height: _imageBytes == null ? 104 : 140,
                     width: double.infinity,
@@ -299,7 +291,7 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text('支持 JPG、PNG，最大 5 MB。'),
+                const Text('上传前会适度压缩图片，处理后不超过 5 MB。'),
                 if (_imageBytes != null || _imageError != null)
                   TextButton.icon(
                     onPressed: _submitting
@@ -381,7 +373,7 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
           ),
         const SizedBox(height: 8),
         FilledButton(
-          onPressed: _submitting ? null : _submit,
+          onPressed: _submitting || _pickingImage ? null : _submit,
           child: Text(
             _submitting
                 ? '正在发布…'

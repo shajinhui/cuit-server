@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chengxin_youyou/core/config/app_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +11,8 @@ import '../../profile/presentation/profile_avatar_button.dart';
 import 'session_view_model.dart';
 import '../../../ui/components/page_layout.dart';
 import '../../../ui/components/page_selection.dart';
+import '../../community/presentation/community_scope.dart';
+import '../../campus/presentation/campus_widgets.dart';
 
 /// 个人中心：展示当前账号信息，并提供应用外观和登录状态设置。
 class ProfilePage extends StatelessWidget {
@@ -38,6 +42,10 @@ class ProfilePage extends StatelessWidget {
     final settings = context.watch<AppSettings>();
     final student = session.student;
     final theme = Theme.of(context);
+    final community = CommunityScope.maybeOf(context);
+    if (community != null) {
+      scheduleMicrotask(() => unawaited(community.loadProfile()));
+    }
 
     return SafeArea(
       bottom: false,
@@ -49,7 +57,40 @@ class ProfilePage extends StatelessWidget {
             children: [
               _ProfileHeader(
                 avatar: avatar,
-                name: student?.name ?? '同学',
+                name: community == null
+                    ? student?.name ?? '同学'
+                    : community.profile?.displayName ?? '校园同学',
+                publicAvatar: community == null
+                    ? null
+                    : InkWell(
+                        key: const Key('profile-public-avatar'),
+                        customBorder: const CircleBorder(),
+                        onTap: () =>
+                            context.pushNamed('community-profile-edit'),
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            if (community.profile != null)
+                              CampusAuthorAvatar(
+                                author: community.profile!,
+                                radius: 48,
+                                linkToProfile: false,
+                              )
+                            else
+                              const CircleAvatar(
+                                radius: 48,
+                                child: Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 44,
+                                ),
+                              ),
+                            const CircleAvatar(
+                              radius: 14,
+                              child: Icon(Icons.edit_outlined, size: 16),
+                            ),
+                          ],
+                        ),
+                      ),
                 subtitle: _academicSummary(student?.campus, student?.major),
                 status: session.isDemo
                     ? '体验账号'
@@ -60,6 +101,12 @@ class ProfilePage extends StatelessWidget {
               const SizedBox(height: 26),
               _ProfileCard(
                 children: [
+                  if (community != null)
+                    _InfoRow(
+                      icon: Icons.person_outline_rounded,
+                      title: '学校姓名（仅自己可见）',
+                      value: _valueOrFallback(student?.name),
+                    ),
                   _InfoRow(
                     icon: Icons.school_outlined,
                     title: '学籍信息',
@@ -81,6 +128,75 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
+              if (community != null) ...[
+                const _SectionHeading(title: '校园社区'),
+                const SizedBox(height: 10),
+                _ProfileCard(
+                  children: [
+                    ListTile(
+                      key: const Key('profile-public-info'),
+                      leading: const _SettingIcon(
+                        icon: Icons.person_outline_rounded,
+                      ),
+                      title: const Text('公开资料'),
+                      subtitle: Text(
+                        community.profile == null
+                            ? community.error ?? '设置校园昵称和头像'
+                            : '昵称和头像在评分、二手、论坛保持一致',
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.pushNamed('community-profile-edit'),
+                    ),
+                    const _CardDivider(),
+                    ListTile(
+                      key: const Key('profile-community-messages'),
+                      leading: const _SettingIcon(
+                        icon: Icons.campaign_outlined,
+                      ),
+                      title: const Text('互动消息'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (community.unreadCount > 0)
+                            Text(
+                              community.unreadCount > 99
+                                  ? '99+'
+                                  : '${community.unreadCount}',
+                            ),
+                          const Icon(Icons.chevron_right_rounded),
+                        ],
+                      ),
+                      onTap: () => context.pushNamed('community-notifications'),
+                    ),
+                    const _CardDivider(),
+                    ListTile(
+                      key: const Key('profile-community-favorites'),
+                      leading: const _SettingIcon(
+                        icon: Icons.star_outline_rounded,
+                      ),
+                      title: const Text('我的收藏'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.pushNamed('community-favorites'),
+                    ),
+                    if (community.profile != null) ...[
+                      const _CardDivider(),
+                      ListTile(
+                        key: const Key('profile-community-home'),
+                        leading: const _SettingIcon(
+                          icon: Icons.school_outlined,
+                        ),
+                        title: const Text('我的公开主页'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () => context.pushNamed(
+                          'community-profile',
+                          pathParameters: {'profileId': community.profile!.id},
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 24),
+              ],
               const _SectionHeading(title: '常用功能'),
               const SizedBox(height: 10),
               _ProfileCard(
@@ -260,8 +376,10 @@ class _ProfileHeader extends StatelessWidget {
     required this.name,
     required this.subtitle,
     required this.status,
+    this.publicAvatar,
   });
   final ProfileAvatar? avatar;
+  final Widget? publicAvatar;
 
   final String name;
   final String subtitle;
@@ -274,7 +392,9 @@ class _ProfileHeader extends StatelessWidget {
 
     return Column(
       children: [
-        if (avatar != null)
+        if (publicAvatar != null)
+          publicAvatar!
+        else if (avatar != null)
           ProfileAvatarButton(avatar: avatar!, size: 96)
         else
           CircleAvatar(

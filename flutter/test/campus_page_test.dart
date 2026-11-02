@@ -1,4 +1,5 @@
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
+import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:chengxin_youyou/features/campus/presentation/campus_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/rating_board_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_editor_page.dart';
@@ -9,6 +10,35 @@ import 'package:go_router/go_router.dart';
 import 'fakes/campus_preview_repository.dart';
 
 void main() {
+  testWidgets('二手首屏不下载屏幕外的整批图片，滚动后再加载后续商品', (tester) async {
+    tester.view.physicalSize = const Size(390, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _ManyListingsRepository();
+    final router = _createRouter(repository);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('二手'));
+    await tester.pumpAndSettle();
+
+    final firstScreenLoads = repository.assetLoads;
+    expect(firstScreenLoads, greaterThan(0));
+    expect(firstScreenLoads, lessThanOrEqualTo(8));
+    expect(find.text('商品 39'), findsNothing);
+
+    await tester.drag(
+      find.byKey(const ValueKey('campus-listings')),
+      const Offset(0, -900),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.assetLoads, greaterThan(firstScreenLoads));
+    expect(repository.assetLoads, lessThan(40));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('校园页切换评分和二手内容，并保留列表筛选', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -86,6 +116,40 @@ void main() {
     expect(isCampusContactValid('qq', '12345'), isTrue);
     expect(isCampusContactValid('qq', '012345'), isFalse);
   });
+}
+
+class _ManyListingsRepository extends CampusPreviewRepository {
+  @override
+  Future<CampusPageResult<CampusListing>> listListings({
+    bool mine = false,
+    String query = '',
+    String type = 'sell',
+    String? cursor,
+  }) async => CampusPageResult(
+    items: List.generate(
+      40,
+      (index) => CampusListing(
+        id: 'listing-$index',
+        title: '商品 $index',
+        description: '测试商品',
+        priceCents: 1000,
+        campus: 'airport',
+        imageAssetId: 'image-$index',
+        seller: const CampusAuthor(
+          id: 'seller',
+          displayName: '测试卖家',
+          avatarPreset: 0,
+        ),
+        listingType: type,
+        status: 'on_sale',
+        version: 1,
+        createdAt: '2026-10-01T00:00:00Z',
+        isMine: mine,
+      ),
+    ),
+    nextCursor: null,
+    hasMore: false,
+  );
 }
 
 GoRouter _createRouter(CampusRepository repository) => GoRouter(

@@ -24,10 +24,21 @@ void main() {
 
     await tester.tap(find.text('论坛'));
     await tester.pumpAndSettle();
-    expect(find.text('大家都在聊'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('campus-forum-sort-segment')),
+      findsOneWidget,
+    );
+    expect(find.text('大家都在聊'), findsNothing);
     expect(find.text('图书馆晚上能不能延长闭馆时间'), findsOneWidget);
     expect(find.text('操作系统实验报告模板分享'), findsOneWidget);
 
+    await tester.tap(find.byKey(const ValueKey('forum-shortcut-study')));
+    await tester.pumpAndSettle();
+    expect(find.text('操作系统实验报告模板分享'), findsOneWidget);
+    expect(find.text('图书馆晚上能不能延长闭馆时间'), findsNothing);
+
+    await tester.tap(find.text('全部'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('学习交流'));
     await tester.pumpAndSettle();
     expect(find.text('操作系统实验报告模板分享'), findsOneWidget);
@@ -207,7 +218,10 @@ void main() {
 
     expect(repository.deletedThreadIds, ['thread-1']);
     // 删除成功后返回校园页。
-    expect(find.text('大家都在聊'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('campus-forum-sort-segment')),
+      findsOneWidget,
+    );
     expect(find.text('图书馆晚上能不能延长闭馆时间'), findsNothing);
   });
 

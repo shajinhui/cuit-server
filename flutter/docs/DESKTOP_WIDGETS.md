@@ -96,10 +96,12 @@ Android 使用半小时系统刷新，并为上下课、午夜安排非精确闹
 
 这次主应用的开发描述文件于 **2026-10-15 17:25（北京时间）** 到期。到期前需要重新签名并安装；不能把这份个人开发签名包当作长期分发包。此前命令行的 `No Accounts` 不代表 Xcode 界面没有登录账号；本次通过界面的自动签名生成描述文件后，命令行已能使用本地描述文件完成签名。
 
-直接调用 `xcodebuild` 时，需要沿用 `tool/flutter.sh` 建立的 `.dart_tool/local_toolchain` 路径，否则原生 Dart 构建钩子可能使用系统的 Command Line Tools 而找不到 iPhone SDK：
+2026-10-15 已续签主应用与扩展，有效期延长至 **2026-10-22 16:31（北京时间）**；包含 Shorebird 引擎的新基础包已验签并覆盖安装到测试 iPhone，启动及运行时初始化通过。构建和签名限制见 [iOS 热更新与本机安装](IOS_HOT_UPDATE.md)。
+
+直接调用 `xcodebuild` 时，需要沿用 `tool/flutter.sh` 建立的 `.build/local_toolchain` 路径，否则原生 Dart 构建钩子可能使用系统的 Command Line Tools 而找不到 iPhone SDK。包装器放在 `.dart_tool` 外，避免被 Shorebird 的 iOS 构建清理：
 
 ```bash
-env PATH="$PWD/.dart_tool/local_toolchain:$PATH" \
+env PATH="$PWD/.build/local_toolchain:$PATH" \
   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
   -configuration Release -sdk iphoneos \

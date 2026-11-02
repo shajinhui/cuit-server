@@ -11,8 +11,6 @@ class UnavailableAppUpdateRepository implements AppUpdateRepository {
   Future<AppPatchInfo> readPatches() async => const AppPatchInfo();
 
   @override
-  Future<AppPatchStatus> checkForUpdate() async => AppPatchStatus.unavailable;
-
-  @override
-  Future<void> downloadUpdate() async => throw UnsupportedError('当前平台未提供在线补丁');
+  Future<void> checkAndDownload() async =>
+      throw UnsupportedError('当前平台未提供在线补丁');
 }

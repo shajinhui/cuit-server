@@ -7,6 +7,7 @@ import { RatingsApiError } from '@/features/ratings'
 import { RatingAvatar, RatingImage, RatingPageHeader, RatingState } from '@/features/ratings/components'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 import GlassToolbar from '@/shared/ui/GlassToolbar.vue'
+import RatingAuthorName from '@/features/ratings/components/RatingAuthorName.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +83,7 @@ async function copyContact() {
           <h1>{{ item.title }}</h1>
           <p class="marketplace-note">{{ campusLabels[item.campus] }} · {{ new Date(item.created_at).toLocaleDateString('zh-CN') }} 发布</p>
           <p class="marketplace-description">{{ item.description }}</p>
-          <div class="marketplace-seller"><RatingAvatar :author="item.seller" /><span>{{ item.seller.display_name }}</span><small>{{ item.is_mine ? '我发布的' : wanted ? '求购者' : '卖家' }}</small></div>
+          <div class="marketplace-seller"><RatingAvatar :author="item.seller" /><RatingAuthorName :author="item.seller" /><small>{{ item.is_mine ? '我发布的' : wanted ? '求购者' : '卖家' }}</small></div>
         </section>
         <section v-if="contact" ref="contactPanel" class="marketplace-contact" tabindex="-1" aria-labelledby="seller-contact-title">
           <h2 id="seller-contact-title">{{ contactTitle }}</h2>

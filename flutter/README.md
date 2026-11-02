@@ -14,23 +14,27 @@ python3 tool/sync_calendar.py --check
 ./tool/flutter.sh run -d <设备标识>
 ```
 
-默认进入登录页。点击 **先体验一下** 可查看虚构课表，无需账号，不访问教务接口。也可在启动时直接进入体验：
+首次打开进入登录页。点击 **先体验一下** 可查看虚构课表，无需账号，不访问教务接口。也可在启动时直接进入体验：
 
 ```bash
 ./tool/flutter.sh run -d <设备标识> --dart-define=DEMO_MODE=true
 ```
 
+启动不再展示额外的品牌图标和转圈页，只等待本机初始化。原生端已有上次验证的身份、且能从安全存储读取未过期 Cookie 时，先进入缓存课表，显示后在后台刷新；无本机登录记录则进入登录页。缓存身份不代表服务端仍然登录，联网请求仍正常校验，收到 401 按原逻辑退出；断网继续保留已显示的课表。初始化失败仍保留重试入口。
+
 `tool/flutter.sh` 优先使用 `FLUTTER_BIN`，其次是 PATH 中的 Flutter，最后尝试本机隔离安装目录 `~/.local/share/cuit-flutter-sdk/bin/flutter`。macOS 下会为构建进程选择已安装的 Xcode，并为 Dart 原生构建钩子包装 `xcrun`，不修改全局 `xcode-select`。
 
-Android 需要 Android SDK 和 JDK。可通过 `ANDROID_HOME`、`JAVA_HOME` 指定。当前机器的调试构建环境位于 `~/.local/share/cuit-android-sdk`；发布签名没有配置，当前 release 配置也仅供本地验证，不能直接上架。
+Android 需要 Android SDK 和 JDK。可通过 `ANDROID_HOME`、`JAVA_HOME` 指定。当前机器的 Android SDK 位于 `~/.local/share/cuit-android-sdk`，已配置独立的 RSA-4096 发布签名。Release 必须读取完整的 `android/key.properties`，缺少配置或密钥时停止构建；Debug 仍使用开发签名。私钥备份与其他开发机配置见 [Android 发布签名](docs/ANDROID_SIGNING.md)。
 
 iOS 模拟器无需个人签名。真机安装需要在 Xcode 给主应用和 `ScheduleWidget` 扩展选择同一 Team，并配置包含 App Groups 的签名；步骤与本机签名限制见 [桌面小组件](docs/DESKTOP_WIDGETS.md)。项目中现有 Team 是本机开发签名配置，其他开发者需要改为自己的团队；证书、私钥、描述文件和密码不进入仓库。新客户端使用独立包名 `org.dpdns.fanxiaogao05.chengxin.flutter`，避免覆盖现有客户端。
 
 ## 热更新
 
-客户端通过 `shorebird_code_push` 接入 Shorebird，启动后在后台检查并下载补丁，不等待更新完成才展示页面。“我的 → 关于 → 检查更新”显示检查、下载、失败重试与下次启动生效的状态；下载完成后不强制退出 App。启动和手动操作合并同一个更新任务。普通 Flutter 构建、Debug 和 iOS 模拟器没有补丁运行时，入口显示当前安装包暂不支持在线更新。
+客户端通过 `shorebird_code_push` 接入 Shorebird，启动和回到前台时在后台检查并下载补丁，不等待更新完成才展示页面。自动检查间隔为 5 分钟，失败后回前台可立即重试，手动检查不受间隔限制。“我的 → 关于 → 检查更新”显示检查、下载、失败重试与下次启动生效的状态；下载完成后不强制退出 App。启动、前台恢复和手动操作合并同一个更新任务，并展示当前实际运行的基础版本或补丁号。普通 Flutter 构建、Debug 和 iOS 模拟器没有补丁运行时，入口显示当前安装包暂不支持在线更新。
 
-**项目已绑定真实 Shorebird 应用；启用热更新仍需分发一次包含 Shorebird 引擎的基础安装包。** `shorebird.yaml` 已生成并加入资源列表，既有项目应沿用该配置，不重复执行 `init`。其他开发机按 [Shorebird 官方指南](https://docs.shorebird.dev/getting-started/)安装 CLI 后，在本目录执行：
+**Android 基础版本 `0.1.0+2` 与 stable 二手列表优化补丁 6 已发布并完成实际下发、冷启动生效验收（2026-10-18）。客户端需先安装一次包含 Shorebird 引擎的正式基础包。** `shorebird.yaml` 已生成并加入资源列表，既有项目应沿用该配置，不重复执行 `init`。其他开发机按 [Shorebird 官方指南](https://docs.shorebird.dev/getting-started/)安装 CLI 后，在本目录执行：
+
+iOS 同版本基础包也已发布；二手列表优化补丁 7 于 2026-10-18 发布至 stable，已完成真机正式通道下载和冷启动生效验收。该批次同时包含已通过回归的启动和登录状态恢复优化。真机验收中发生过沙盒误清，登录、服务器课表、原头像和更新器身份已恢复；不能宣称全部旧本地标记均已恢复，过程和限制见 [iOS 热更新与本机安装](docs/IOS_HOT_UPDATE.md)。个人开发签名有效至 2026-10-22 16:31（北京时间）。
 
 ```bash
 ./tool/shorebird.sh login
@@ -41,22 +45,22 @@ iOS 模拟器无需个人签名。真机安装需要在 Xcode 给主应用和 `S
 
 # 使用 Shorebird 引擎构建，并按正常流程签名、分发基础安装包。
 ./tool/shorebird.sh release android
-./tool/shorebird.sh release ios
+./tool/shorebird.sh release ios --export-options-plist=ios/ExportOptions-development.plist
 
 # 修改 Dart 代码后，明确指定基础版本。此例对应当前 0.1.0+2。
 ./tool/shorebird.sh patch android 0.1.0+2 --track staging
-./tool/shorebird.sh patch ios 0.1.0+2 --track staging
+./tool/shorebird.sh patch ios 0.1.0+2 --track staging --export-options-plist=ios/ExportOptions-development.plist
 ```
 
 `init` 生成真实 `shorebird.yaml` 并将其加入 `pubspec.yaml` 的资源列表，随后设置 `auto_update: false`，由客户端统一检查和下载，避免与引擎自动更新重复执行。生成的配置应提交到版本控制；app_id 是公开标识，登录令牌不进入仓库。已有 Shorebird 应用请沿用其真实配置和标识，不重新创建应用，并确保 `auto_update: false` 与资源声明齐全。
 
-基础版本固定使用 `.flutter-version`；补丁使用该基础版本记录的 Flutter 引擎。`SHOREBIRD_BIN` 可指定 CLI 路径。开发用 `flutter build` 产物不包含热更新引擎，正式热更新安装包必须使用 `shorebird release` 构建。当前 Android release 仍需要配置正式签名；iOS 已有 Team 配置，仍需验证主应用与小组件的真机签名和发布描述文件。
+基础版本固定使用 `.flutter-version`；补丁使用该基础版本记录的 Flutter 引擎。`SHOREBIRD_BIN` 可指定 CLI 路径。开发用 `flutter build` 产物不包含热更新引擎，热更新安装包必须使用 `shorebird release` 构建。Android release 已接入本机发布签名；iOS 主应用与小组件的个人开发签名、App Groups 和真机安装已通过。iOS App Store / TestFlight 分发仍需发布证书及对应描述文件。
 
-补丁先发布到 staging，按[官方测试流程](https://docs.shorebird.dev/code-push/guides/staging-patches/)预览对应基础版本，验证首次启动下载、结束进程后再次启动生效，再通过 Shorebird 控制台将该补丁提升到 stable；客户端默认只接收 stable。iOS 补丁必须用真机测试，Android 可以用模拟器。旧基础版本需要单独发布补丁，发布新基础版本时才修改安装包版本号。
+补丁先发布到 staging，按[官方测试流程](https://docs.shorebird.dev/code-push/guides/staging-patches/)预览对应基础版本，验证首次启动下载、结束进程后再次启动生效，再执行 `./tool/shorebird.sh patches set-track --release 0.1.0+2 --patch <实际补丁号> --track stable` 将验证通过的补丁提升到 stable；客户端默认只接收 stable。iOS 补丁必须用真机测试，Android 可以用模拟器。旧基础版本需要单独发布补丁，发布新基础版本时才修改安装包版本号。
 
 热更新范围为 Dart 代码、Flutter 页面和纯 Dart 依赖；原生插件实现、权限、Flutter 引擎与打包 assets 的修改需要新安装包。补丁撤回后也要再次启动才能切换到回滚版本。本机已下载的补丁或回滚通过本地状态识别，断网不误报为未更新。范围与机制见 [Shorebird 官方文档](https://docs.shorebird.dev/code-push/)。
 
-2026-10-13 已完成账号登录、真实应用绑定和配置检查；基础版本发布和真实补丁下发尚未验收。代码与脚本的本地验证记录见 `test/app_update_test.dart` 与 `tool/test_shorebird.py`，不能将普通 Debug 构建成功视为 OTA 验收。
+2026-10-15 已发布正式签名的 Android Shorebird 基础版本 `0.1.0+2`（Release 900236）与 stable 补丁 1（Patch 721144），并在 Android 15 ARM64 模拟器完成真实下载、冷启动生效、断网报错和恢复前台自动重试验收。290 项 Flutter 测试（含 17 项更新专项）、8 项脚本测试及代码分析通过。iOS 同一 Release 的状态也已确认为 `active`，开发签名 IPA 已覆盖安装并验证运行时。安装包、校验信息与截图位于 `build/releases/0.1.0+2/`；Android 完整记录见 [热更新验收](docs/HOT_UPDATE_ACCEPTANCE.md)，iOS 安装包与验证摘要位于该目录的 `ios/`。
 
 2026-10-06 本地验证：
 
@@ -69,7 +73,9 @@ iOS 模拟器无需个人签名。真机安装需要在 Xcode 给主应用和 `S
 | iOS 模拟器使用真实 SDK 检测运行时、展示更新入口 | 通过；普通 Debug 包正确提示不支持在线更新 |
 | 本机 Shorebird CLI | 已安装 1.6.124；已查询确认支持项目 Flutter 3.47.5 |
 | 账号绑定与项目配置（2026-10-13 复验） | 通过；真实 app_id、资源声明与 auto_update: false 已配置 |
-| 正式基础包、真实补丁下载及生效 | 待配置平台发布签名并发布基础包后验收 |
+| Android 发布签名（2026-10-15） | 通过；RSA-4096 独立发布密钥，APK v2 验签与证书指纹比对通过 |
+| Shorebird 基础包、真实补丁下载及生效（2026-10-15） | Android 基础版本与 stable 补丁 1 已验收；当日 iOS 验证范围为基础包发布、开发签名装机及运行时初始化 |
+| 最新正式热更新（2026-10-18） | 二手列表优化 Android 补丁 6、iOS 补丁 7 均已发布至 stable，并完成实际下载和冷启动生效验收；目标基础版本为 0.1.0+2；iOS 验收事故及恢复范围见安装文档 |
 
 复验原生运行入口（使用已有 iOS 模拟器）：
 
@@ -92,7 +98,7 @@ iOS 模拟器无需个人签名。真机安装需要在 Xcode 给主应用和 `S
 | 工具 | 成绩、考场、空教室、校历、校园地图、历年试卷、图书馆预约／续座、校园跑与俱乐部 |
 | 校园 | 论坛分类、发帖、回复与点赞；评分广场、创建板块／对象、评分／评论／回复／举报、我的内容；二手发布、筛选、联系方式、状态管理 |
 | 我的 | 账号信息、15 个原版头像／相册裁剪、学业完成情况、问题反馈、主题、轻量效果、退出 |
-| 热更新 | 后台检查与下载、个人中心手动检查、失败重试、下次启动生效提示；实际分发需 Shorebird 账号和基础安装包 |
+| 热更新 | 启动与回前台检查、后台下载、手动检查、断网失败重试、实际补丁号；Android stable 补丁 6、iOS stable 补丁 7 均已完成实际下载和冷启动生效验收 |
 | 桌面小组件 | Android 可调整卡片大小，iOS 支持小／中／大卡；今日课程、下一节课、点击回到今天、退出清空；iOS 真机需 App Groups 签名 |
 
 桌面卡片入口在“我的 → 桌面小组件”。添加方式、数据流、平台代码、测试和当前 iOS 签名限制见 [桌面小组件](docs/DESKTOP_WIDGETS.md)。新增原生扩展和资源需要安装完整更新包。

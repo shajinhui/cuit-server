@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../ui/components/page_layout.dart';
 import 'campus_widgets.dart';
+import 'campus_image_picker.dart';
 
 /// 发帖页：选择版块 + 标题 + 正文 + 最多三张附图。传入 editingThread 时进入编辑模式。
 class ForumEditorPage extends StatefulWidget {
@@ -30,7 +31,6 @@ class ForumEditorPage extends StatefulWidget {
 
 class _ForumEditorPageState extends State<ForumEditorPage> {
   static const _maxImages = 3;
-  static const _maxImageBytes = 5 * 1024 * 1024;
 
   final _picker = ImagePicker();
   final _titleController = TextEditingController();
@@ -46,6 +46,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   String _lastPayload = '';
   bool _categoriesLoading = true;
   bool _submitting = false;
+  bool _pickingImages = false;
 
   bool get _editing => widget.editingThread != null;
 
@@ -93,34 +94,33 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   }
 
   Future<void> _pickImages() async {
+    if (_submitting || _pickingImages) return;
     final remaining = _maxImages - _images.length - _keptAssetIds.length;
     if (remaining <= 0) {
       setState(() => _imageError = '最多添加 $_maxImages 张图片');
       return;
     }
+    setState(() => _pickingImages = true);
     try {
-      final files = await _picker.pickMultiImage(
-        requestFullMetadata: false,
-        limit: remaining,
-      );
-      if (files.isEmpty) return;
+      final files = await pickCampusImages(_picker, remaining);
+      if (!mounted || files.isEmpty) return;
       String? error;
       for (final file in files) {
-        final mime = file.mimeType ?? _mimeFromName(file.name);
-        if (mime != 'image/jpeg' && mime != 'image/png') {
-          error = '只支持 JPG 或 PNG 图片';
-          continue;
+        try {
+          final image = await readCampusUploadImage(file);
+          if (!mounted) return;
+          _images.add(
+            _ForumImage(bytes: image.bytes, filename: image.filename),
+          );
+        } on CampusImageException catch (failure) {
+          error = failure.message;
         }
-        final bytes = await file.readAsBytes();
-        if (bytes.length > _maxImageBytes) {
-          error = '单张图片不能超过 5 MB';
-          continue;
-        }
-        _images.add(_ForumImage(bytes: bytes, filename: file.name));
       }
       if (mounted) setState(() => _imageError = error);
-    } catch (error) {
-      if (mounted) setState(() => _imageError = '无法读取图片：$error');
+    } catch (_) {
+      if (mounted) setState(() => _imageError = '无法读取图片，请重新选择。');
+    } finally {
+      if (mounted) setState(() => _pickingImages = false);
     }
   }
 
@@ -132,7 +132,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   }
 
   Future<void> _submit() async {
-    if (_submitting) return;
+    if (_submitting || _pickingImages) return;
     final repository = widget.repository;
     final categoryId = _selectedCategoryId;
     final title = _titleController.text.trim();
@@ -356,7 +356,9 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
                       InkWell(
                         key: const ValueKey('forum-add-image'),
                         borderRadius: BorderRadius.circular(12),
-                        onTap: _submitting ? null : _pickImages,
+                        onTap: _submitting || _pickingImages
+                            ? null
+                            : _pickImages,
                         child: Container(
                           width: 88,
                           height: 88,
@@ -379,7 +381,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                const Text('支持 JPG、PNG，单张最大 5 MB。'),
+                const Text('上传前会适度压缩图片，处理后不超过 5 MB。'),
                 if (_imageError != null)
                   Text(
                     _imageError!,
@@ -401,7 +403,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
         const SizedBox(height: 12),
         FilledButton(
           key: const ValueKey('forum-thread-submit'),
-          onPressed: _submitting ? null : _submit,
+          onPressed: _submitting || _pickingImages ? null : _submit,
           child: Text(
             _submitting
                 ? (_editing ? '正在保存…' : '正在发布…')

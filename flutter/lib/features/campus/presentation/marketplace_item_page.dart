@@ -222,7 +222,7 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                   children: [
                     CampusAuthorAvatar(author: item.seller),
                     const SizedBox(width: 10),
-                    Expanded(child: Text(item.seller.displayName)),
+                    Expanded(child: CampusAuthorName(author: item.seller)),
                     const SizedBox(width: 8),
                     Text(
                       item.isMine

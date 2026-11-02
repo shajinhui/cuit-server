@@ -6,8 +6,9 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 
 import '../storage/app_storage.dart';
 import 'api_exception.dart';
+import 'session_transport_contract.dart';
 
-Future<Future<void> Function()> configureSessionTransport(
+Future<SessionTransport> configureSessionTransport(
   Dio dio,
   AppStorage secureStorage,
 ) async {
@@ -17,7 +18,22 @@ Future<Future<void> Function()> configureSessionTransport(
     ignoreExpires: false,
   );
   dio.interceptors.add(CookieManager(jar));
-  return jar.deleteAll;
+  return SessionTransport(
+    clearCookies: jar.deleteAll,
+    hasStoredCookies: () async {
+      try {
+        final cookies = await jar.loadForRequest(
+          Uri.parse('${dio.options.baseUrl}/api/v1/jwxt/session'),
+        );
+        return cookies.isNotEmpty;
+      } catch (_) {
+        throw const ApiException(
+          '无法读取本机登录状态，请重启应用后重试。',
+          kind: FailureKind.storage,
+        );
+      }
+    },
+  );
 }
 
 /// Cookie 读写失败不等于断网，不能因此恢复为离线登录。

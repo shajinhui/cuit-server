@@ -9,6 +9,8 @@ export interface RatingAuthor {
   id: string
   display_name: string
   avatar_preset: number
+  avatar_asset_id?: string | null
+  profile_version?: number
 }
 
 export interface RatingAssetRef {

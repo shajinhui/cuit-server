@@ -16,13 +16,16 @@ class SessionViewModel extends ChangeNotifier {
   int generation = 0;
   bool _disposed = false;
 
-  Future<void> restore() async {
+  Future<void> restore({bool cacheOnly = false}) async {
     final requestGeneration = ++generation;
     isRestoring = true;
     error = null;
     _notify();
     try {
-      final result = await repository.restore();
+      final source = repository;
+      final result = cacheOnly && source is CachedSessionRepository
+          ? await source.restoreCached()
+          : await source.restore();
       if (_disposed || requestGeneration != generation) return;
       student = result?.student;
       isOffline = result?.offline ?? false;

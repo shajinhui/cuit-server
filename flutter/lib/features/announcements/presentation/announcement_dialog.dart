@@ -4,6 +4,9 @@ import '../../../ui/components/page_dialog.dart';
 import '../models/app_announcement.dart';
 import 'announcement_view_model.dart';
 
+const _groupName = '成信友友二群';
+const _groupUrl = 'https://qm.qq.com/q/oY2MdsQgco';
+
 Future<void> showAnnouncement(
   BuildContext context,
   AnnouncementViewModel viewModel,
@@ -23,6 +26,8 @@ Future<void> showAnnouncement(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(announcement.body),
+            const SizedBox(height: 12),
+            const Text(_groupName),
             if (viewModel.isOffline) ...[
               const SizedBox(height: 12),
               const Text('离线内容，联网后可获取最新公告'),
@@ -35,12 +40,11 @@ Future<void> showAnnouncement(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('我知道了'),
           ),
-          if (announcement.actionUrl != null)
-            FilledButton(
-              key: const Key('announcement-action'),
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(announcement.actionLabel!),
-            ),
+          FilledButton(
+            key: const Key('announcement-action'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(announcement.actionLabel ?? '立即入群'),
+          ),
         ],
       ),
     );
@@ -48,11 +52,10 @@ Future<void> showAnnouncement(
     await viewModel.finishPresentation(announcement);
   }
   if (openLink != true || !context.mounted) return;
+  // 公告专属按钮沿用服务端链接；没有专属按钮时，默认进入成信友友二群。
+  final uri = announcement.actionUrl ?? Uri.parse(_groupUrl);
   try {
-    if (await launchUrl(
-      announcement.actionUrl!,
-      mode: LaunchMode.externalApplication,
-    )) {
+    if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       return;
     }
   } catch (_) {

@@ -17,6 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/profile/data/profile_avatar.dart';
 import '../features/profile/data/profile_repository.dart';
+import '../features/community/data/community_repository.dart';
+import '../features/community/presentation/community_view_model.dart';
 import '../features/autorun/data/autorun_repository.dart';
 import '../features/app_update/data/shorebird_app_update_repository.dart';
 import '../features/app_update/data/unavailable_app_update_repository.dart';
@@ -62,21 +64,26 @@ class AppDependencies {
   final DesktopWidgets? desktopWidgets;
   DesktopWidgetController? desktopWidget;
   ProfileAvatar? avatar;
+  CommunityViewModel? community;
   ScheduleViewModel? schedule;
   int _sessionGeneration = -1;
+  String? _boundIdentity;
   bool _widgetOpenRequested = false;
+  bool _disposed = false;
 
   static Future<AppDependencies> create() async {
     const config = AppConfig();
-    final calendar = await AcademicCalendar.load();
-    final preferences = await SharedPreferences.getInstance();
+    final (calendar, preferences, cacheStorage) = await (
+      AcademicCalendar.load(),
+      SharedPreferences.getInstance(),
+      createCacheStorage(),
+    ).wait;
     // 浏览器由 Cookie 管理会话；不把身份另外写入 localStorage。
     final privateStorage = kIsWeb
         ? MemoryAppStorage()
         : isHarmonyOS
         ? const OhosSecureAppStorage()
         : const SecureAppStorage(FlutterSecureStorage());
-    final cacheStorage = await createCacheStorage();
     final api = await ApiClient.create(config.apiBaseUrl, privateStorage);
     final session = SessionViewModel(
       DefaultSessionRepository(
@@ -124,7 +131,8 @@ class AppDependencies {
     if (config.startInDemo) {
       session.enterDemo();
     } else {
-      await session.restore();
+      // 启动只读取本机身份与凭证，不等待会话检查、个人信息等网络请求。
+      await session.restore(cacheOnly: true);
     }
     return dependencies;
   }
@@ -132,17 +140,25 @@ class AppDependencies {
   void _syncSchedule() {
     // 登录开始和成功属于同一代请求，只有拿到身份后才能创建课表。
     final student = session.student;
+    final identity = student == null
+        ? null
+        : '${session.isDemo}:${student.number}';
     if (student == null && !session.isRestoring) {
       _publishWidgetMessage('loggedOut', '登录后查看今日课程');
     }
     if (_sessionGeneration == session.generation &&
+        _boundIdentity == identity &&
         (student == null || schedule != null)) {
       return;
     }
-    if (_sessionGeneration != session.generation) {
+    if (_sessionGeneration != session.generation ||
+        _boundIdentity != identity) {
       campusRepository?.clearSession();
     }
     _sessionGeneration = session.generation;
+    _boundIdentity = identity;
+    community?.dispose();
+    community = null;
     avatar?.dispose();
     avatar = null;
     desktopWidget?.dispose();
@@ -151,6 +167,10 @@ class AppDependencies {
     schedule?.dispose();
     schedule = null;
     if (student == null) return;
+    final campus = campusRepository;
+    if (!session.isDemo && campus is CommunityRepository) {
+      community = CommunityViewModel(campus as CommunityRepository, campus!);
+    }
     avatar = ProfileAvatar(
       session.isDemo ? MemoryAppStorage() : userStorage ?? MemoryAppStorage(),
       'v1:${api?.dio.options.baseUrl ?? 'demo'}:${student.number}:avatar',
@@ -182,7 +202,18 @@ class AppDependencies {
         );
       }
     }
-    unawaited(schedule!.initialize());
+    unawaited(_initializeSchedule(schedule!));
+  }
+
+  Future<void> _initializeSchedule(ScheduleViewModel viewModel) async {
+    await viewModel.initialize();
+    if (!_disposed &&
+        identical(schedule, viewModel) &&
+        session.isOffline &&
+        viewModel.snapshot?.fromCache == true) {
+      // 缓存已显示后再联网；401 仍走原来的过期退出逻辑。
+      await viewModel.refresh();
+    }
   }
 
   void _publishWidgetMessage(String status, String message) {
@@ -229,11 +260,13 @@ class AppDependencies {
   }
 
   void dispose() {
+    _disposed = true;
     session.removeListener(_syncSchedule);
     desktopWidgets?.onOpenSchedule = null;
     desktopWidget?.dispose();
     schedule?.removeListener(_openWidgetScheduleIfReady);
     schedule?.dispose();
+    community?.dispose();
     campusRepository?.dispose();
     autoRunRepository?.dispose();
     avatar?.dispose();

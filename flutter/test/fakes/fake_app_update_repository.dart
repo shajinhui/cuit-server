@@ -4,8 +4,8 @@ class FakeAppUpdateRepository implements AppUpdateRepository {
   @override
   bool isAvailable = true;
   AppPatchInfo patches = const AppPatchInfo();
-  AppPatchStatus status = AppPatchStatus.upToDate;
-  Future<AppPatchStatus> Function()? onCheck;
+  bool updateAvailable = false;
+  Future<bool> Function()? onCheck;
   Future<void> Function()? onDownload;
   Object? checkError;
   Object? downloadError;
@@ -20,14 +20,11 @@ class FakeAppUpdateRepository implements AppUpdateRepository {
   }
 
   @override
-  Future<AppPatchStatus> checkForUpdate() async {
+  Future<void> checkAndDownload() async {
     checks++;
     if (checkError != null) throw checkError!;
-    return onCheck == null ? status : await onCheck!();
-  }
-
-  @override
-  Future<void> downloadUpdate() async {
+    final available = onCheck == null ? updateAvailable : await onCheck!();
+    if (!available) return;
     downloads++;
     if (downloadError != null) throw downloadError!;
     await onDownload?.call();

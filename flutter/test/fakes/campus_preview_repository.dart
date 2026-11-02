@@ -114,7 +114,11 @@ class CampusPreviewRepository implements CampusRepository {
       (await listListings()).items.first;
 
   @override
-  Future<Uint8List?> loadAsset(String assetId) async {
+  Future<Uint8List?> loadAsset(
+    String assetId, {
+    bool refresh = false,
+    bool thumbnail = false,
+  }) async {
     assetLoads++;
     return null;
   }

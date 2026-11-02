@@ -17,7 +17,7 @@ class AppUpdateTile extends StatelessWidget {
         AppUpdateState.unavailable => '当前安装包暂不支持在线更新',
         AppUpdateState.checking => '正在检查更新…',
         AppUpdateState.upToDate => '暂无可用的在线更新',
-        AppUpdateState.downloading => '正在后台下载更新…',
+        AppUpdateState.downloading => '正在检查并下载可用更新…',
         AppUpdateState.restartRequired => '更新已准备好，下次启动生效',
         AppUpdateState.failed => viewModel.error!,
       };
@@ -37,7 +37,22 @@ class AppUpdateTile extends StatelessWidget {
           ),
         ),
         title: const Text('检查更新'),
-        subtitle: Text(subtitle),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(subtitle),
+            if (viewModel.hasPatchInfo)
+              Text(
+                viewModel.currentPatch == null
+                    ? '当前为基础版本'
+                    : '当前补丁：${viewModel.currentPatch}',
+                key: const Key('app-current-patch'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
         trailing: viewModel.isBusy
             ? const SizedBox.square(
                 dimension: 20,

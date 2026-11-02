@@ -7,7 +7,9 @@ import graduationIcon from '@/assets/icons/profile-graduation-cap.png'
 import profileIcon from '@/assets/icons/nav-profile.png'
 import { logoutSession } from '@/app/sessionLifecycle'
 import { useProfileStore } from '@/features/profile'
-import AvatarPicker from '@/features/profile/components/AvatarPicker.vue'
+import { useCommunityStore } from '@/features/community/store'
+import CommunityProfileEditor from '@/features/community/components/CommunityProfileEditor.vue'
+import RatingAvatar from '@/features/ratings/components/RatingAvatar.vue'
 import { usePwaInstall } from '@/features/pwa-install'
 import { useSessionStore } from '@/features/session'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
@@ -21,20 +23,18 @@ defineOptions({ name: 'ProfilePage' })
 
 const router = useRouter()
 const profileStore = useProfileStore()
+const community = useCommunityStore()
+const publicEditorOpen = ref(false)
 const session = useSessionStore()
 const { isInstalled, requestInstall } = usePwaInstall()
 const { preference: colorScheme, options: colorSchemeOptions, setPreference: setColorScheme } =
   useColorScheme()
 const notice = ref('')
 const loggingOut = ref(false)
-const avatarPickerOpen = ref(false)
 let noticeTimer: number | undefined
 
 const avatarSrc = computed(() => profileStore.avatar?.src || profileIcon)
-const selectedPresetId = computed(() =>
-  profileStore.avatar?.kind === 'preset' ? profileStore.avatar.presetId : null,
-)
-const identityName = computed(() => profileStore.profile?.Name || (profileStore.loading ? '正在加载…' : '同学'))
+const identityName = computed(() => community.profile?.display_name || profileStore.profile?.Name || (profileStore.loading ? '正在加载…' : '同学'))
 const academicIdentity = computed(() => {
   const profile = profileStore.profile
   if (!profile) return ''
@@ -53,6 +53,7 @@ usePageTheme('bg-page')
 onMounted(() => {
   void loadProfile()
   void profileStore.loadAvatar()
+  void community.load()
 })
 
 onBeforeUnmount(() => {
@@ -91,22 +92,6 @@ async function installApp() {
   if (result === 'installed') showNotice('当前已在桌面应用中打开')
 }
 
-async function selectPresetAvatar(presetId: number) {
-  await profileStore.selectPresetAvatar(presetId)
-  avatarPickerOpen.value = false
-  showNotice('头像已更新')
-}
-
-async function uploadAvatar(file: File) {
-  try {
-    await profileStore.setCustomAvatar(file)
-    avatarPickerOpen.value = false
-    showNotice('头像已更新')
-  } catch (error) {
-    showNotice(error instanceof Error ? error.message : '头像保存失败，请重试')
-  }
-}
-
 function maskStudentNumber(studentNo: string) {
   if (!studentNo) return ''
   if (studentNo.length <= 4) return studentNo
@@ -122,9 +107,10 @@ function maskStudentNumber(studentNo: string) {
           type="button"
           class="profile-avatar"
           aria-label="更换头像"
-          @click="avatarPickerOpen = true"
+          @click="publicEditorOpen = true"
         >
-          <img :src="avatarSrc" alt="" />
+          <RatingAvatar v-if="community.profile" :author="community.profile" />
+          <img v-else :src="avatarSrc" alt="" />
           <span class="profile-avatar__edit" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <path d="M4 20h4.2L20 8.2l-4.2-4.2L4 16v4Zm8.6-12.8 4.2 4.2" />
@@ -139,6 +125,10 @@ function maskStudentNumber(studentNo: string) {
 
       <article class="student-card surface-card">
         <div v-if="profileStore.profile" class="student-card__rows">
+          <div v-if="community.profile" class="student-card__row">
+            <div class="student-card__icon"><img :src="profileIcon" alt="" /></div>
+            <div class="student-card__copy"><h2>学校姓名（仅自己可见）</h2><p>{{ profileStore.profile.Name || '未提供' }}</p></div>
+          </div>
           <div class="student-card__row">
             <div class="student-card__icon">
               <img class="profile-graduation-icon" :src="graduationIcon" alt="" />
@@ -187,6 +177,11 @@ function maskStudentNumber(studentNo: string) {
       </article>
 
       <div class="profile-menu surface-card">
+        <button type="button" @click="publicEditorOpen = true">
+          <svg class="profile-menu__leading-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></svg>
+          <span>公开昵称和头像</span>
+          <svg class="profile-menu__chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m7.5 4.5 5 5.5-5 5.5" /></svg>
+        </button>
         <button type="button" @click="router.push({ name: 'plan-completion' })">
           <img :src="graduationIcon" alt="" />
           <span>学业完成情况</span>
@@ -245,14 +240,7 @@ function maskStudentNumber(studentNo: string) {
         </button>
       </div>
 
-      <AvatarPicker
-        :open="avatarPickerOpen"
-        :selected-preset-id="selectedPresetId"
-        :saving="profileStore.avatarSaving"
-        @close="avatarPickerOpen = false"
-        @select-preset="selectPresetAvatar"
-        @upload="uploadAvatar"
-      />
+      <CommunityProfileEditor :open="publicEditorOpen" :local-avatar="profileStore.avatar" @close="publicEditorOpen = false" @saved="showNotice('公开资料已更新')" />
 
       <Transition name="toast">
         <div v-if="notice" class="toast-message" role="status">{{ notice }}</div>
@@ -260,3 +248,7 @@ function maskStudentNumber(studentNo: string) {
     </section>
   </AppShell>
 </template>
+
+<style scoped>
+.profile-avatar :deep(.rating-avatar) { width: 100%; height: 100%; border-radius: 50%; }
+</style>
