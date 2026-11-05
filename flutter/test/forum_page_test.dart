@@ -49,6 +49,32 @@ void main() {
     expect(repository.lastForumSort, 'active');
   });
 
+  testWidgets('校园顶部栏随上滑隐藏并在回滑时恢复', (tester) async {
+    tester.view.physicalSize = const Size(390, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    final router = _createRouter(repository);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('论坛'));
+    await tester.pumpAndSettle();
+
+    final header = find.byKey(const ValueKey('campus-collapsible-header'));
+    expect(tester.getSize(header).height, greaterThan(0));
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, -240));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(header).height, 0);
+
+    await tester.drag(find.byType(ListView).first, const Offset(0, 120));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(header).height, greaterThan(0));
+  });
+
   testWidgets('论坛帖子打开详情并展开楼中楼回复', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

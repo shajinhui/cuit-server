@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:flutter/rendering.dart' show ScrollCacheExtent, ScrollDirection;
 import 'package:go_router/go_router.dart';
 
 import 'campus_widgets.dart';
@@ -45,12 +45,18 @@ class _CampusPageState extends State<CampusPage> {
   bool _hasMore = false;
   bool _loading = true;
   bool _loadingMore = false;
+  bool _headerVisible = true;
   int _requestVersion = 0;
 
   @override
   void initState() {
     super.initState();
     unawaited(_load(reset: true));
+  }
+
+  void _setHeaderVisible(bool visible) {
+    if (visible == _headerVisible) return;
+    setState(() => _headerVisible = visible);
   }
 
   @override
@@ -170,6 +176,7 @@ class _CampusPageState extends State<CampusPage> {
     if (_area == value) return;
     setState(() {
       _area = value;
+      _headerVisible = true;
       _submittedQuery = '';
       _searchController.clear();
       _nextCursor = null;
@@ -331,33 +338,62 @@ class _CampusPageState extends State<CampusPage> {
       bottom: false,
       child: Column(
         children: [
-          _buildHeader(),
+          ClipRect(
+            child: AnimatedAlign(
+              key: const ValueKey('campus-collapsible-header'),
+              alignment: Alignment.topCenter,
+              heightFactor: _headerVisible ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              child: _buildHeader(),
+            ),
+          ),
           Expanded(
             child: ColoredBox(
               color: _area == 'forum' ? scheme.surface : Colors.transparent,
-              child: RefreshIndicator(
-                onRefresh: () => _load(reset: true),
-                child: _area == 'marketplace'
-                    ? _buildMarketplaceList()
-                    : ListView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: _area == 'forum'
-                            ? const EdgeInsets.only(bottom: 120)
-                            : const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                        children: [
-                          if (_area == 'ratings') _buildRatingIntro(scheme),
-                          _buildSearch(),
-                          if (_area == 'ratings') ...[
-                            _buildRatingHeading(),
-                            ..._buildRatingContent(),
-                          ] else if (_area == 'forum') ...[
-                            _buildForumFilters(),
-                            _buildForumShortcuts(),
-                            ..._buildForumContent(),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification.metrics.axis != Axis.vertical) {
+                    return false;
+                  }
+                  if (notification.metrics.pixels <= 0) {
+                    _setHeaderVisible(true);
+                  } else if (notification is ScrollUpdateNotification &&
+                      notification.scrollDelta != null &&
+                      notification.scrollDelta!.abs() > .5) {
+                    _setHeaderVisible(notification.scrollDelta! < 0);
+                  } else if (notification is UserScrollNotification &&
+                      notification.direction != ScrollDirection.idle) {
+                    _setHeaderVisible(
+                      notification.direction == ScrollDirection.reverse,
+                    );
+                  }
+                  return false;
+                },
+                child: RefreshIndicator(
+                  onRefresh: () => _load(reset: true),
+                  child: _area == 'marketplace'
+                      ? _buildMarketplaceList()
+                      : ListView(
+                          controller: _scrollController,
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: _area == 'forum'
+                              ? const EdgeInsets.only(bottom: 120)
+                              : const EdgeInsets.fromLTRB(16, 4, 16, 120),
+                          children: [
+                            if (_area == 'ratings') _buildRatingIntro(scheme),
+                            _buildSearch(),
+                            if (_area == 'ratings') ...[
+                              _buildRatingHeading(),
+                              ..._buildRatingContent(),
+                            ] else if (_area == 'forum') ...[
+                              _buildForumFilters(),
+                              _buildForumShortcuts(),
+                              ..._buildForumContent(),
+                            ],
                           ],
-                        ],
-                      ),
+                        ),
+                ),
               ),
             ),
           ),
