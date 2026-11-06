@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>成信友友 · 论坛改版演示</title>
+  <style>
+    :root {
+      --accent: #3478f6;
+      --accent-soft: #edf4ff;
+      --green: #20a66a;
+      --green-soft: #eaf8f1;
+      --orange: #ee8b2d;
+      --text: #17191d;
+      --text-2: #626873;
+      --text-3: #979da7;
+      --line: #eceef1;
+      --surface: #ffffff;
+      --subtle: #f6f7f9;
+      --page: #e9edf2;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      background: var(--page);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, textarea { font: inherit; }
+    button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid rgba(52, 120, 246, .38);
+      outline-offset: 2px;
+    }
+    .icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .icon-sm { width: 17px; height: 17px; }
+    .icon-lg { width: 25px; height: 25px; }
+    .hidden { display: none !important; }
+
+    .phone {
+      width: min(100%, 430px);
+      height: 100dvh;
+      min-height: 640px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .view { position: absolute; inset: 0; display: none; flex-direction: column; background: var(--surface); }
+    .view.active { display: flex; }
+
+    /* 顶部只承担定位与检索，不做欢迎区。 */
+    .status-bar {
+      height: 27px;
+      padding: 7px 19px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: .1px;
+      flex: none;
+    }
+    .status-icons { display: flex; align-items: center; gap: 5px; }
+    .signal { display: flex; gap: 1.5px; align-items: flex-end; height: 11px; }
+    .signal i { display: block; width: 2.5px; border-radius: 1px; background: currentColor; }
+    .signal i:nth-child(1) { height: 4px; }
+    .signal i:nth-child(2) { height: 6px; }
+    .signal i:nth-child(3) { height: 8px; }
+    .signal i:nth-child(4) { height: 10px; }
+    .battery { width: 20px; height: 10px; border: 1.2px solid currentColor; border-radius: 3px; padding: 1px; position: relative; }
+    .battery::before { content: ""; display: block; width: 75%; height: 100%; border-radius: 1px; background: currentColor; }
+    .battery::after { content: ""; position: absolute; right: -3px; top: 2px; width: 2px; height: 4px; border-radius: 0 1px 1px 0; background: currentColor; opacity: .5; }
+
+    .app-header { padding: 8px 15px 9px; flex: none; background: rgba(255,255,255,.97); }
+    .title-row { height: 38px; display: flex; align-items: center; gap: 12px; }
+    .campus-title { font-size: 21px; line-height: 1; font-weight: 750; letter-spacing: -.4px; margin-right: 5px; }
+    .area-switch { display: flex; align-items: center; gap: 21px; flex: 1; }
+    .area-switch button { border: 0; background: none; padding: 8px 0; font-size: 14px; color: var(--text-2); position: relative; }
+    .area-switch button.active { color: var(--text); font-weight: 700; }
+    .area-switch button.active::after { content: ""; position: absolute; width: 14px; height: 3px; border-radius: 3px; background: var(--accent); left: 50%; bottom: 1px; transform: translateX(-50%); }
+    .icon-button { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: transparent; display: inline-flex; align-items: center; justify-content: center; }
+    .icon-button:active { background: var(--subtle); }
+    .search-row { display: flex; gap: 9px; margin-top: 8px; }
+    .search-box { height: 36px; border-radius: 10px; background: var(--subtle); display: flex; align-items: center; gap: 7px; padding: 0 11px; flex: 1; color: var(--text-3); }
+    .search-box input { border: 0; outline: 0; background: transparent; min-width: 0; width: 100%; color: var(--text); font-size: 13px; }
+    .search-box input::placeholder { color: var(--text-3); }
+    .publish-button { height: 36px; padding: 0 13px; border: 0; border-radius: 10px; background: var(--accent); color: white; display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 650; }
+
+    .feed-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .feed-scroll::-webkit-scrollbar, .comments-scroll::-webkit-scrollbar { display: none; }
+    .channel-row { height: 43px; display: flex; align-items: center; padding: 0 15px; border-bottom: 1px solid var(--line); background: white; position: sticky; top: 0; z-index: 5; }
+    .channels { display: flex; align-items: center; gap: 22px; overflow-x: auto; scrollbar-width: none; flex: 1; }
+    .channels::-webkit-scrollbar { display: none; }
+    .channel { flex: none; height: 43px; border: 0; padding: 0; background: none; color: var(--text-2); font-size: 13px; position: relative; }
+    .channel.active { color: var(--accent); font-weight: 650; }
+    .channel.active::after { content: ""; position: absolute; height: 2px; border-radius: 2px; background: var(--accent); left: 2px; right: 2px; bottom: 0; }
+    .sort-button { border: 0; border-left: 1px solid var(--line); background: white; padding: 3px 0 3px 12px; margin-left: 12px; display: flex; align-items: center; gap: 2px; font-size: 12px; color: var(--text-2); }
+
+    .pinned {
+      margin: 0 15px;
+      padding: 11px 0 10px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--text-2);
+    }
+    .pin-label { flex: none; color: var(--accent); font-weight: 650; }
+    .pinned strong { color: var(--text); font-weight: 550; }
+
+    .campus-shortcuts { display: flex; justify-content: space-between; gap: 8px; padding: 8px 15px; border-bottom: 7px solid var(--subtle); }
+    .shortcut { border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center; gap: 5px; color: var(--text-2); font-size: 10px; white-space: nowrap; }
+    .shortcut-icon { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; }
+    .shortcut-icon .icon { width: 14px; height: 14px; }
+    .shortcut:nth-child(1) .shortcut-icon { background: #edf4ff; color: #3478f6; }
+    .shortcut:nth-child(2) .shortcut-icon { background: #fff4e8; color: #dc832a; }
+    .shortcut:nth-child(3) .shortcut-icon { background: #ecf8f2; color: #27976a; }
+    .shortcut:nth-child(4) .shortcut-icon { background: #f3efff; color: #7b64d8; }
+
+    .feed-list { background: white; }
+    .post {
+      width: 100%;
+      display: block;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      background: white;
+      padding: 14px 15px 11px;
+      position: relative;
+    }
+    .post:active { background: #fafbfc; }
+    .open-post { border: 0; background: none; padding: 0; color: inherit; text-align: left; }
+    .post-head { width: 100%; display: flex; align-items: center; min-width: 0; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #dde4ed; flex: none; }
+    .author-block { margin-left: 9px; min-width: 0; flex: 1; }
+    .author-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .author { font-size: 13px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .identity { flex: none; padding: 1px 5px; border-radius: 4px; background: #f0f3f7; color: #727c8b; font-size: 9px; line-height: 15px; }
+    .post-time { margin-top: 2px; color: var(--text-3); font-size: 10px; line-height: 14px; }
+    .post-state { flex: none; align-self: flex-start; margin-top: 2px; font-size: 10px; padding: 2px 6px; border-radius: 5px; }
+    .post-state.open { color: var(--orange); background: #fff5e9; }
+    .post-state.solved { color: var(--green); background: var(--green-soft); }
+    .post-body { display: block; width: calc(100% - 45px); margin: 9px 0 0 45px; font-size: 15px; line-height: 1.55; letter-spacing: .05px; color: #202226; }
+    .post-body .post-title { font-weight: 650; }
+    .course-link { margin: 8px 0 0 45px; border: 0; display: inline-flex; align-items: center; gap: 5px; max-width: calc(100% - 45px); padding: 5px 8px; border-radius: 6px; background: var(--accent-soft); color: #3970c8; font-size: 11px; }
+    .course-link strong { font-weight: 650; }
+    .post-images { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 9px 0 0 45px; }
+    .post-images img { width: 100%; aspect-ratio: 1.13; object-fit: cover; border-radius: 6px; background: #e5e9ef; }
+    .post-meta { display: flex; align-items: center; margin: 10px 0 0 45px; min-height: 24px; }
+    .post-taxonomy { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; font-size: 10px; color: var(--text-3); }
+    .topic { color: #758195; }
+    .post-actions { display: flex; align-items: center; gap: 17px; color: #656c77; }
+    .post-action { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 3px 0; font-size: 11px; }
+    .post-action.liked { color: var(--accent); }
+    .empty-search { padding: 50px 20px; text-align: center; color: var(--text-3); font-size: 13px; }
+    .feed-end { text-align: center; color: #b0b5bd; font-size: 10px; padding: 18px 0 24px; }
+
+    .bottom-nav { height: 63px; padding: 6px 15px max(6px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); flex: none; background: rgba(255,255,255,.98); }
+    .nav-item { border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #858b94; font-size: 10px; }
+    .nav-item.active { color: var(--accent); }
+
+    /* 详情延续同一套信息流语言，不另做卡片。 */
+    .detail-header { height: 48px; padding: 0 9px; display: flex; align-items: center; border-bottom: 1px solid var(--line); flex: none; }
+    .detail-header strong { flex: 1; text-align: center; font-size: 15px; }
+    .detail-header .icon-button:last-child { margin-left: auto; }
+    .detail-header .header-spacer { width: 34px; }
+    .comments-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+    .detail-main { padding: 16px 15px 12px; }
+    .detail-author { display: flex; align-items: center; }
+    .detail-author .avatar { width: 39px; height: 39px; }
+    .detail-author-name { font-size: 14px; font-weight: 650; }
+    .detail-author-meta { color: var(--text-3); font-size: 10px; margin-top: 3px; }
+    .follow-button { margin-left: auto; border: 1px solid #d9e5f8; background: white; color: var(--accent); border-radius: 7px; padding: 5px 11px; font-size: 11px; }
+    .follow-button.followed { color: var(--text-3); border-color: var(--line); background: var(--subtle); }
+    .detail-title { font-size: 19px; line-height: 1.45; font-weight: 700; margin: 15px 0 0; letter-spacing: -.15px; }
+    .detail-body { margin: 11px 0 0; font-size: 16px; line-height: 1.75; white-space: pre-line; }
+    .detail-course { width: 100%; margin-top: 13px; border: 0; text-align: left; display: flex; align-items: center; gap: 9px; padding: 10px 11px; background: var(--subtle); border-radius: 8px; }
+    .detail-course-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 8px; background: white; color: var(--accent); }
+    .detail-course-text { flex: 1; min-width: 0; }
+    .detail-course-text strong { display: block; font-size: 12px; }
+    .detail-course-text span { display: block; font-size: 10px; color: var(--text-3); margin-top: 2px; }
+    .detail-course-score { color: var(--orange); font-size: 12px; font-weight: 650; }
+    .detail-footnote { display: flex; align-items: center; gap: 6px; margin-top: 13px; color: var(--text-3); font-size: 10px; }
+    .detail-actions { display: flex; justify-content: space-around; padding: 10px 25px 13px; border-bottom: 7px solid var(--subtle); }
+    .detail-action { display: flex; align-items: center; gap: 5px; border: 0; background: transparent; padding: 5px 12px; color: var(--text-2); font-size: 12px; }
+    .detail-action.liked { color: var(--accent); }
+    .comments-head { height: 43px; padding: 0 15px; display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+    .comments-head strong { font-size: 13px; }
+    .comments-head span { color: var(--text-3); font-size: 11px; margin-left: 5px; }
+    .comment-sort { margin-left: auto; border: 0; background: transparent; color: var(--text-3); font-size: 10px; padding: 5px 0; }
+    .comment { display: flex; padding: 13px 15px 10px; border-bottom: 1px solid var(--line); }
+    .comment .avatar { width: 30px; height: 30px; }
+    .comment-content { flex: 1; min-width: 0; margin-left: 9px; }
+    .comment-userline { display: flex; align-items: center; gap: 6px; }
+    .comment-user { font-size: 11px; color: #717986; }
+    .author-badge { padding: 0 4px; border-radius: 3px; background: var(--accent-soft); color: var(--accent); font-size: 8px; line-height: 14px; }
+    .comment-text { margin-top: 4px; font-size: 14px; line-height: 1.55; }
+    .reply-to { color: #6e7e95; }
+    .comment-meta { display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 9px; margin-top: 6px; }
+    .comment-reply { border: 0; background: none; padding: 0; color: var(--text-3); font-size: 9px; }
+    .comment-like { border: 0; background: none; padding: 4px 0 4px 10px; color: var(--text-3); display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 9px; }
+    .comment-like.liked { color: var(--accent); }
+    .nested { margin-top: 9px; padding: 8px 9px; border-radius: 7px; background: var(--subtle); font-size: 12px; line-height: 1.55; }
+    .nested strong { color: #6c7788; font-weight: 500; }
+    .accepted { margin: 0 15px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .accepted-label { display: flex; align-items: center; gap: 4px; color: var(--green); font-size: 11px; font-weight: 650; margin-bottom: 6px; }
+    .accepted p { margin: 0; color: var(--text-2); font-size: 12px; line-height: 1.6; }
+    .reply-bar { min-height: 56px; padding: 8px 11px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; background: white; flex: none; }
+    .reply-input-wrap { height: 36px; border-radius: 9px; background: var(--subtle); display: flex; align-items: center; flex: 1; padding: 0 11px; }
+    .reply-input { border: 0; outline: 0; background: transparent; width: 100%; font-size: 12px; color: var(--text); }
+    .reply-input::placeholder { color: var(--text-3); }
+    .send-reply { width: 34px; height: 34px; border: 0; border-radius: 50%; display: grid; place-items: center; color: var(--accent); background: var(--accent-soft); }
+
+    .sheet-scrim { position: absolute; inset: 0; z-index: 30; background: rgba(18,24,32,.35); display: none; align-items: flex-end; }
+    .sheet-scrim.open { display: flex; }
+    .compose-sheet { width: 100%; background: white; border-radius: 18px 18px 0 0; padding: 9px 15px max(18px, env(safe-area-inset-bottom)); animation: rise .18s ease-out; }
+    @keyframes rise { from { transform: translateY(20px); opacity: .5; } to { transform: translateY(0); opacity: 1; } }
+    .sheet-handle { width: 34px; height: 4px; background: #dfe2e6; border-radius: 4px; margin: 0 auto 13px; }
+    .compose-title { display: flex; align-items: center; justify-content: space-between; }
+    .compose-title strong { font-size: 16px; }
+    .compose-submit { border: 0; border-radius: 8px; padding: 7px 14px; background: var(--accent); color: white; font-size: 12px; }
+    .compose-campus { margin: 11px 0; color: var(--text-3); font-size: 11px; display: flex; align-items: center; gap: 4px; }
+    .compose-input { width: 100%; height: 108px; resize: none; border: 0; outline: 0; padding: 5px 0; font-size: 15px; line-height: 1.6; }
+    .compose-input::placeholder { color: #a5abb4; }
+    .compose-options { display: flex; gap: 8px; padding-top: 9px; border-top: 1px solid var(--line); }
+    .compose-option { border: 0; border-radius: 6px; padding: 5px 9px; background: var(--subtle); color: var(--text-2); font-size: 11px; }
+    .compose-option.selected { background: var(--accent-soft); color: var(--accent); }
+
+    .toast { position: absolute; z-index: 50; left: 50%; bottom: 83px; transform: translate(-50%, 10px); background: rgba(24,28,34,.88); color: white; border-radius: 8px; padding: 9px 14px; font-size: 12px; opacity: 0; pointer-events: none; transition: .18s ease; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (min-width: 600px) {
+      body { padding: 20px 0; }
+      .phone { height: min(900px, calc(100dvh - 40px)); border-radius: 25px; box-shadow: 0 18px 55px rgba(32,43,58,.16); border: 1px solid rgba(32,43,58,.08); }
+    }
+    @media (max-width: 360px) {
+      .channels { gap: 17px; }
+      .post-body, .post-meta, .post-images, .course-link { margin-left: 0; }
+      .post-body { width: 100%; }
+      .course-link { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.6-4 3-6 7-6s6.4 2 7 6"></path></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"></path></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 9.5 9.5 0 0 1-3.5-.7L4 20l1.3-3.8A7.3 7.3 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"></path></symbol>
+    <symbol id="i-like" viewBox="0 0 24 24"><path d="M7 10v10H4V10h3Zm0 9h10.2a2 2 0 0 0 2-1.7l1-6A2 2 0 0 0 18.2 9H14l.7-3.1A2.4 2.4 0 0 0 12.3 3L7 10"></path></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="m14 5 6 6-6 6v-4C8 13 5 15 3 18c0-6 3-10 11-11V5Z"></path></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z"></path></symbol>
+    <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 19c.5-4 2.5-6 6-6s5.5 2 6 6M16 5.5a3 3 0 0 1 0 5.8M17 13c2.4.4 3.7 2.4 4 5"></path></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12Z"></path><circle cx="12" cy="9" r="2.3"></circle></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.6 2.6 0 0 1 5 1c0 2-2.5 2-2.5 4M12 17.5v.1"></path></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8M5 10v10h14V10M9 20v-6h6v6"></path></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 4-8 8 8 8"></path></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"></path></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m21 3-8 18-3-8-8-3 19-7Z"></path><path d="m10 13 5-5"></path></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M4 9a12 12 0 0 1 16 0M7 13a7.5 7.5 0 0 1 10 0M10.5 16.5a2.3 2.3 0 0 1 3 0"></path></symbol>
+  </svg>
+
+  <main class="phone" id="app">
+    <section class="view active" id="feedView" aria-label="论坛信息流">
+      <div class="status-bar"><span>15:06</span><div class="status-icons"><span class="signal"><i></i><i></i><i></i><i></i></span><svg class="icon" style="width:15px"><use href="#i-wifi"></use></svg><span class="battery"></span></div></div>
+      <header class="app-header">
+        <div class="title-row">
+          <div class="campus-title">校园</div>
+          <nav class="area-switch" aria-label="校园栏目">
+            <button data-toast="课程评分入口">评分</button>
+            <button data-toast="二手市场入口">二手</button>
+            <button class="active">论坛</button>
+          </nav>
+          <button class="icon-button" aria-label="个人中心" data-toast="个人中心"><svg class="icon"><use href="#i-user"></use></svg></button>
+        </div>
+        <div class="search-row">
+          <label class="search-box"><svg class="icon icon-sm"><use href="#i-search"></use></svg><input id="searchInput" type="search" placeholder="搜索帖子、课程或同学" aria-label="搜索帖子"></label>
+          <button class="publish-button" id="openCompose"><svg class="icon icon-sm"><use href="#i-plus"></use></svg>发帖</button>
+        </div>
+      </header>
+
+      <div class="feed-scroll" id="feedScroll">
+        <div class="channel-row">
+          <div class="channels" role="tablist" aria-label="帖子分区">
+            <button class="channel active" data-filter="all" role="tab">全部</button>
+            <button class="channel" data-filter="daily" role="tab">日常</button>
+            <button class="channel" data-filter="study" role="tab">学习</button>
+            <button class="channel" data-filter="help" role="tab">求助</button>
+            <button class="channel" data-filter="team" role="tab">组队</button>
+            <button class="channel" data-filter="lost" role="tab">失物</button>
+          </div>
+          <button class="sort-button" id="sortButton"><span>最新</span><svg class="icon" style="width:14px"><use href="#i-chevron"></use></svg></button>
+        </div>
+
+        <div class="pinned"><span class="pin-label">置顶</span><div><strong>成信大竞赛交流群开放</strong><br>①群已满，新建②群；组队前请先阅读群公告</div></div>
+
+        <div class="campus-shortcuts" aria-label="校园快捷入口">
+          <button class="shortcut" data-toast="按课程看评价与讨论"><span class="shortcut-icon"><svg class="icon icon-sm"><use href="#i-book"></use></svg></span>课程讨论</button>
+          <button class="shortcut" data-toast="竞赛组队大厅"><span class="shortcut-icon"><svg class="icon icon-sm"><use href="#i-team"></use></svg></span>竞赛组队</button>
+          <button class="shortcut" data-toast="失物招领"><span class="shortcut-icon"><svg class="icon icon-sm"><use href="#i-pin"></use></svg></span>失物招领</button>
+          <button class="shortcut" data-toast="本校问答"><span class="shortcut-icon"><svg class="icon icon-sm"><use href="#i-help"></use></svg></span>本校问答</button>
+        </div>
+
+        <div class="feed-list" id="feedList">
+          <article class="post" data-category="help" data-id="bus" data-search="龙泉 校车 航空港 求助 冬什聆">
+            <button class="post-head open-post" aria-label="打开帖子：龙泉周末校车">
+              <img class="avatar" src="https://i.pravatar.cc/96?img=47" alt="">
+              <span class="author-block"><span class="author-line"><span class="author">冬什聆</span><span class="identity">24级 · 龙泉</span></span><span class="post-time">14:49 · 航空港 / 龙泉互通</span></span>
+              <span class="post-state open">待解决</span>
+            </button>
+            <button class="post-body open-post">龙泉这边周末有校车去航空港吗？班次什么时候啊，不是本校的，可以坐吗</button>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 求助</span><span>浏览 466</span></div><div class="post-actions"><button class="post-action like-button" aria-label="点赞"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>1</span></button><button class="post-action open-post" aria-label="查看评论"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>2</span></button><button class="post-action share-button" aria-label="分享"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+          </article>
+
+          <article class="post" data-category="study" data-id="course" data-search="数据结构 期末 复习 课程 学习 林小满">
+            <button class="post-head open-post" aria-label="打开帖子：数据结构复习">
+              <img class="avatar" src="https://i.pravatar.cc/96?img=32" alt="">
+              <span class="author-block"><span class="author-line"><span class="author">林小满</span><span class="identity">23级 · 计算机</span></span><span class="post-time">14:36 · 航空港校区</span></span>
+              <span class="post-state solved">已解决</span>
+            </button>
+            <button class="post-body open-post"><span class="post-title">数据结构期末复习资料整理好了</span><br>把近几年重点按章节重新排了一遍，链表和树的部分补了手写推导，需要的同学可以直接看。</button>
+            <button class="course-link open-post"><svg class="icon icon-sm"><use href="#i-book"></use></svg><span>关联课程</span><strong>数据结构</strong><span>4.6 分</span></button>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 学习交流</span><span>浏览 1.2k</span></div><div class="post-actions"><button class="post-action like-button liked" aria-label="点赞"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>86</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>24</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+          </article>
+
+          <article class="post" data-category="daily" data-id="cats" data-search="校猫 日常 航空港 猫猫 南九">
+            <button class="post-head open-post" aria-label="打开帖子：校猫近况">
+              <img class="avatar" src="https://i.pravatar.cc/96?img=12" alt="">
+              <span class="author-block"><span class="author-line"><span class="author">南九</span><span class="identity">25级 · 软工</span></span><span class="post-time">14:21 · 航空港校区</span></span>
+            </button>
+            <button class="post-body open-post">图书馆门口的三花今天也来巡场了，躲在花坛边，怕人的同学不要突然伸手。</button>
+            <div class="post-images"><img src="https://images.unsplash.com/photo-1574158622682-e40e69881006?auto=format&fit=crop&w=320&q=75" alt="橘白猫"><img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=320&q=75" alt="花猫"><img src="https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=320&q=75" alt="猫咪"></div>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 校宠</span><span>浏览 892</span></div><div class="post-actions"><button class="post-action like-button"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>47</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>8</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+          </article>
+
+          <article class="post" data-category="team" data-id="contest" data-search="数学建模 竞赛 组队 计算机 陈默">
+            <button class="post-head open-post" aria-label="打开帖子：数学建模组队">
+              <img class="avatar" src="https://i.pravatar.cc/96?img=68" alt="">
+              <span class="author-block"><span class="author-line"><span class="author">陈默</span><span class="identity">22级 · 应数</span></span><span class="post-time">13:58 · 竞赛组队</span></span>
+              <span class="post-state open">缺 1 人</span>
+            </button>
+            <button class="post-body open-post"><span class="post-title">数学建模校赛组队，缺一位负责论文排版的同学</span><br>已有建模和编程，周末能一起线下讨论，目标认真完成，不摸鱼。</button>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 竞赛组队</span><span>浏览 318</span></div><div class="post-actions"><button class="post-action like-button"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>12</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>16</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+          </article>
+
+          <article class="post" data-category="lost" data-id="lost" data-search="失物 校园卡 一食堂 周同学">
+            <button class="post-head open-post" aria-label="打开帖子：寻找校园卡">
+              <img class="avatar" src="https://i.pravatar.cc/96?img=25" alt="">
+              <span class="author-block"><span class="author-line"><span class="author">周同学</span><span class="identity">24级 · 电子</span></span><span class="post-time">13:42 · 一食堂附近</span></span>
+            </button>
+            <button class="post-body open-post">捡到一张校园卡，卡套是透明蓝色的，已放到一食堂一楼服务台，失主看到去认领。</button>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 失物招领</span><span>浏览 205</span></div><div class="post-actions"><button class="post-action like-button"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>19</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>3</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+          </article>
+
+          <article class="post" data-category="daily" data-id="print" data-search="打印 资料 跑腿 互助 13栋 老天奶">
+            <button class="post-head open-post" aria-label="打开帖子：打印互助">
+              <img class="avatar" src="https://i.pravatar.cc/96?img=15" alt="">
+              <span class="author-block"><span class="author-line"><span class="author">老天奶</span><span class="identity">23级 · 通信</span></span><span class="post-time">13:30 · 龙泉校区</span></span>
+            </button>
+            <button class="post-body open-post">找个人帮我打印资料送到 13 栋，十元，大概二十页，四点前送到就行。</button>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 互助</span><span>浏览 298</span></div><div class="post-actions"><button class="post-action like-button"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>4</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>4</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+          </article>
+        </div>
+        <div class="empty-search hidden" id="emptySearch">没有找到相关帖子，换个关键词试试</div>
+        <div class="feed-end">已经看到今天的全部新帖</div>
+      </div>
+
+      <nav class="bottom-nav" aria-label="应用导航">
+        <button class="nav-item" data-toast="课表"><svg class="icon icon-lg"><use href="#i-grid"></use></svg>课表</button>
+        <button class="nav-item" data-toast="工具"><svg class="icon icon-lg"><use href="#i-grid"></use></svg>工具</button>
+        <button class="nav-item active"><svg class="icon icon-lg"><use href="#i-home"></use></svg>校园</button>
+        <button class="nav-item" data-toast="我的"><svg class="icon icon-lg"><use href="#i-user"></use></svg>我的</button>
+      </nav>
+    </section>
+
+    <section class="view" id="detailView" aria-label="帖子详情">
+      <div class="status-bar"><span>15:06</span><div class="status-icons"><span class="signal"><i></i><i></i><i></i><i></i></span><svg class="icon" style="width:15px"><use href="#i-wifi"></use></svg><span class="battery"></span></div></div>
+      <header class="detail-header"><button class="icon-button" id="backButton" aria-label="返回"><svg class="icon"><use href="#i-back"></use></svg></button><strong>帖子</strong><button class="icon-button" data-toast="更多操作"><svg class="icon"><use href="#i-more"></use></svg></button></header>
+      <div class="comments-scroll" id="detailScroll">
+        <article class="detail-main">
+          <div class="detail-author"><img class="avatar" id="detailAvatar" src="https://i.pravatar.cc/96?img=47" alt=""><div class="author-block"><div class="detail-author-name" id="detailAuthor">冬什聆</div><div class="detail-author-meta" id="detailIdentity">24级 · 龙泉校区</div></div><button class="follow-button" id="followButton">关注</button></div>
+          <h1 class="detail-title" id="detailTitle">龙泉周末有校车去航空港吗？</h1>
+          <div class="detail-body" id="detailBody">龙泉这边周末有校车去航空港吗？班次什么时候啊，不是本校的，可以坐吗？下周一要去航空港参加活动，想提前确认一下。</div>
+          <button class="detail-course hidden" id="detailCourse"><span class="detail-course-icon"><svg class="icon icon-sm"><use href="#i-book"></use></svg></span><span class="detail-course-text"><strong>数据结构</strong><span>查看课程评价与全部讨论</span></span><span class="detail-course-score">4.6 分</span><svg class="icon icon-sm" style="transform:rotate(-90deg)"><use href="#i-chevron"></use></svg></button>
+          <div class="detail-footnote"><span id="detailTag"># 求助</span><span>·</span><span id="detailMeta">14:49 发布 · 浏览 466 · 龙泉校区</span></div>
+        </article>
+        <div class="detail-actions"><button class="detail-action" id="detailLike"><svg class="icon"><use href="#i-like"></use></svg><span>1</span></button><button class="detail-action" id="favoriteButton"><svg class="icon"><use href="#i-star"></use></svg><span>收藏</span></button><button class="detail-action share-button"><svg class="icon"><use href="#i-share"></use></svg><span>分享</span></button></div>
+
+        <div class="accepted" id="acceptedAnswer"><div class="accepted-label"><svg class="icon icon-sm"><use href="#i-check"></use></svg>已被楼主采纳</div><p>周末每天 8:00 和 16:30 各一班，在龙泉校区正门上车。外校人员不能单独乘车，需要本校同学带校园卡登记。</p></div>
+        <div class="comments-head"><strong>评论</strong><span id="commentCount">2</span><button class="comment-sort">按时间</button></div>
+        <div id="commentsList">
+          <article class="comment"><img class="avatar" src="https://i.pravatar.cc/96?img=5" alt=""><div class="comment-content"><div class="comment-userline"><span class="comment-user">青柠</span><span class="identity">21级 · 外语</span></div><div class="comment-text">上周六坐过，早上八点的车，七点五十到正门就行。</div><div class="comment-meta"><span>1小时前 · 四川</span><button class="comment-reply">回复</button></div></div><button class="comment-like"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>3</span></button></article>
+          <article class="comment"><img class="avatar" src="https://i.pravatar.cc/96?img=47" alt=""><div class="comment-content"><div class="comment-userline"><span class="comment-user">冬什聆</span><span class="author-badge">作者</span></div><div class="comment-text"><span class="reply-to">回复 青柠：</span>好的，那外校同学可以登记乘车吗？</div><div class="nested"><strong>青柠：</strong>可以，让同行的本校同学带卡到司机那里登记。</div><div class="comment-meta"><span>48分钟前 · 四川</span><button class="comment-reply">回复</button></div></div><button class="comment-like"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>1</span></button></article>
+        </div>
+      </div>
+      <div class="reply-bar"><div class="reply-input-wrap"><input class="reply-input" id="replyInput" placeholder="友善回复，帮助同学解决问题"></div><button class="send-reply" id="sendReply" aria-label="发送回复"><svg class="icon icon-sm"><use href="#i-send"></use></svg></button></div>
+    </section>
+
+    <div class="sheet-scrim" id="composeScrim">
+      <section class="compose-sheet" aria-label="发布帖子">
+        <div class="sheet-handle"></div>
+        <div class="compose-title"><strong>分享校园动态</strong><button class="compose-submit" id="composeSubmit">发布</button></div>
+        <div class="compose-campus"><svg class="icon" style="width:13px"><use href="#i-pin"></use></svg>航空港校区 · 以「友友」身份发布</div>
+        <textarea class="compose-input" id="composeInput" placeholder="说点具体的事，同学们更容易参与讨论……"></textarea>
+        <div class="compose-options"><button class="compose-option selected">日常</button><button class="compose-option">学习交流</button><button class="compose-option">求助</button><button class="compose-option">失物招领</button></div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status"></div>
+  </main>
+
+  <script>
+    const feedView = document.getElementById('feedView');
+    const detailView = document.getElementById('detailView');
+    const feedScroll = document.getElementById('feedScroll');
+    const detailScroll = document.getElementById('detailScroll');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+    let savedScroll = 0;
+    let currentFilter = 'all';
+
+    const postDetails = {
+      bus: { author: '冬什聆', identity: '24级 · 龙泉校区', avatar: 'https://i.pravatar.cc/96?img=47', title: '龙泉周末有校车去航空港吗？', body: '龙泉这边周末有校车去航空港吗？班次什么时候啊，不是本校的，可以坐吗？下周一要去航空港参加活动，想提前确认一下。', tag: '# 求助', meta: '14:49 发布 · 浏览 466 · 龙泉校区', likes: 1 },
+      course: { author: '林小满', identity: '23级 · 计算机学院', avatar: 'https://i.pravatar.cc/96?img=32', title: '数据结构期末复习资料整理好了', body: '把近几年重点按章节重新排了一遍，链表和树的部分补了手写推导，需要的同学可以直接看。\n\n资料只是辅助，建议先按老师给的考试范围过一遍，再用这份清单查漏补缺。', tag: '# 学习交流', meta: '14:36 发布 · 浏览 1.2k · 航空港校区', likes: 86, course: true },
+      cats: { author: '南九', identity: '25级 · 软件工程', avatar: 'https://i.pravatar.cc/96?img=12', title: '图书馆门口的三花今天也来巡场了', body: '躲在花坛边，怕人的同学不要突然伸手。最近天气凉了，大家投喂的时候注意不要给太咸的食物。', tag: '# 校宠', meta: '14:21 发布 · 浏览 892 · 航空港校区', likes: 47 },
+      contest: { author: '陈默', identity: '22级 · 应用数学', avatar: 'https://i.pravatar.cc/96?img=68', title: '数学建模校赛组队，缺一位负责论文排版的同学', body: '已有建模和编程，周末能一起线下讨论，目标认真完成，不摸鱼。\n\n不要求之前参加过，但希望能熟悉公式和图表排版，周六下午可以试一次协作。', tag: '# 竞赛组队', meta: '13:58 发布 · 浏览 318 · 航空港校区', likes: 12 },
+      lost: { author: '周同学', identity: '24级 · 电子信息', avatar: 'https://i.pravatar.cc/96?img=25', title: '在一食堂捡到一张校园卡', body: '卡套是透明蓝色的，已放到一食堂一楼服务台，失主看到去认领。认领时需要说明卡面信息。', tag: '# 失物招领', meta: '13:42 发布 · 浏览 205 · 一食堂', likes: 19 },
+      print: { author: '老天奶', identity: '23级 · 通信工程', avatar: 'https://i.pravatar.cc/96?img=15', title: '找同学帮忙打印资料送到 13 栋', body: '大概二十页，四点前送到就行，费用十元。资料已经整理好，可以直接发文件。', tag: '# 互助', meta: '13:30 发布 · 浏览 298 · 龙泉校区', likes: 4 }
+    };
+
+    function showToast(message) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add('show');
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+    }
+
+    function openPost(id) {
+      const data = postDetails[id] || postDetails.bus;
+      savedScroll = feedScroll.scrollTop;
+      document.getElementById('detailAuthor').textContent = data.author;
+      document.getElementById('detailIdentity').textContent = data.identity;
+      document.getElementById('detailAvatar').src = data.avatar;
+      document.getElementById('detailTitle').textContent = data.title;
+      document.getElementById('detailBody').textContent = data.body;
+      document.getElementById('detailTag').textContent = data.tag;
+      document.getElementById('detailMeta').textContent = data.meta;
+      document.getElementById('detailLike').querySelector('span').textContent = data.likes;
+      document.getElementById('detailLike').classList.remove('liked');
+      document.getElementById('detailCourse').classList.toggle('hidden', !data.course);
+      document.getElementById('acceptedAnswer').classList.toggle('hidden', id !== 'bus');
+      feedView.classList.remove('active');
+      detailView.classList.add('active');
+      detailScroll.scrollTop = 0;
+    }
+
+    document.addEventListener('click', event => {
+      const open = event.target.closest('.open-post');
+      if (open) {
+        const post = open.closest('.post');
+        if (post) openPost(post.dataset.id);
+        return;
+      }
+      const toastTrigger = event.target.closest('[data-toast]');
+      if (toastTrigger) showToast(toastTrigger.dataset.toast + ' · 演示入口');
+      const like = event.target.closest('.like-button, .comment-like');
+      if (like) {
+        const number = like.querySelector('span');
+        const active = like.classList.toggle('liked');
+        number.textContent = Math.max(0, Number(number.textContent) + (active ? 1 : -1));
+      }
+    });
+
+    document.getElementById('backButton').addEventListener('click', () => {
+      detailView.classList.remove('active');
+      feedView.classList.add('active');
+      requestAnimationFrame(() => feedScroll.scrollTop = savedScroll);
+    });
+
+    document.querySelectorAll('.channel').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.channel').forEach(item => item.classList.remove('active'));
+        button.classList.add('active');
+        currentFilter = button.dataset.filter;
+        filterPosts();
+      });
+    });
+
+    function filterPosts() {
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      let visible = 0;
+      document.querySelectorAll('.post').forEach(post => {
+        const matchesFilter = currentFilter === 'all' || post.dataset.category === currentFilter;
+        const matchesSearch = !query || post.dataset.search.toLowerCase().includes(query) || post.textContent.toLowerCase().includes(query);
+        post.classList.toggle('hidden', !(matchesFilter && matchesSearch));
+        if (matchesFilter && matchesSearch) visible++;
+      });
+      document.getElementById('emptySearch').classList.toggle('hidden', visible > 0);
+    }
+    document.getElementById('searchInput').addEventListener('input', filterPosts);
+
+    const sortOrders = ['最新', '活跃', '精华'];
+    let sortIndex = 0;
+    document.getElementById('sortButton').addEventListener('click', () => {
+      sortIndex = (sortIndex + 1) % sortOrders.length;
+      document.querySelector('#sortButton span').textContent = sortOrders[sortIndex];
+      showToast('已按' + sortOrders[sortIndex] + '排序');
+    });
+
+    document.querySelectorAll('.share-button').forEach(button => button.addEventListener('click', () => showToast('分享面板 · 演示')));
+
+    document.getElementById('detailLike').addEventListener('click', event => {
+      const button = event.currentTarget;
+      const number = button.querySelector('span');
+      const active = button.classList.toggle('liked');
+      number.textContent = Number(number.textContent) + (active ? 1 : -1);
+    });
+
+    document.getElementById('favoriteButton').addEventListener('click', event => {
+      const button = event.currentTarget;
+      const active = button.classList.toggle('liked');
+      button.querySelector('span').textContent = active ? '已收藏' : '收藏';
+      showToast(active ? '已加入收藏' : '已取消收藏');
+    });
+
+    document.getElementById('followButton').addEventListener('click', event => {
+      const active = event.currentTarget.classList.toggle('followed');
+      event.currentTarget.textContent = active ? '已关注' : '关注';
+    });
+
+    document.getElementById('detailCourse').addEventListener('click', () => showToast('进入「数据结构」课程讨论'));
+    document.querySelectorAll('.comment-reply').forEach(button => button.addEventListener('click', () => document.getElementById('replyInput').focus()));
+
+    document.getElementById('sendReply').addEventListener('click', () => {
+      const input = document.getElementById('replyInput');
+      const value = input.value.trim();
+      if (!value) { input.focus(); return; }
+      const comment = document.createElement('article');
+      comment.className = 'comment';
+      comment.innerHTML = '<img class="avatar" src="https://i.pravatar.cc/96?img=56" alt=""><div class="comment-content"><div class="comment-userline"><span class="comment-user">友友</span><span class="identity">25级 · 计算机</span></div><div class="comment-text"></div><div class="comment-meta"><span>刚刚 · 四川</span><button class="comment-reply">回复</button></div></div><button class="comment-like"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>0</span></button>';
+      comment.querySelector('.comment-text').textContent = value;
+      document.getElementById('commentsList').appendChild(comment);
+      const count = document.getElementById('commentCount');
+      count.textContent = Number(count.textContent) + 1;
+      input.value = '';
+      comment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast('回复已发布');
+    });
+    document.getElementById('replyInput').addEventListener('keydown', event => {
+      if (event.key === 'Enter') document.getElementById('sendReply').click();
+    });
+
+    const composeScrim = document.getElementById('composeScrim');
+    document.getElementById('openCompose').addEventListener('click', () => {
+      composeScrim.classList.add('open');
+      setTimeout(() => document.getElementById('composeInput').focus(), 100);
+    });
+    composeScrim.addEventListener('click', event => {
+      if (event.target === composeScrim) composeScrim.classList.remove('open');
+    });
+    document.querySelectorAll('.compose-option').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.compose-option').forEach(item => item.classList.remove('selected'));
+      button.classList.add('selected');
+    }));
+    document.getElementById('composeSubmit').addEventListener('click', () => {
+      const input = document.getElementById('composeInput');
+      if (!input.value.trim()) { input.focus(); showToast('先写一点内容吧'); return; }
+      composeScrim.classList.remove('open');
+      showToast('发布成功 · 演示不写入数据');
+      input.value = '';
+    });
+  </script>
+</body>
+</html>
