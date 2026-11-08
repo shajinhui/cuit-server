@@ -40,6 +40,7 @@ import 'app_shell.dart';
 import '../features/schedule/presentation/desktop_widget_page.dart';
 import '../features/community/presentation/community_scope.dart';
 import '../features/community/presentation/community_pages.dart';
+import '../features/push/push_service.dart';
 
 class ChengxinApp extends StatefulWidget {
   const ChengxinApp({super.key, required this.dependencies});
@@ -54,6 +55,8 @@ class _ChengxinAppState extends State<ChengxinApp> {
   @override
   void initState() {
     super.initState();
+    widget.dependencies.push?.onNotificationTap = _openPushTarget;
+    widget.dependencies.push?.flushPendingTarget();
     // 热更新独立于账号和业务初始化，不等待网络检查才展示页面。
     unawaited(widget.dependencies.appUpdate?.checkInBackground());
     _appLifecycle = AppLifecycleListener(
@@ -65,6 +68,17 @@ class _ChengxinAppState extends State<ChengxinApp> {
     unawaited(widget.dependencies.announcements?.refresh());
     widget.dependencies.desktopWidgets?.onOpenSchedule = _openWidgetSchedule;
     unawaited(_consumeWidgetLaunch());
+  }
+
+  void _openPushTarget(PushNotificationTarget target) {
+    if (!mounted) return;
+    _router.pushNamed(
+      'forum-thread',
+      pathParameters: {'threadId': target.threadId},
+      queryParameters: {
+        if (target.replyId != null) 'reply': target.replyId!,
+      },
+    );
   }
 
   Future<void> _consumeWidgetLaunch() async {
@@ -406,6 +420,7 @@ class _ChengxinAppState extends State<ChengxinApp> {
   @override
   void dispose() {
     _appLifecycle.dispose();
+    widget.dependencies.push?.onNotificationTap = null;
     widget.dependencies.desktopWidgets?.onOpenSchedule = null;
     _router.dispose();
     super.dispose();

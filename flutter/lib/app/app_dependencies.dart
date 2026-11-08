@@ -19,6 +19,7 @@ import '../features/profile/data/profile_avatar.dart';
 import '../features/profile/data/profile_repository.dart';
 import '../features/community/data/community_repository.dart';
 import '../features/community/presentation/community_view_model.dart';
+import '../features/push/push_service.dart';
 import '../features/autorun/data/autorun_repository.dart';
 import '../features/app_update/data/shorebird_app_update_repository.dart';
 import '../features/app_update/data/unavailable_app_update_repository.dart';
@@ -43,6 +44,7 @@ class AppDependencies {
     this.appUpdate,
     this.announcements,
     this.desktopWidgets,
+    this.push,
     ProfileRepository? profileRepository,
   }) : profileRepository =
            profileRepository ?? (api == null ? null : ProfileRepository(api)) {
@@ -62,6 +64,7 @@ class AppDependencies {
   final AppUpdateViewModel? appUpdate;
   final AnnouncementViewModel? announcements;
   final DesktopWidgets? desktopWidgets;
+  final PushNotificationService? push;
   DesktopWidgetController? desktopWidget;
   ProfileAvatar? avatar;
   CommunityViewModel? community;
@@ -93,6 +96,15 @@ class AppDependencies {
             DefaultScheduleRepository(api, cacheStorage, account).clear(),
       ),
     );
+    final push = !kIsWeb && !isHarmonyOS && !config.startInDemo
+        ? PushNotificationService(
+            api: api,
+            session: session,
+            platform: defaultTargetPlatform == TargetPlatform.iOS
+                ? 'ios'
+                : 'android',
+          )
+        : null;
     final dependencies = AppDependencies(
       session: session,
       calendar: calendar,
@@ -121,6 +133,7 @@ class AppDependencies {
       desktopWidgets: NativeDesktopWidgets.supported
           ? NativeDesktopWidgets()
           : null,
+      push: push,
       createScheduleLocalStore: (student) => ScheduleLocalStore(
         cacheStorage,
         'v1:${api.dio.options.baseUrl}:${student.number}:local',
@@ -134,6 +147,7 @@ class AppDependencies {
       // 启动只读取本机身份与凭证，不等待会话检查、个人信息等网络请求。
       await session.restore(cacheOnly: true);
     }
+    unawaited(push?.initialize());
     return dependencies;
   }
 
@@ -267,6 +281,7 @@ class AppDependencies {
     schedule?.removeListener(_openWidgetScheduleIfReady);
     schedule?.dispose();
     community?.dispose();
+    push?.dispose();
     campusRepository?.dispose();
     autoRunRepository?.dispose();
     avatar?.dispose();
