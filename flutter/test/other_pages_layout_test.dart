@@ -1,6 +1,7 @@
 import 'package:chengxin_youyou/app/app.dart';
 import 'package:chengxin_youyou/features/campus/presentation/campus_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/campus_widgets.dart';
+import 'package:chengxin_youyou/features/campus/presentation/forum_editor_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_editor_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_item_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_mine_page.dart';
@@ -44,6 +45,9 @@ void main() {
     }
 
     await show(Scaffold(body: CampusPage(repository: repository)));
+    // 上滑检查后顶部栏已收起，先回滑恢复再切换栏目。
+    await tester.drag(find.byType(ListView).first, const Offset(0, 600));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('二手'));
     await tester.pumpAndSettle();
     expect(find.text('校园二手车'), findsOneWidget);
@@ -62,6 +66,7 @@ void main() {
       RatingEditorPage(repository: repository, boardId: 'board-1'),
       MarketplaceEditorPage(repository: repository),
       MarketplaceEditorPage(repository: repository, initialType: 'wanted'),
+      ForumEditorPage(repository: repository),
     ]) {
       await show(page);
     }

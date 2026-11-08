@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import 'campus_widgets.dart';
 
 class MarketplaceItemPage extends StatefulWidget {
@@ -115,11 +116,15 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     final item = _item;
     final wanted = item?.listingType == 'wanted';
     return PageScaffold(
       title: wanted ? '求购详情' : '商品详情',
+      backgroundColor: campusCanvas,
       actions: [
         if (item?.isMine == true)
           TextButton(
@@ -134,22 +139,39 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: FilledButton(
-                  onPressed: _busy || item.status != 'on_sale'
-                      ? null
-                      : _revealContact,
-                  child: Text(
-                    item.status != 'on_sale'
-                        ? listingStatusLabel(item)
-                        : _busy
-                        ? '正在获取联系方式…'
-                        : _contact != null
-                        ? (wanted ? '查看求购者联系方式' : '查看卖家联系方式')
-                        : wanted
-                        ? '我有闲置'
-                        : '我想购买',
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 9, 16, 9),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border(
+                    top: BorderSide(color: campusCardLine, width: .8),
+                  ),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: _busy || item.status != 'on_sale'
+                        ? null
+                        : _revealContact,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: campusInk,
+                      foregroundColor: campusOnInk,
+                      minimumSize: const Size(44, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      item.status != 'on_sale'
+                          ? listingStatusLabel(item)
+                          : _busy
+                          ? '正在获取联系方式…'
+                          : _contact != null
+                          ? (wanted ? '查看求购者联系方式' : '查看卖家联系方式')
+                          : wanted
+                          ? '我有闲置'
+                          : '我想购买',
+                    ),
                   ),
                 ),
               ),
@@ -169,166 +191,397 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
     );
   }
 
+  Widget _buildPanel({
+    required Widget child,
+    EdgeInsetsGeometry padding = const EdgeInsets.all(17),
+  }) => Container(
+    decoration: campusCardDecoration(radius: 18),
+    child: Padding(padding: padding, child: child),
+  );
+
   Widget _buildContent(CampusListing item) {
     final wanted = item.listingType == 'wanted';
+    final colors = Theme.of(context).colorScheme;
     final published = DateTime.tryParse(item.createdAt)?.toLocal();
+    final publishedText = published == null
+        ? ''
+        : '${published.year}/${published.month}/${published.day} 发布';
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 28),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 30),
       children: [
         if (item.imageAssetId != null)
-          CampusAssetImage(
-            assetId: item.imageAssetId,
-            repository: widget.repository,
-            width: double.infinity,
-            height: 230,
-            radius: 12,
-            fit: BoxFit.contain,
-            fallback: Icons.shopping_bag_outlined,
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: campusCardDecoration(radius: 20),
+            child: Stack(
+              children: [
+                CampusAssetImage(
+                  assetId: item.imageAssetId,
+                  repository: widget.repository,
+                  width: double.infinity,
+                  height: 250,
+                  radius: 14,
+                  fit: BoxFit.contain,
+                  fallback: Icons.shopping_bag_outlined,
+                ),
+                Positioned(
+                  left: 10,
+                  top: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: campusSurface.withValues(alpha: .92),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      wanted ? '求购' : '闲置',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+        if (item.imageAssetId != null) const SizedBox(height: 14),
+        _buildPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${wanted ? '预算 ' : ''}¥${campusFormatPrice(item.priceCents)}',
+                      style: const TextStyle(
+                        fontSize: 30,
+                        height: 1.15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -.8,
+                        color: campusInk,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: campusControlSurface,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      listingStatusLabel(item),
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: campusMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                item.title,
+                style: const TextStyle(
+                  fontSize: 21,
+                  height: 1.32,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -.3,
+                ),
+              ),
+              const SizedBox(height: 9),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.location_on_outlined,
+                        size: 13,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        campusLabel(item.campus),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (publishedText.isNotEmpty)
+                    Text(
+                      publishedText,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 15),
+                child: Divider(height: 1, thickness: .7),
+              ),
+              Text(
+                item.description.isEmpty ? '发布者没有填写描述。' : item.description,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.65,
+                  color: item.description.isEmpty
+                      ? colors.onSurfaceVariant
+                      : colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: campusCanvas,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: campusCardLine, width: .7),
+                ),
+                child: Row(
+                  children: [
+                    CampusAuthorAvatar(author: item.seller, radius: 15),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CampusAuthorName(
+                            author: item.seller,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.isMine
+                                ? '我发布的'
+                                : wanted
+                                ? '求购者'
+                                : '卖家',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_contact != null) ...[
+          const SizedBox(height: 12),
+          _buildPanel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${wanted ? '预算 ' : ''}¥${campusFormatPrice(item.priceCents)}',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: campusInk,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 15,
+                        color: campusOnInk,
                       ),
                     ),
-                    Chip(label: Text(listingStatusLabel(item))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(item.title, style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                  '${campusLabel(item.campus)} · ${published == null ? '' : '${published.year}/${published.month}/${published.day} 发布'}',
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  item.description.isEmpty ? '发布者没有填写描述。' : item.description,
-                ),
-                const Divider(height: 28),
-                Row(
-                  children: [
-                    CampusAuthorAvatar(author: item.seller),
-                    const SizedBox(width: 10),
-                    Expanded(child: CampusAuthorName(author: item.seller)),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 9),
                     Text(
-                      item.isMine
-                          ? '我发布的'
-                          : wanted
-                          ? '求购者'
-                          : '卖家',
+                      wanted ? '求购者联系方式' : '卖家联系方式',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 13),
+                SelectableText(
+                  '${contactLabel(_contact!.type)}：${_contact!.value}',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -.1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _copyContact,
+                    style: TextButton.styleFrom(
+                      foregroundColor: campusInk,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    icon: const Icon(Icons.copy_rounded, size: 16),
+                    label: const Text('复制联系方式'),
+                  ),
+                ),
+                Text(
+                  _copyMessage ??
+                      (wanted
+                          ? '联系求购者确认需求和交易方式。获取联系方式不代表已成交。'
+                          : '联系卖家确认商品情况和交易方式。获取联系方式不代表已预订或成交。'),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.5,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-        if (_contact != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    wanted ? '求购者联系方式' : '卖家联系方式',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 10),
-                  SelectableText(
-                    '${contactLabel(_contact!.type)}：${_contact!.value}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _copyContact,
-                      icon: const Icon(Icons.copy_rounded),
-                      label: const Text('复制联系方式'),
-                    ),
-                  ),
-                  Text(
-                    _copyMessage ??
-                        (wanted
-                            ? '联系求购者确认需求和交易方式。获取联系方式不代表已成交。'
-                            : '联系卖家确认商品情况和交易方式。获取联系方式不代表已预订或成交。'),
-                  ),
-                ],
+        ],
+        if (item.isMine) ...[
+          const SizedBox(height: 12),
+          _buildOwnerActions(item),
+        ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 18, 8, 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.shield_outlined,
+                size: 13,
+                color: colors.onSurfaceVariant,
               ),
-            ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  '买卖双方自行联系、约定交易，本版本暂不支持在线支付。',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    height: 1.4,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
           ),
-        if (item.isMine) _buildOwnerActions(item),
-        const Padding(
-          padding: EdgeInsets.all(8),
-          child: Text('买卖双方自行联系、约定交易。本版本暂不支持在线支付。'),
         ),
-        if (_actionError != null)
+        if (_actionError != null) ...[
+          const SizedBox(height: 10),
           Text(
             _actionError!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+            style: TextStyle(color: colors.error, fontSize: 12),
           ),
+        ],
       ],
     );
   }
 
   Widget _buildOwnerActions(CampusListing item) {
     final wanted = item.listingType == 'wanted';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              wanted ? '管理求购' : '管理商品',
-              style: Theme.of(context).textTheme.titleMedium,
+    final colors = Theme.of(context).colorScheme;
+    return _buildPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: campusControlSurface,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(Icons.tune_rounded, size: 16),
+              ),
+              const SizedBox(width: 9),
+              Text(
+                wanted ? '管理求购' : '管理商品',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            item.status == 'sold'
+                ? (wanted ? '已求到物品，不再出现在求购列表中。' : '商品已售出，不再出现在二手列表中。')
+                : (wanted ? '求到物品后，请标记已求到。' : '交易完成后，请标记已售出。'),
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: colors.onSurfaceVariant,
             ),
-            const SizedBox(height: 6),
-            Text(
-              item.status == 'sold'
-                  ? (wanted ? '已求到物品，不再出现在求购列表中。' : '商品已售出，不再出现在二手列表中。')
-                  : (wanted ? '求到物品后，请标记已求到。' : '交易完成后，请标记已售出。'),
-            ),
-            const SizedBox(height: 12),
-            if (item.status != 'sold')
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _changeStatus(
-                            item.status == 'on_sale' ? 'withdrawn' : 'on_sale',
-                          ),
-                    child: Text(
-                      item.status == 'on_sale'
-                          ? (wanted ? '关闭求购' : '下架商品')
-                          : (wanted ? '重新开启求购' : '重新上架'),
+          ),
+          const SizedBox(height: 13),
+          if (item.status != 'sold')
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _changeStatus(
+                          item.status == 'on_sale' ? 'withdrawn' : 'on_sale',
+                        ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(44, 42),
+                    foregroundColor: campusInk,
+                    side: const BorderSide(color: campusCardLine),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  FilledButton.tonal(
-                    onPressed: _busy ? null : () => _changeStatus('sold'),
-                    child: Text(wanted ? '标记已求到' : '标记已售出'),
+                  child: Text(
+                    item.status == 'on_sale'
+                        ? (wanted ? '关闭求购' : '下架商品')
+                        : (wanted ? '重新开启求购' : '重新上架'),
                   ),
-                ],
-              ),
-          ],
-        ),
+                ),
+                FilledButton.tonal(
+                  onPressed: _busy ? null : () => _changeStatus('sold'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(44, 42),
+                    backgroundColor: campusControlSurface,
+                    foregroundColor: campusInk,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(wanted ? '标记已求到' : '标记已售出'),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }

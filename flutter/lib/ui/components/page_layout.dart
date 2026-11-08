@@ -109,21 +109,151 @@ class PageScaffold extends StatelessWidget {
   }
 }
 
+/// 页面级调色板。
+///
+/// 普通页面使用全局主题；论坛等需要独立试色的页面可以只覆盖自己的背景、
+/// 强调色和卡片面，不改变评分、二手等其他栏目的视觉。
+@immutable
+class PagePalette extends ThemeExtension<PagePalette> {
+  const PagePalette({
+    required this.background,
+    required this.accent,
+    required this.surface,
+    required this.onSurface,
+    this.controlTrackColor,
+    this.controlSelectedColor,
+    this.controlSelectedForegroundColor,
+  });
+
+  final Color background;
+  final Color accent;
+  final Color surface;
+  final Color onSurface;
+
+  /// 分段控件可选的中性轨道和选中态颜色。为空时沿用原页面默认样式。
+  final Color? controlTrackColor;
+  final Color? controlSelectedColor;
+  final Color? controlSelectedForegroundColor;
+
+  @override
+  PagePalette copyWith({
+    Color? background,
+    Color? accent,
+    Color? surface,
+    Color? onSurface,
+    Color? controlTrackColor,
+    Color? controlSelectedColor,
+    Color? controlSelectedForegroundColor,
+  }) => PagePalette(
+    background: background ?? this.background,
+    accent: accent ?? this.accent,
+    surface: surface ?? this.surface,
+    onSurface: onSurface ?? this.onSurface,
+    controlTrackColor: controlTrackColor ?? this.controlTrackColor,
+    controlSelectedColor: controlSelectedColor ?? this.controlSelectedColor,
+    controlSelectedForegroundColor:
+        controlSelectedForegroundColor ?? this.controlSelectedForegroundColor,
+  );
+
+  @override
+  PagePalette lerp(covariant PagePalette? other, double t) {
+    if (other == null) return this;
+    return PagePalette(
+      background: Color.lerp(background, other.background, t)!,
+      accent: Color.lerp(accent, other.accent, t)!,
+      surface: Color.lerp(surface, other.surface, t)!,
+      onSurface: Color.lerp(onSurface, other.onSurface, t)!,
+      controlTrackColor: Color.lerp(
+        controlTrackColor,
+        other.controlTrackColor,
+        t,
+      ),
+      controlSelectedColor: Color.lerp(
+        controlSelectedColor,
+        other.controlSelectedColor,
+        t,
+      ),
+      controlSelectedForegroundColor: Color.lerp(
+        controlSelectedForegroundColor,
+        other.controlSelectedForegroundColor,
+        t,
+      ),
+    );
+  }
+}
+
 /// 公共视觉规则由页面显式采用，避免全局主题影响业务页面。
-ThemeData pageTheme(BuildContext context, {Color? backgroundColor}) {
+ThemeData pageTheme(
+  BuildContext context, {
+  Color? backgroundColor,
+  Color? accent,
+  Brightness? brightness,
+  ColorScheme? colorScheme,
+  Color? surface,
+  Color? onSurface,
+  Color? onAccent,
+  Color? inputFillColor,
+  Color? controlTrackColor,
+  Color? controlSelectedColor,
+  Color? controlSelectedForegroundColor,
+}) {
   final theme = Theme.of(context);
-  final dark = theme.brightness == Brightness.dark;
-  final surface = dark ? const Color(0xFF2C2C2E) : Colors.white;
-  final background = backgroundColor ?? pageBackground(context);
+  final parentPalette = theme.extension<PagePalette>();
+  final targetBrightness = brightness ?? theme.brightness;
+  final dark = targetBrightness == Brightness.dark;
+  final resolvedBackground =
+      backgroundColor ??
+      parentPalette?.background ??
+      (dark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7));
+  final resolvedAccent =
+      accent ??
+      parentPalette?.accent ??
+      (dark ? const Color(0xFF409CFF) : const Color(0xFF0088FF));
+  final resolvedSurface =
+      surface ??
+      parentPalette?.surface ??
+      (dark ? const Color(0xFF2C2C2E) : Colors.white);
+  final resolvedOnSurface =
+      onSurface ??
+      parentPalette?.onSurface ??
+      (dark ? const Color(0xFFF2F2F7) : const Color(0xFF1C1C1E));
+  final resolvedOnAccent = onAccent ?? Colors.white;
+  final scheme = (colorScheme ?? theme.colorScheme).copyWith(
+    brightness: targetBrightness,
+    primary: resolvedAccent,
+    surface: resolvedSurface,
+    onSurface: resolvedOnSurface,
+  );
+  final textTheme = theme.textTheme.apply(
+    bodyColor: resolvedOnSurface,
+    displayColor: resolvedOnSurface,
+  );
   return theme.copyWith(
-    colorScheme: theme.colorScheme.copyWith(
-      primary: pageAccent(context),
-      surface: surface,
-      onSurface: dark ? const Color(0xFFF2F2F7) : const Color(0xFF1C1C1E),
-    ),
-    scaffoldBackgroundColor: background,
+    brightness: targetBrightness,
+    colorScheme: scheme,
+    textTheme: textTheme,
+    iconTheme: theme.iconTheme.copyWith(color: resolvedOnSurface),
+    extensions: [
+      ...theme.extensions.values.where(
+        (extension) => extension is! PagePalette,
+      ),
+      PagePalette(
+        background: resolvedBackground,
+        accent: resolvedAccent,
+        surface: resolvedSurface,
+        onSurface: resolvedOnSurface,
+        controlTrackColor:
+            controlTrackColor ?? parentPalette?.controlTrackColor,
+        controlSelectedColor:
+            controlSelectedColor ?? parentPalette?.controlSelectedColor,
+        controlSelectedForegroundColor:
+            controlSelectedForegroundColor ??
+            parentPalette?.controlSelectedForegroundColor,
+      ),
+    ],
+    scaffoldBackgroundColor: resolvedBackground,
     cardTheme: CardThemeData(
-      color: surface,
+      color: resolvedSurface,
       elevation: 0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
@@ -134,15 +264,15 @@ ThemeData pageTheme(BuildContext context, {Color? backgroundColor}) {
         maximumSize: const Size(44, 44),
         padding: EdgeInsets.zero,
         iconSize: 21,
-        backgroundColor: surface.withValues(alpha: .8),
-        foregroundColor: theme.colorScheme.onSurface,
+        backgroundColor: resolvedSurface.withValues(alpha: .8),
+        foregroundColor: resolvedOnSurface,
         shape: const CircleBorder(),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: pageAccent(context),
-        foregroundColor: Colors.white,
+        backgroundColor: resolvedAccent,
+        foregroundColor: resolvedOnAccent,
         minimumSize: const Size(44, 52),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -152,15 +282,15 @@ ThemeData pageTheme(BuildContext context, {Color? backgroundColor}) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(44, 48),
-        backgroundColor: background,
-        foregroundColor: theme.colorScheme.onSurface,
+        backgroundColor: resolvedBackground,
+        foregroundColor: resolvedOnSurface,
         side: BorderSide.none,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: background,
+      fillColor: inputFillColor ?? resolvedBackground,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -172,21 +302,23 @@ ThemeData pageTheme(BuildContext context, {Color? backgroundColor}) {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: pageAccent(context)),
+        borderSide: BorderSide(color: resolvedAccent),
       ),
     ),
   );
 }
 
 Color pageBackground(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF1C1C1E)
-    : const Color(0xFFF2F2F7);
+    Theme.of(context).extension<PagePalette>()?.background ??
+    (Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF1C1C1E)
+        : const Color(0xFFF2F2F7));
 
 Color pageAccent(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF409CFF)
-    : const Color(0xFF0088FF);
+    Theme.of(context).extension<PagePalette>()?.accent ??
+    (Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF409CFF)
+        : const Color(0xFF0088FF));
 
 /// 原版共用的圆角分组容器；不为每一行单独增加阴影或模糊。
 class PageCard extends StatelessWidget {
@@ -195,14 +327,16 @@ class PageCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.radius = 22,
+    this.color,
   });
   final Widget child;
   final EdgeInsetsGeometry padding;
   final double radius;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Theme.of(context).colorScheme.surface,
+    color: color ?? Theme.of(context).colorScheme.surface,
     borderRadius: BorderRadius.circular(radius),
     clipBehavior: Clip.antiAlias,
     child: Padding(padding: padding, child: child),
@@ -335,6 +469,9 @@ class PageSegmentedControl<T> extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.compact = false,
+    this.trackColor,
+    this.selectedColor,
+    this.selectedForegroundColor,
   });
   final Map<T, String> values;
   final T selected;
@@ -342,51 +479,69 @@ class PageSegmentedControl<T> extends StatelessWidget {
 
   /// 紧凑工具栏使用较小字号和更少装饰留白，但点击区域仍至少 44 高。
   final bool compact;
+
+  /// 需要独立试色的栏目可以覆盖轨道和选中态颜色。
+  final Color? trackColor;
+  final Color? selectedColor;
+  final Color? selectedForegroundColor;
   @override
-  Widget build(BuildContext context) => PageCard(
-    radius: compact ? 22 : 24,
-    padding: EdgeInsets.all(compact ? 0 : 4),
-    child: Row(
-      children: [
-        for (final item in values.entries)
-          Expanded(
-            child: Semantics(
-              selected: selected == item.key,
-              child: TextButton(
-                onPressed: onChanged == null
-                    ? null
-                    : () => onChanged!(item.key),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(44, 44),
-                  tapTargetSize: compact
-                      ? MaterialTapTargetSize.shrinkWrap
-                      : null,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 4 : 6,
-                    vertical: compact ? 6 : 10,
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).extension<PagePalette>();
+    final resolvedTrack = trackColor ?? palette?.controlTrackColor;
+    final resolvedSelected = selectedColor ?? palette?.controlSelectedColor;
+    final resolvedSelectedForeground =
+        selectedForegroundColor ?? palette?.controlSelectedForegroundColor;
+    return PageCard(
+      radius: compact ? 22 : 24,
+      padding: EdgeInsets.all(compact ? 0 : 4),
+      color: resolvedTrack,
+      child: Row(
+        children: [
+          for (final item in values.entries)
+            Expanded(
+              child: Semantics(
+                selected: selected == item.key,
+                child: TextButton(
+                  onPressed: onChanged == null
+                      ? null
+                      : () => onChanged!(item.key),
+                  style: TextButton.styleFrom(
+                    // 紧凑分段栏用于校园顶部，视觉高度更轻，但仍保留横向
+                    // 44 的触控宽度；普通分段控件继续使用 44 高。
+                    minimumSize: Size(44, compact ? 34 : 44),
+                    tapTargetSize: compact
+                        ? MaterialTapTargetSize.shrinkWrap
+                        : null,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 4 : 6,
+                      vertical: compact ? 4 : 10,
+                    ),
+                    foregroundColor: selected == item.key
+                        ? (resolvedSelectedForeground ??
+                              Theme.of(context).colorScheme.onSurface)
+                        : Theme.of(context).colorScheme.onSurface,
+                    backgroundColor: selected == item.key
+                        ? (resolvedSelected ?? pageBackground(context))
+                        : Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                  backgroundColor: selected == item.key
-                      ? pageBackground(context)
-                      : Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text(
-                  item.value,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: compact ? 13 : 14,
-                    fontWeight: FontWeight.w600,
+                  child: Text(
+                    item.value,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: compact ? 12 : 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class PageGroupedList extends StatelessWidget {

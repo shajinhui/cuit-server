@@ -450,6 +450,44 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
   }
 
   @override
+  Future<ForumCategory> createForumCategory({
+    required String name,
+    required String description,
+  }) async => ForumCategory.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/categories',
+        method: 'POST',
+        body: {'name': name, 'description': description},
+      ),
+    ),
+  );
+
+  @override
+  Future<List<String>> getForumHomeCategories() async {
+    final data = _asMap(await _request('/api/v1/forum/me/home-categories'));
+    final items = data['category_ids'];
+    return items is List
+        ? items.whereType<String>().where((id) => id.isNotEmpty).toList()
+        : const [];
+  }
+
+  @override
+  Future<List<String>> setForumHomeCategories(List<String> categoryIds) async {
+    final data = _asMap(
+      await _request(
+        '/api/v1/forum/me/home-categories',
+        method: 'PUT',
+        body: {'category_ids': categoryIds},
+      ),
+    );
+    final items = data['category_ids'];
+    return items is List
+        ? items.whereType<String>().where((id) => id.isNotEmpty).toList()
+        : const [];
+  }
+
+  @override
   Future<ForumThreadDetail> getForumThread(String threadId) async {
     final data = await _request('/api/v1/forum/threads/${_path(threadId)}');
     return ForumThreadDetail.fromJson(_asMap(data));

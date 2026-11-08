@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import 'campus_image_picker.dart';
 import '../../../ui/components/page_selection.dart';
 import 'campus_widgets.dart';
@@ -169,7 +170,10 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
   }
 
   @override
-  Widget build(BuildContext context) => PageScaffold(
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) => PageScaffold(
     title: _wanted ? '发布求购' : '发布闲置',
     child: ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),

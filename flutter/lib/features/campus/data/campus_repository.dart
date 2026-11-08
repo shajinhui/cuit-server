@@ -97,6 +97,16 @@ abstract interface class CampusRepository {
 
   Future<List<ForumCategory>> listForumCategories();
 
+  Future<ForumCategory> createForumCategory({
+    required String name,
+    required String description,
+  });
+
+  /// 首页展示的版块顺序；「全部」和「热门」是固定频道，不在此列表中。
+  Future<List<String>> getForumHomeCategories();
+
+  Future<List<String>> setForumHomeCategories(List<String> categoryIds);
+
   Future<CampusPageResult<ForumThread>> listForumThreads({
     bool mine = false,
     String? categoryId,

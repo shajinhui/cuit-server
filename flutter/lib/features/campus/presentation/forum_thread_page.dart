@@ -9,6 +9,8 @@ import 'package:go_router/go_router.dart';
 import '../../../ui/components/page_layout.dart';
 import 'campus_report_dialog.dart';
 import 'campus_widgets.dart';
+import 'campus_theme.dart';
+import 'forum_widgets.dart';
 import '../../community/data/community_repository.dart';
 
 /// 帖子详情：主楼、楼中楼回复、点赞与举报。数据只在页面内存中保存，不做本机缓存。
@@ -512,21 +514,24 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     if (detail == null || repository == null) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('删除帖子'),
-        content: const Text('删除后无法恢复，确定删除这篇帖子吗？'),
-        actions: [
-          TextButton(
-            key: const ValueKey('forum-thread-delete-cancel'),
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            key: const ValueKey('forum-thread-delete-confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
-          ),
-        ],
+      builder: (dialogContext) => Theme(
+        data: campusTheme(dialogContext),
+        child: AlertDialog(
+          title: const Text('删除帖子'),
+          content: const Text('删除后无法恢复，确定删除这篇帖子吗？'),
+          actions: [
+            TextButton(
+              key: const ValueKey('forum-thread-delete-cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              key: const ValueKey('forum-thread-delete-confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('删除'),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed != true) return;
@@ -615,7 +620,12 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Theme(
+    data: campusTheme(context),
+    child: Builder(builder: _buildScaffold),
+  );
+
+  Widget _buildScaffold(BuildContext context) {
     final detail = _detail;
     return PageScaffold(
       title: '帖子详情',
@@ -814,7 +824,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
           ),
         Container(
           constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
@@ -860,16 +870,19 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
 
   Widget _buildMainPost(ForumThreadDetail detail) {
     final thread = detail.thread;
+    final poll = parseForumPoll(thread.body);
+    final plainBody = poll?.plainBody ?? thread.body;
+    final displayTitle = forumDisplayTitle(thread.title, poll);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: pageBackground(context), width: 7),
+          bottom: BorderSide(color: pageBackground(context), width: 4),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -905,27 +918,31 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                 ),
               ],
             ),
-            if (thread.title.isNotEmpty) ...[
-              const SizedBox(height: 12),
+            if (displayTitle.isNotEmpty) ...[
+              const SizedBox(height: 8),
               Text(
-                thread.title,
+                displayTitle,
                 style: const TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w700,
-                  height: 1.45,
+                  height: 1.35,
                 ),
               ),
             ],
-            if (thread.body.isNotEmpty) ...[
-              const SizedBox(height: 10),
+            if (plainBody.isNotEmpty) ...[
+              const SizedBox(height: 6),
               // 帖子正文保持服务端原始换行，不做富文本渲染。
               Text(
-                thread.body,
-                style: const TextStyle(fontSize: 16, height: 1.7),
+                plainBody,
+                style: const TextStyle(fontSize: 16, height: 1.55),
               ),
             ],
+            if (poll != null) ...[
+              const SizedBox(height: 10),
+              ForumPollCard(data: poll),
+            ],
             if (thread.imageAssetIds.isNotEmpty) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Builder(
                 builder: (context) {
                   final ids = thread.imageAssetIds.take(3).toList();
@@ -933,8 +950,8 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                     return CampusAssetImage(
                       assetId: ids.single,
                       repository: widget.repository,
-                      width: 320,
-                      height: 360,
+                      width: 280,
+                      height: 280,
                       radius: 8,
                       adaptive: true,
                       fallback: Icons.image_outlined,
@@ -963,60 +980,54 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                 },
               ),
             ],
-            if (thread.categoryName.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                '# ${thread.categoryName}',
-                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
-              ),
-            ],
-            const SizedBox(height: 5),
-            SizedBox(
-              width: double.infinity,
-              child: Wrap(
-                alignment: WrapAlignment.spaceAround,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  TextButton.icon(
-                    key: const ValueKey('forum-thread-like'),
-                    onPressed: _likeSubmitting ? null : _toggleLike,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(44, 44),
-                      foregroundColor: _liked
-                          ? pageAccent(context)
-                          : colors.onSurfaceVariant,
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                if (thread.categoryName.isNotEmpty)
+                  Expanded(
+                    child: Text(
+                      '# ${thread.categoryName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
-                    icon: Icon(
-                      _liked
-                          ? Icons.thumb_up_alt_rounded
-                          : Icons.thumb_up_alt_outlined,
-                      size: 20,
-                    ),
-                    label: Text('$_likeCount'),
+                  )
+                else
+                  const Spacer(),
+                TextButton.icon(
+                  key: const ValueKey('forum-thread-like'),
+                  onPressed: _likeSubmitting ? null : _toggleLike,
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(44, 44),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    foregroundColor: _liked
+                        ? pageAccent(context)
+                        : colors.onSurfaceVariant,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 18,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 19,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$_replyCount',
-                          style: TextStyle(color: colors.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
+                  icon: Icon(
+                    _liked
+                        ? Icons.thumb_up_alt_rounded
+                        : Icons.thumb_up_alt_outlined,
+                    size: 20,
                   ),
-                ],
-              ),
+                  label: Text('$_likeCount'),
+                ),
+                const SizedBox(width: 12),
+                Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 19,
+                  color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '$_replyCount',
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ],
             ),
             if (thread.isLocked)
               Text(
@@ -1031,297 +1042,290 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     );
   }
 
-  Widget _buildReply(ForumReply reply) {
-    final colors = Theme.of(context).colorScheme;
-    final isThreadAuthor = _detail?.thread.author.id == reply.author.id;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colors.outlineVariant.withValues(alpha: .65),
-            width: .6,
+  Future<void> _showReplyActions(ForumReply reply) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      builder: (sheetContext) => Theme(
+        data: campusTheme(sheetContext),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (reply.canDelete)
+                ListTile(
+                  key: ValueKey('forum-reply-delete-${reply.id}'),
+                  leading: const Icon(Icons.delete_outline_rounded),
+                  title: const Text('删除回复'),
+                  textColor: Theme.of(sheetContext).colorScheme.error,
+                  iconColor: Theme.of(sheetContext).colorScheme.error,
+                  onTap: () => Navigator.of(sheetContext).pop('delete'),
+                ),
+              ListTile(
+                key: ValueKey('forum-reply-report-${reply.id}'),
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('举报回复'),
+                onTap: () => Navigator.of(sheetContext).pop('report'),
+              ),
+            ],
           ),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 13, 10, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CampusAuthorAvatar(
-                  author: reply.author,
-                  radius: 15,
-                  repository: widget.repository,
-                ),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          CampusAuthorName(
-                            author: reply.author,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colors.onSurfaceVariant,
+    );
+    if (!mounted || action == null) return;
+    if (action == 'delete') {
+      await _deleteReply(reply);
+    } else if (action == 'report') {
+      await _report('forum_reply', reply.id);
+    }
+  }
+
+  Widget _buildReply(ForumReply reply) {
+    final colors = Theme.of(context).colorScheme;
+    final isThreadAuthor = _detail?.thread.author.id == reply.author.id;
+    return GestureDetector(
+      key: ValueKey('forum-reply-${reply.id}'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => _showReplyActions(reply),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: colors.outlineVariant.withValues(alpha: .65),
+              width: .6,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 9, 10, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CampusAuthorAvatar(
+                    author: reply.author,
+                    radius: 15,
+                    repository: widget.repository,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          spacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            CampusAuthorName(
+                              author: reply.author,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colors.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          if (isThreadAuthor)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: pageAccent(
-                                  context,
-                                ).withValues(alpha: .1),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                              child: Text(
-                                '作者',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  height: 1.6,
-                                  color: pageAccent(context),
+                            if (isThreadAuthor)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: pageAccent(
+                                    context,
+                                  ).withValues(alpha: .1),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: Text(
+                                  '作者',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    height: 1.6,
+                                    color: pageAccent(context),
+                                  ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        reply.body,
-                        style: const TextStyle(fontSize: 14, height: 1.55),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            child: Text(
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          reply.body,
+                          style: const TextStyle(fontSize: 14, height: 1.45),
+                        ),
+                        const SizedBox(height: 2),
+                        Wrap(
+                          spacing: 2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
                               campusFormatTime(reply.createdAt),
                               style: TextStyle(
                                 fontSize: 9,
                                 color: colors.onSurfaceVariant,
                               ),
                             ),
-                          ),
-                          TextButton(
-                            onPressed: _replySubmitting
-                                ? null
-                                : () {
-                                    setState(() => _replyTarget = reply);
-                                    _replyFocusNode.requestFocus();
-                                  },
-                            style: _replyActionStyle,
-                            child: const Text('回复'),
-                          ),
-                          if (reply.canDelete)
                             TextButton(
-                              key: ValueKey('forum-reply-delete-${reply.id}'),
-                              onPressed: _replyDeleting.contains(reply.id)
+                              onPressed: _replySubmitting
                                   ? null
-                                  : () => _deleteReply(reply),
+                                  : () {
+                                      setState(() => _replyTarget = reply);
+                                      _replyFocusNode.requestFocus();
+                                    },
                               style: _replyActionStyle,
-                              child: const Text('删除'),
+                              child: const Text('回复'),
                             ),
-                          TextButton(
-                            onPressed: () => _report('forum_reply', reply.id),
-                            style: _replyActionStyle,
-                            child: const Text('举报'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  key: ValueKey('forum-reply-like-${reply.id}'),
-                  onPressed: _replyLikeSubmitting.contains(reply.id)
-                      ? null
-                      : () => _toggleReplyLike(reply),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(40, 44),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    foregroundColor: reply.liked
-                        ? pageAccent(context)
-                        : colors.onSurfaceVariant,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        reply.liked
-                            ? Icons.thumb_up_alt_rounded
-                            : Icons.thumb_up_alt_outlined,
-                        size: 16,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${reply.likeCount}',
-                        style: const TextStyle(fontSize: 9),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (reply.replyCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(left: 39),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => _toggleReplyChildren(reply),
-                    style: _replyActionStyle,
-                    icon: Icon(
-                      _expandedReplies.contains(reply.id)
-                          ? Icons.expand_less
-                          : Icons.expand_more,
-                      size: 17,
-                    ),
-                    label: Text(
-                      _expandedReplies.contains(reply.id)
-                          ? '收起回复'
-                          : '查看 ${reply.replyCount} 条回复',
-                    ),
-                  ),
-                ),
-              ),
-            if (_expandedReplies.contains(reply.id))
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(left: 39, top: 4),
-                padding: const EdgeInsets.fromLTRB(10, 4, 6, 7),
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerHighest.withValues(alpha: .45),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    if (_childrenLoading.contains(reply.id))
-                      const Padding(
-                        padding: EdgeInsets.all(8),
-                        child: CircularProgressIndicator(),
-                      ),
-                    for (final child in _replyChildren[reply.id] ?? [])
-                      _buildChildReply(child),
-                    if (_childrenHasMore.contains(reply.id) ||
-                        !_replyChildren.containsKey(reply.id))
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          key: ValueKey('forum-children-more-${reply.id}'),
-                          onPressed: _childrenLoading.contains(reply.id)
-                              ? null
-                              : () => _loadReplyChildren(
-                                  reply.id,
-                                  reset: !_replyChildren.containsKey(reply.id),
+                            if (reply.replyCount > 0)
+                              TextButton.icon(
+                                onPressed: () => _toggleReplyChildren(reply),
+                                style: _replyActionStyle,
+                                icon: Icon(
+                                  _expandedReplies.contains(reply.id)
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  size: 16,
                                 ),
-                          style: _replyActionStyle,
-                          child: const Text('加载更多回复'),
+                                label: Text(
+                                  _expandedReplies.contains(reply.id)
+                                      ? '收起回复'
+                                      : '查看 ${reply.replyCount} 条回复',
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                  ],
-                ),
+                      ],
+                    ),
+                  ),
+                  _buildReplyLike(reply),
+                ],
               ),
-          ],
+              if (_expandedReplies.contains(reply.id))
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(left: 39, top: 2),
+                  padding: const EdgeInsets.fromLTRB(10, 0, 6, 2),
+                  child: Column(
+                    children: [
+                      if (_childrenLoading.contains(reply.id))
+                        const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: CircularProgressIndicator(),
+                        ),
+                      for (final child in _replyChildren[reply.id] ?? [])
+                        _buildChildReply(child),
+                      if (_childrenHasMore.contains(reply.id) ||
+                          !_replyChildren.containsKey(reply.id))
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton(
+                            key: ValueKey('forum-children-more-${reply.id}'),
+                            onPressed: _childrenLoading.contains(reply.id)
+                                ? null
+                                : () => _loadReplyChildren(
+                                    reply.id,
+                                    reset: !_replyChildren.containsKey(
+                                      reply.id,
+                                    ),
+                                  ),
+                            style: _replyActionStyle,
+                            child: const Text('加载更多回复'),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   ButtonStyle get _replyActionStyle => TextButton.styleFrom(
-    minimumSize: const Size(40, 40),
+    minimumSize: const Size(32, 28),
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     textStyle: const TextStyle(fontSize: 10),
     foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
   );
 
+  Widget _buildReplyLike(ForumReply reply) {
+    final colors = Theme.of(context).colorScheme;
+    return TextButton(
+      key: ValueKey('forum-reply-like-${reply.id}'),
+      onPressed: _replyLikeSubmitting.contains(reply.id)
+          ? null
+          : () => _toggleReplyLike(reply),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(40, 40),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        foregroundColor: reply.liked
+            ? pageAccent(context)
+            : colors.onSurfaceVariant,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            reply.liked
+                ? Icons.thumb_up_alt_rounded
+                : Icons.thumb_up_alt_outlined,
+            size: 16,
+          ),
+          const SizedBox(height: 1),
+          Text('${reply.likeCount}', style: const TextStyle(fontSize: 9)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildChildReply(ForumReply child) {
     final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CampusAuthorAvatar(
-            author: child.author,
-            radius: 12,
-            repository: widget.repository,
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CampusAuthorName(
-                  author: child.author,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  child.body,
-                  style: const TextStyle(fontSize: 12, height: 1.5),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      campusFormatTime(child.createdAt),
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    TextButton.icon(
-                      key: ValueKey('forum-reply-like-${child.id}'),
-                      onPressed: _replyLikeSubmitting.contains(child.id)
-                          ? null
-                          : () => _toggleReplyLike(child),
-                      style: _replyActionStyle,
-                      icon: Icon(
-                        child.liked
-                            ? Icons.thumb_up_alt_rounded
-                            : Icons.thumb_up_alt_outlined,
-                        size: 14,
-                      ),
-                      label: Text('${child.likeCount}'),
-                    ),
-                    if (child.canDelete)
-                      IconButton(
-                        key: ValueKey('forum-reply-delete-${child.id}'),
-                        tooltip: '删除回复',
-                        onPressed: _replyDeleting.contains(child.id)
-                            ? null
-                            : () => _deleteReply(child),
-                        icon: const Icon(Icons.delete_outline, size: 17),
-                      ),
-                    IconButton(
-                      tooltip: '举报回复',
-                      onPressed: () => _report('forum_reply', child.id),
-                      icon: const Icon(Icons.flag_outlined, size: 17),
-                    ),
-                  ],
-                ),
-              ],
+    return GestureDetector(
+      key: ValueKey('forum-reply-${child.id}'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => _showReplyActions(child),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CampusAuthorAvatar(
+              author: child.author,
+              radius: 12,
+              repository: widget.repository,
             ),
-          ),
-        ],
+            const SizedBox(width: 7),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CampusAuthorName(
+                    author: child.author,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    child.body,
+                    style: const TextStyle(fontSize: 12, height: 1.35),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    campusFormatTime(child.createdAt),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildReplyLike(child),
+          ],
+        ),
       ),
     );
   }

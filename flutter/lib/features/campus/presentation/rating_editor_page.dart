@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import 'campus_image_picker.dart';
 
 class RatingEditorPage extends StatefulWidget {
@@ -134,7 +135,10 @@ class _RatingEditorPageState extends State<RatingEditorPage> {
   }
 
   @override
-  Widget build(BuildContext context) => PageScaffold(
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) => PageScaffold(
     title: _creatingItem ? '添加评分对象' : '创建评分板块',
     child: ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),

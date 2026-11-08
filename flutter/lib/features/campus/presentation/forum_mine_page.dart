@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
 import 'campus_widgets.dart';
+import 'campus_theme.dart';
 import 'forum_widgets.dart';
 
 /// 我的帖子列表。帖子管理（删除、编辑）属于后续范围，这里只做查看与跳转。
@@ -85,7 +86,12 @@ class _ForumMinePageState extends State<ForumMinePage> {
   }
 
   @override
-  Widget build(BuildContext context) => PageScaffold(
+  Widget build(BuildContext context) => Theme(
+    data: campusTheme(context),
+    child: Builder(builder: _buildScaffold),
+  );
+
+  Widget _buildScaffold(BuildContext context) => PageScaffold(
     title: '我的帖子',
     child: RefreshIndicator(
       onRefresh: () => _load(reset: true),

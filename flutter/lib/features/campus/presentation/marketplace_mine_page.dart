@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import 'campus_widgets.dart';
 
 class MarketplaceMinePage extends StatefulWidget {
@@ -113,7 +114,10 @@ class _MarketplaceMinePageState extends State<MarketplaceMinePage> {
   }
 
   @override
-  Widget build(BuildContext context) => PageScaffold(
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) => PageScaffold(
     title: _type == 'wanted' ? '我的求购' : '我的二手发布',
     actions: [
       IconButton(

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import '../../../ui/components/page_selection.dart';
 import 'campus_report_dialog.dart';
 import 'campus_widgets.dart';
@@ -137,10 +138,15 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     final board = _board;
+    final colors = Theme.of(context).colorScheme;
     return PageScaffold(
       title: '评分板块',
+      backgroundColor: campusCanvas,
       actions: [
         if (board != null)
           IconButton(
@@ -153,15 +159,32 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
           ? null
           : SafeArea(
               top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-                child: FilledButton.icon(
-                  onPressed: () => context.pushNamed(
-                    'rating-create-item',
-                    pathParameters: {'boardId': board.id},
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  border: Border(
+                    top: BorderSide(color: campusCardLine, width: .8),
                   ),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('添加评分对象'),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => context.pushNamed(
+                      'rating-create-item',
+                      pathParameters: {'boardId': board.id},
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: campusInk,
+                      foregroundColor: campusOnInk,
+                      minimumSize: const Size(44, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 20),
+                    label: const Text('添加评分对象'),
+                  ),
                 ),
               ),
             ),
@@ -190,7 +213,17 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
               onSubmitted: (_) => _search(),
               decoration: InputDecoration(
                 hintText: '搜索这个板块的对象',
-                prefixIcon: const Icon(Icons.search_rounded),
+                hintStyle: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 13,
+                ),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
                 suffixIcon: _searchController.text.isEmpty
                     ? null
                     : IconButton(
@@ -201,16 +234,38 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
                         },
                         icon: const Icon(Icons.close_rounded),
                       ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: campusCardLine,
+                    width: .8,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: campusCardLine,
+                    width: .8,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: campusInk, width: 1.1),
+                ),
               ),
               onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
                   child: Text(
                     '全部评分${board == null ? '' : ' / ${board.itemCount}'}',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.2,
+                    ),
                   ),
                 ),
                 PageDropdown<String>(
@@ -233,6 +288,7 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
             if (_submittedQuery.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -319,67 +375,95 @@ class _RatingItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final score = item.rating.score;
-    return Card(
+    final colors = Theme.of(context).colorScheme;
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
+      decoration: campusCardDecoration(radius: 18),
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              CampusAssetImage(
-                assetId: item.imageAssetId,
-                repository: repository,
-                height: 58,
-                width: 58,
-                fallback: Icons.storefront_outlined,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      item.description.isEmpty
-                          ? '${item.rating.count} 人评分'
-                          : item.description,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Row(
+              children: [
+                CampusAssetImage(
+                  assetId: item.imageAssetId,
+                  repository: repository,
+                  height: 68,
+                  width: 68,
+                  radius: 14,
+                  fallback: Icons.storefront_outlined,
                 ),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    score == null ? '—' : score.toStringAsFixed(1),
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: pageAccent(context),
-                    ),
+                const SizedBox(width: 13),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -.1,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        item.description.isEmpty
+                            ? '${item.rating.count} 人评分'
+                            : item.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.45,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${item.rating.count} 人',
-                    style: const TextStyle(fontSize: 11),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+                  decoration: BoxDecoration(
+                    color: campusCanvas,
+                    borderRadius: BorderRadius.circular(13),
+                    border: Border.all(color: campusCardLine, width: .7),
                   ),
-                ],
-              ),
-            ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        score == null ? '—' : score.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 23,
+                          height: 1,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -.5,
+                          color: campusInk,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${item.rating.count} 人评',
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

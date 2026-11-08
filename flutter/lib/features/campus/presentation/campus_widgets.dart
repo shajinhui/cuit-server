@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
 import 'campus_image_preview.dart';
+import 'campus_theme.dart';
 import '../../community/presentation/community_scope.dart';
 
 /// 板块与评分对象使用原版的小封面、标题、作者和下方介绍。
@@ -32,75 +33,96 @@ class CampusHero extends StatelessWidget {
   final String? stats;
 
   @override
-  Widget build(BuildContext context) => PageCard(
-    radius: 16,
-    padding: const EdgeInsets.all(14),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CampusAssetImage(
-              assetId: assetId,
-              repository: repository,
-              fallback: fallback,
-              height: 80,
-              width: 80,
-              radius: 10,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      CampusAuthorAvatar(
-                        author: author,
-                        radius: 10,
-                        repository: repository,
+  Widget build(BuildContext context) => Container(
+    decoration: campusCardDecoration(radius: 18),
+    child: PageCard(
+      radius: 18,
+      padding: const EdgeInsets.all(15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CampusAssetImage(
+                assetId: assetId,
+                repository: repository,
+                fallback: fallback,
+                height: 82,
+                width: 82,
+                radius: 14,
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                        letterSpacing: -.3,
                       ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: CampusAuthorName(
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        CampusAuthorAvatar(
                           author: author,
-                          suffix: ' $authorSuffix',
-                          style: const TextStyle(fontSize: 12),
+                          radius: 10,
+                          repository: repository,
+                        ),
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: CampusAuthorName(
+                            author: author,
+                            suffix: ' $authorSuffix',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (stats != null) ...[
+                      const SizedBox(height: 7),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: campusControlSurface,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(
+                          stats!,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            height: 1.2,
+                            color: campusMuted,
+                          ),
                         ),
                       ),
                     ],
-                  ),
-                  if (stats != null) ...[
-                    const SizedBox(height: 6),
-                    Text(stats!, style: const TextStyle(fontSize: 12)),
                   ],
-                ],
+                ),
+              ),
+            ],
+          ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: 13),
+            Text(
+              description,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: campusMuted,
               ),
             ),
           ],
-        ),
-        if (description.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            description,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.5,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
         ],
-      ],
+      ),
     ),
   );
 }
@@ -496,36 +518,65 @@ class CampusRatingSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final score = summary.score;
-    return PageCard(
-      radius: 12,
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 96,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  score == null ? '—' : score.toStringAsFixed(1),
-                  style: TextStyle(
-                    fontSize: 38,
-                    height: 1.1,
-                    color: colors.primary,
-                    fontWeight: FontWeight.w700,
+    return Container(
+      decoration: campusCardDecoration(radius: 18),
+      child: PageCard(
+        radius: 18,
+        padding: const EdgeInsets.all(15),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked =
+                constraints.maxWidth < 300 ||
+                MediaQuery.textScalerOf(context).scale(12) > 17;
+            final scorePanel = Container(
+              width: stacked ? double.infinity : 102,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+              decoration: BoxDecoration(
+                color: campusCanvas,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: campusCardLine, width: .7),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        score == null ? '—' : score.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 36,
+                          height: 1,
+                          color: campusInk,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -1,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 2, bottom: 3),
+                        child: Text(
+                          '/ 5',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  summary.count == 0 ? '等待第一份评分' : '${summary.count} 人评分',
-                  style: const TextStyle(fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
+                  const SizedBox(height: 7),
+                  Text(
+                    summary.count == 0 ? '等待第一份评分' : '${summary.count} 人评分',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            );
+            final distribution = Column(
               children: [
                 for (var stars = 5; stars >= 1; stars--)
                   Padding(
@@ -533,10 +584,13 @@ class CampusRatingSummaryCard extends StatelessWidget {
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 25,
+                          width: 28,
                           child: Text(
                             '$stars★',
-                            style: const TextStyle(fontSize: 10),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
                         ),
                         Expanded(
@@ -547,20 +601,45 @@ class CampusRatingSummaryCard extends StatelessWidget {
                                       summary.count,
                             minHeight: 5,
                             borderRadius: BorderRadius.circular(4),
+                            backgroundColor: campusControlSurface,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          '${summary.distribution[stars] ?? 0}',
-                          style: const TextStyle(fontSize: 10),
+                        SizedBox(
+                          width: 18,
+                          child: Text(
+                            '${summary.distribution[stars] ?? 0}',
+                            textAlign: TextAlign.end,
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
               ],
-            ),
-          ),
-        ],
+            );
+            if (stacked) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  scorePanel,
+                  const SizedBox(height: 12),
+                  distribution,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                scorePanel,
+                const SizedBox(width: 15),
+                Expanded(child: distribution),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

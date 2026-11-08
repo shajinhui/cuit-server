@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import '../../../ui/components/page_menu.dart';
 import '../../../ui/components/page_selection.dart';
 import 'campus_report_dialog.dart';
@@ -320,10 +321,14 @@ class _RatingItemPageState extends State<RatingItemPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     final detail = _detail;
     return PageScaffold(
       title: '评分详情',
+      backgroundColor: campusCanvas,
       actions: [
         if (detail != null)
           IconButton(
@@ -452,7 +457,7 @@ class _RatingItemPageState extends State<RatingItemPage> {
         CampusRatingSummaryCard(summary: _summary ?? detail.item.rating),
         const SizedBox(height: 12),
         _buildRatingAction(detail),
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -574,125 +579,200 @@ class _RatingItemPageState extends State<RatingItemPage> {
     );
   }
 
-  Widget _buildComment(CampusComment comment) => Card(
-    margin: const EdgeInsets.only(bottom: 10),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CampusAuthorAvatar(author: comment.author, radius: 14),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CampusAuthorName(
-                  author: comment.author,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              if (comment.starsSnapshot != null)
-                Text(
-                  '${comment.starsSnapshot! * 2} 分 · ',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              Text(
-                campusFormatTime(comment.createdAt),
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ],
+  Widget _buildComment(CampusComment comment) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: .65),
+            width: .6,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(38, 8, 0, 4),
-            child: Text(comment.body),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 30),
-            child: Wrap(
-              spacing: 4,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 9, 0, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() => _replyTarget = comment);
-                    _commentFocusNode.requestFocus();
-                  },
-                  child: const Text('回复'),
-                ),
-                TextButton(
-                  onPressed: () => _report('comment', comment.id),
-                  child: const Text('举报'),
-                ),
-                if (comment.canDelete)
-                  TextButton(
-                    onPressed: () => _deleteComment(comment),
-                    child: const Text('删除'),
-                  ),
-              ],
-            ),
-          ),
-          if (comment.replyCount > 0)
-            TextButton.icon(
-              onPressed: () => _toggleReplies(comment),
-              icon: Icon(
-                _expandedReplies.contains(comment.id)
-                    ? Icons.expand_less
-                    : Icons.expand_more,
-              ),
-              label: Text(
-                _expandedReplies.contains(comment.id)
-                    ? '收起回复'
-                    : '查看 ${comment.replyCount} 条回复',
-              ),
-            ),
-          if (_expandedReplies.contains(comment.id))
-            Padding(
-              padding: const EdgeInsets.only(left: 28),
-              child: Column(
-                children: [
-                  for (final reply in _replies[comment.id] ?? [])
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CampusAuthorAvatar(
-                        author: reply.author,
-                        radius: 12,
-                      ),
-                      title: CampusAuthorName(author: reply.author),
-                      subtitle: Text(
-                        '${reply.body}\n${campusFormatTime(reply.createdAt)}',
-                      ),
-                      isThreeLine: true,
-                      trailing: PageActionMenu<String>(
-                        onSelected: (action) {
-                          if (action == 'report') {
-                            _report('comment', reply.id);
-                          }
-                          if (action == 'delete') {
-                            _deleteComment(reply, rootId: comment.id);
-                          }
-                        },
-                        actions: [
-                          const PageMenuAction(
-                            value: 'report',
-                            label: '举报',
-                            icon: Icons.flag_outlined,
+                CampusAuthorAvatar(author: comment.author, radius: 15),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          CampusAuthorName(
+                            author: comment.author,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
-                          if (reply.canDelete)
-                            const PageMenuAction(
-                              value: 'delete',
-                              label: '删除',
-                              icon: Icons.delete_outline_rounded,
-                              destructive: true,
+                          if (comment.starsSnapshot != null)
+                            Text(
+                              '${comment.starsSnapshot! * 2} 分',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.amber.shade700,
+                              ),
+                            ),
+                          Text(
+                            campusFormatTime(comment.createdAt),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        comment.body,
+                        style: const TextStyle(fontSize: 14, height: 1.45),
+                      ),
+                      const SizedBox(height: 2),
+                      Wrap(
+                        spacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              setState(() => _replyTarget = comment);
+                              _commentFocusNode.requestFocus();
+                            },
+                            style: _commentActionStyle,
+                            child: const Text('回复'),
+                          ),
+                          TextButton(
+                            onPressed: () => _report('comment', comment.id),
+                            style: _commentActionStyle,
+                            child: const Text('举报'),
+                          ),
+                          if (comment.canDelete)
+                            TextButton(
+                              onPressed: () => _deleteComment(comment),
+                              style: _commentActionStyle,
+                              child: const Text('删除'),
+                            ),
+                          if (comment.replyCount > 0)
+                            TextButton.icon(
+                              onPressed: () => _toggleReplies(comment),
+                              style: _commentActionStyle,
+                              icon: Icon(
+                                _expandedReplies.contains(comment.id)
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                                size: 16,
+                              ),
+                              label: Text(
+                                _expandedReplies.contains(comment.id)
+                                    ? '收起回复'
+                                    : '查看 ${comment.replyCount} 条回复',
+                              ),
                             ),
                         ],
                       ),
-                    ),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+            if (_expandedReplies.contains(comment.id))
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(left: 39, top: 2),
+                padding: const EdgeInsets.fromLTRB(10, 2, 4, 4),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest.withValues(alpha: .45),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    for (final reply in _replies[comment.id] ?? [])
+                      _buildCommentReply(reply, rootId: comment.id),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  ButtonStyle get _commentActionStyle => TextButton.styleFrom(
+    minimumSize: const Size(40, 40),
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    textStyle: const TextStyle(fontSize: 10),
+    foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+  );
+
+  Widget _buildCommentReply(CampusComment reply, {required String rootId}) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CampusAuthorAvatar(author: reply.author, radius: 12),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CampusAuthorName(
+                  author: reply.author,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  reply.body,
+                  style: const TextStyle(fontSize: 12, height: 1.4),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  campusFormatTime(reply.createdAt),
+                  style: TextStyle(fontSize: 9, color: colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          PageActionMenu<String>(
+            onSelected: (action) {
+              if (action == 'report') _report('comment', reply.id);
+              if (action == 'delete') _deleteComment(reply, rootId: rootId);
+            },
+            actions: [
+              const PageMenuAction(
+                value: 'report',
+                label: '举报',
+                icon: Icons.flag_outlined,
+              ),
+              if (reply.canDelete)
+                const PageMenuAction(
+                  value: 'delete',
+                  label: '删除',
+                  icon: Icons.delete_outline_rounded,
+                  destructive: true,
+                ),
+            ],
+          ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _ItemHero extends StatelessWidget {

@@ -363,13 +363,15 @@ String createCampusRequestId() {
       '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
 }
 
-/// 论坛版块。数量固定且较少，由后端返回，客户端不做本地缓存。
+/// 论坛版块。官方版块由后端预置，用户也可以创建自己的版块。
 class ForumCategory {
   const ForumCategory({
     required this.id,
     required this.name,
     required this.description,
     required this.sortOrder,
+    this.isOfficial = true,
+    this.isMine = false,
   });
 
   final String id;
@@ -377,11 +379,21 @@ class ForumCategory {
   final String description;
   final int sortOrder;
 
+  /// 官方预置版块排在用户版块之前，并带有稳定的初始排序。
+  final bool isOfficial;
+
+  /// 当前登录用户创建的版块。
+  final bool isMine;
+
   factory ForumCategory.fromJson(Map<String, dynamic> json) => ForumCategory(
     id: _string(json['id']),
     name: _string(json['name']),
     description: _string(json['description']),
     sortOrder: _integer(json['sort_order']),
+    isOfficial:
+        json['is_official'] == true ||
+        (json['is_official'] is num && (json['is_official'] as num) != 0),
+    isMine: json['is_mine'] == true,
   );
 }
 

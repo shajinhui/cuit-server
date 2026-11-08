@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../ui/components/page_layout.dart';
+import 'campus_theme.dart';
 import 'campus_widgets.dart';
 
 class RatingsMinePage extends StatefulWidget {
@@ -91,7 +92,10 @@ class _RatingsMinePageState extends State<RatingsMinePage> {
   }
 
   @override
-  Widget build(BuildContext context) => PageScaffold(
+  Widget build(BuildContext context) =>
+      CampusThemeBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) => PageScaffold(
     title: '我的评分内容',
     child: Column(
       children: [

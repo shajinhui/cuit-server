@@ -329,7 +329,7 @@
             </button>
             <button class="post-body open-post"><span class="post-title">数据结构期末复习资料整理好了</span><br>把近几年重点按章节重新排了一遍，链表和树的部分补了手写推导，需要的同学可以直接看。</button>
             <button class="course-link open-post"><svg class="icon icon-sm"><use href="#i-book"></use></svg><span>关联课程</span><strong>数据结构</strong><span>4.6 分</span></button>
-            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 学习交流</span><span>浏览 1.2k</span></div><div class="post-actions"><button class="post-action like-button liked" aria-label="点赞"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>86</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>24</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
+            <div class="post-meta"><div class="post-taxonomy"><span class="topic"># 学习</span><span>浏览 1.2k</span></div><div class="post-actions"><button class="post-action like-button liked" aria-label="点赞"><svg class="icon icon-sm"><use href="#i-like"></use></svg><span>86</span></button><button class="post-action open-post"><svg class="icon icon-sm"><use href="#i-comment"></use></svg><span>24</span></button><button class="post-action share-button"><svg class="icon icon-sm"><use href="#i-share"></use></svg></button></div></div>
           </article>
 
           <article class="post" data-category="daily" data-id="cats" data-search="校猫 日常 航空港 猫猫 南九">
@@ -411,7 +411,7 @@
         <div class="compose-title"><strong>分享校园动态</strong><button class="compose-submit" id="composeSubmit">发布</button></div>
         <div class="compose-campus"><svg class="icon" style="width:13px"><use href="#i-pin"></use></svg>航空港校区 · 以「友友」身份发布</div>
         <textarea class="compose-input" id="composeInput" placeholder="说点具体的事，同学们更容易参与讨论……"></textarea>
-        <div class="compose-options"><button class="compose-option selected">日常</button><button class="compose-option">学习交流</button><button class="compose-option">求助</button><button class="compose-option">失物招领</button></div>
+        <div class="compose-options"><button class="compose-option selected">日常</button><button class="compose-option">学习</button><button class="compose-option">求助</button><button class="compose-option">失物招领</button></div>
       </section>
     </div>
     <div class="toast" id="toast" role="status"></div>
@@ -429,7 +429,7 @@
 
     const postDetails = {
       bus: { author: '冬什聆', identity: '24级 · 龙泉校区', avatar: 'https://i.pravatar.cc/96?img=47', title: '龙泉周末有校车去航空港吗？', body: '龙泉这边周末有校车去航空港吗？班次什么时候啊，不是本校的，可以坐吗？下周一要去航空港参加活动，想提前确认一下。', tag: '# 求助', meta: '14:49 发布 · 浏览 466 · 龙泉校区', likes: 1 },
-      course: { author: '林小满', identity: '23级 · 计算机学院', avatar: 'https://i.pravatar.cc/96?img=32', title: '数据结构期末复习资料整理好了', body: '把近几年重点按章节重新排了一遍，链表和树的部分补了手写推导，需要的同学可以直接看。\n\n资料只是辅助，建议先按老师给的考试范围过一遍，再用这份清单查漏补缺。', tag: '# 学习交流', meta: '14:36 发布 · 浏览 1.2k · 航空港校区', likes: 86, course: true },
+      course: { author: '林小满', identity: '23级 · 计算机学院', avatar: 'https://i.pravatar.cc/96?img=32', title: '数据结构期末复习资料整理好了', body: '把近几年重点按章节重新排了一遍，链表和树的部分补了手写推导，需要的同学可以直接看。\n\n资料只是辅助，建议先按老师给的考试范围过一遍，再用这份清单查漏补缺。', tag: '# 学习', meta: '14:36 发布 · 浏览 1.2k · 航空港校区', likes: 86, course: true },
       cats: { author: '南九', identity: '25级 · 软件工程', avatar: 'https://i.pravatar.cc/96?img=12', title: '图书馆门口的三花今天也来巡场了', body: '躲在花坛边，怕人的同学不要突然伸手。最近天气凉了，大家投喂的时候注意不要给太咸的食物。', tag: '# 校宠', meta: '14:21 发布 · 浏览 892 · 航空港校区', likes: 47 },
       contest: { author: '陈默', identity: '22级 · 应用数学', avatar: 'https://i.pravatar.cc/96?img=68', title: '数学建模校赛组队，缺一位负责论文排版的同学', body: '已有建模和编程，周末能一起线下讨论，目标认真完成，不摸鱼。\n\n不要求之前参加过，但希望能熟悉公式和图表排版，周六下午可以试一次协作。', tag: '# 竞赛组队', meta: '13:58 发布 · 浏览 318 · 航空港校区', likes: 12 },
       lost: { author: '周同学', identity: '24级 · 电子信息', avatar: 'https://i.pravatar.cc/96?img=25', title: '在一食堂捡到一张校园卡', body: '卡套是透明蓝色的，已放到一食堂一楼服务台，失主看到去认领。认领时需要说明卡面信息。', tag: '# 失物招领', meta: '13:42 发布 · 浏览 205 · 一食堂', likes: 19 },

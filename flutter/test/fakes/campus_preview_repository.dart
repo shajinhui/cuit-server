@@ -7,7 +7,9 @@ import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 class CampusPreviewRepository implements CampusRepository {
   int assetLoads = 0;
   String lastBoardSort = 'popular';
+  String lastBoardQuery = '';
   String lastListingType = 'sell';
+  String lastListingQuery = '';
 
   @override
   Future<CampusPageResult<CampusBoard>> listBoards({
@@ -17,6 +19,7 @@ class CampusPreviewRepository implements CampusRepository {
     String? cursor,
   }) async {
     lastBoardSort = sort;
+    lastBoardQuery = query;
     return const CampusPageResult(
       items: [
         CampusBoard(
@@ -49,6 +52,7 @@ class CampusPreviewRepository implements CampusRepository {
     String? cursor,
   }) async {
     lastListingType = type;
+    lastListingQuery = query;
     return CampusPageResult(
       items: [
         CampusListing(
@@ -182,21 +186,87 @@ class CampusPreviewRepository implements CampusRepository {
     hasMore: false,
   );
 
-  @override
-  Future<List<ForumCategory>> listForumCategories() async => const [
-    ForumCategory(
+  final forumCategories = <ForumCategory>[
+    const ForumCategory(
       id: 'cat-general',
-      name: '综合讨论',
-      description: '校园大小事都可以聊。',
+      name: '日常',
+      description: '校园生活、见闻和日常闲聊。',
       sortOrder: 1,
     ),
-    ForumCategory(
+    const ForumCategory(
       id: 'cat-study',
-      name: '学习交流',
-      description: '课程、考试与学习资料。',
+      name: '学习',
+      description: '课程、考试、资料与学习经验。',
       sortOrder: 2,
     ),
+    const ForumCategory(
+      id: 'cat-mutual',
+      name: '互助',
+      description: '校内互帮互助和资源交换。',
+      sortOrder: 3,
+    ),
+    const ForumCategory(
+      id: 'cat-lost',
+      name: '失物',
+      description: '失物招领与寻物启事。',
+      sortOrder: 4,
+    ),
+    const ForumCategory(
+      id: 'cat-partner',
+      name: '搭子',
+      description: '自习、运动、吃饭和出行搭子。',
+      sortOrder: 5,
+    ),
+    const ForumCategory(
+      id: 'cat-activity',
+      name: '社团活动',
+      description: '社团、组织、讲座与校园活动。',
+      sortOrder: 6,
+    ),
+    const ForumCategory(
+      id: 'cat-treehole',
+      name: '树洞',
+      description: '匿名树洞与心情记录。',
+      sortOrder: 7,
+    ),
   ];
+  List<String> forumHomeCategoryIds = [];
+  int _createdCategoryCount = 0;
+
+  @override
+  Future<List<ForumCategory>> listForumCategories() async =>
+      List.of(forumCategories);
+
+  @override
+  Future<ForumCategory> createForumCategory({
+    required String name,
+    required String description,
+  }) async {
+    final category = ForumCategory(
+      id: 'cat-custom-${++_createdCategoryCount}',
+      name: name,
+      description: description,
+      sortOrder: forumCategories.length + 1,
+      isOfficial: false,
+      isMine: true,
+    );
+    forumCategories.add(category);
+    return category;
+  }
+
+  @override
+  Future<List<String>> getForumHomeCategories() async =>
+      List.of(forumHomeCategoryIds);
+
+  @override
+  Future<List<String>> setForumHomeCategories(List<String> categoryIds) async {
+    final available = forumCategories.map((category) => category.id).toSet();
+    forumHomeCategoryIds = categoryIds
+        .where(available.contains)
+        .toSet()
+        .toList();
+    return List.of(forumHomeCategoryIds);
+  }
 
   @override
   Future<CampusPageResult<ForumThread>> listForumThreads({
@@ -207,11 +277,12 @@ class CampusPreviewRepository implements CampusRepository {
     String? cursor,
   }) async {
     lastForumSort = sort;
+    lastForumQuery = query;
     final threads = [
       ForumThread(
         id: 'thread-1',
         categoryId: 'cat-general',
-        categoryName: '综合讨论',
+        categoryName: '日常',
         title: '图书馆晚上能不能延长闭馆时间',
         body: '期末复习人很多，十点闭馆有点早，大家觉得呢？',
         author: const CampusAuthor(
@@ -236,7 +307,7 @@ class CampusPreviewRepository implements CampusRepository {
       const ForumThread(
         id: 'thread-2',
         categoryId: 'cat-study',
-        categoryName: '学习交流',
+        categoryName: '学习',
         title: '操作系统实验报告模板分享',
         body: '整理了一份实验报告模板，需要的同学自取。',
         author: CampusAuthor(
@@ -272,6 +343,7 @@ class CampusPreviewRepository implements CampusRepository {
   }
 
   String lastForumSort = 'latest';
+  String lastForumQuery = '';
 
   /// 供测试断言：被删除的帖子与回复、最近一次编辑结果。
   final deletedThreadIds = <String>[];
@@ -299,7 +371,17 @@ class CampusPreviewRepository implements CampusRepository {
   }) async => ForumThread(
     id: 'thread-new',
     categoryId: categoryId,
-    categoryName: '综合讨论',
+    categoryName: forumCategories
+        .firstWhere(
+          (category) => category.id == categoryId,
+          orElse: () => const ForumCategory(
+            id: '',
+            name: '日常',
+            description: '',
+            sortOrder: 0,
+          ),
+        )
+        .name,
     title: title,
     body: body,
     author: const CampusAuthor(

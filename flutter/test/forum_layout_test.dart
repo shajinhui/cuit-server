@@ -15,7 +15,7 @@ import 'fakes/campus_preview_repository.dart';
 const _post = ForumThread(
   id: 'compact-test',
   categoryId: 'cat-general',
-  categoryName: '综合讨论',
+  categoryName: '日常',
   title: '问候',
   body: '大家好',
   author: CampusAuthor(id: 'test-author', displayName: '体验同学', avatarPreset: 1),
@@ -66,26 +66,56 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('大家都在聊'), findsNothing);
       expect(find.text('校园论坛'), findsNothing);
-      final search = find.byKey(const ValueKey('campus-search'));
       final publish = find.byKey(const ValueKey('campus-create-thread'));
-      expect(tester.getSize(search).height, inInclusiveRange(44, 48));
-      expect(tester.getSize(publish).height, inInclusiveRange(44, 48));
+      expect(publish, findsOneWidget);
+      // 默认不展开搜索，首屏应该让给内容。
+      expect(find.byKey(const ValueKey('campus-search')), findsNothing);
+      final areaTabs = find.byKey(const ValueKey('campus-area-segment'));
+      expect(tester.getSize(areaTabs).height, lessThanOrEqualTo(36));
       final row = find.byKey(const ValueKey('campus-forum-filter-row'));
       expect(tester.getSize(row).height, lessThanOrEqualTo(48));
+      // 首页只保留一排主分类，主题入口收进右侧筛选面板。
+      expect(
+        find.byKey(const ValueKey('campus-forum-shortcuts')),
+        findsNothing,
+      );
+      final filter = find.byKey(const ValueKey('campus-forum-filter'));
+      expect(tester.getSize(filter).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(filter).height, greaterThanOrEqualTo(44));
       final card = find.byKey(const ValueKey('forum-thread-card-compact-test'));
-      // 新版增加 44px 单行校园快捷入口及 6px 分隔，仍保持首屏可见正文。
-      expect(tester.getTopLeft(card).dy, lessThanOrEqualTo(240));
+      // 去掉第二排主题栏后，首屏能更早露出正文。
+      expect(tester.getTopLeft(card).dy, lessThanOrEqualTo(200));
       // 作者头像移至主信息轴后，短帖仍控制在 136px 内。
       expect(tester.getSize(card).height, lessThanOrEqualTo(136));
       expect(tester.widget<Text>(find.text('问候')).style?.fontSize, 15);
+      // 搜索框只在点击右上角入口后展开，并保持 44 的点击高度。
+      await tester.tap(find.byKey(const ValueKey('campus-search-toggle')));
+      await tester.pumpAndSettle();
+      final search = find.byKey(const ValueKey('campus-search'));
+      expect(tester.getSize(search).height, inInclusiveRange(44, 48));
       expect(tester.widget<TextField>(search).style?.fontSize, 14);
-      await tester.tap(find.text('活跃'));
+      // 搜索入口移到顶部后，发帖按钮仍是独立的 44 高点击区域。
+      expect(tester.getSize(publish).height, greaterThanOrEqualTo(44));
+      await tester.tap(filter);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('campus-forum-sort-segment')),
+          matching: find.text('热门'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(repository.lastForumSort, 'active');
+      await tester.tap(find.byKey(const ValueKey('campus-forum-filter-done')));
+      await tester.pumpAndSettle();
       final categories = find.byKey(const ValueKey('campus-forum-categories'));
       await tester.drag(categories, const Offset(-220, 0));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('学习交流'));
+      await tester.tap(find.byKey(const ValueKey('forum-channel-more')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('forum-channel-tile-cat-study')),
+      );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -110,7 +140,7 @@ void main() {
         tester
             .getSize(find.byKey(const ValueKey('campus-create-thread')))
             .height,
-        greaterThanOrEqualTo(44),
+        greaterThanOrEqualTo(34),
       );
       expect(
         MediaQuery.textScalerOf(
@@ -118,13 +148,91 @@ void main() {
         ).scale(13),
         13 * scale,
       );
-      await tester.tap(find.text('活跃'));
+      // 大字体下展开/收起搜索也不能挤压或溢出顶部操作区。
+      await tester.tap(find.byKey(const ValueKey('campus-search-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('campus-search')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('campus-search-cancel')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('campus-search')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('campus-forum-filter')));
+      await tester.pumpAndSettle();
+      final hotSort = find.descendant(
+        of: find.byKey(const ValueKey('campus-forum-sort-segment')),
+        matching: find.text('热门'),
+      );
+      await tester.ensureVisible(hotSort);
+      await tester.pumpAndSettle();
+      await tester.tap(hotSort);
       await tester.pumpAndSettle();
       expect(repository.lastForumSort, 'active');
       expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('campus-forum-filter-done')));
+      await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }
+
+  testWidgets('更多版块面板在 320 宽 3 倍字体下可滚动且无溢出', (tester) async {
+    _screen(tester, 320, scale: 3);
+    final repository = _PreviewRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(Brightness.dark),
+        home: Scaffold(body: CampusPage(repository: repository)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('论坛'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('forum-channel-more')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('forum-channels-sheet')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    final sheetScroll = find.descendant(
+      of: find.byKey(const ValueKey('forum-channels-sheet')),
+      matching: find.byType(Scrollable),
+    );
+    expect(sheetScroll, findsOneWidget);
+    await tester.drag(sheetScroll, const Offset(0, -320));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('投票选项人数与占比在窄屏大字号下换行且仍可投票', (tester) async {
+    _screen(tester, 320, scale: 3);
+    const poll = ForumPollData(
+      question: '走过路过帮忙选个 offer，顺丰科技和华为怎么选？',
+      options: ['华为 AI 应用开发', '顺丰科技 Java 开发'],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(Brightness.dark),
+        home: const Scaffold(
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: ForumPollCard(data: poll),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('0人参与'), findsOneWidget);
+    expect(find.text('0人 | 0.0%'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('华为 AI 应用开发'));
+    await tester.pumpAndSettle();
+    expect(find.text('1人参与'), findsOneWidget);
+    expect(find.text('1人 | 100.0%'), findsOneWidget);
+    expect(find.text('0人 | 0.0%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('帖子长标题、多个标签和大计数在窄屏大字号下自然换行', (tester) async {
     _screen(tester, 320, scale: 3);

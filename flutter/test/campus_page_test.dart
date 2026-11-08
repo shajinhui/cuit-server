@@ -3,6 +3,9 @@ import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:chengxin_youyou/features/campus/presentation/campus_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/rating_board_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_editor_page.dart';
+import 'package:chengxin_youyou/features/campus/presentation/marketplace_mine_page.dart';
+import 'package:chengxin_youyou/features/campus/presentation/rating_editor_page.dart';
+import 'package:chengxin_youyou/ui/components/page_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +24,8 @@ void main() {
     addTearDown(router.dispose);
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
     await tester.pumpAndSettle();
+    // 只统计切到二手后新增的加载量。
+    repository.assetLoads = 0;
     await tester.tap(find.text('二手'));
     await tester.pumpAndSettle();
 
@@ -68,6 +73,121 @@ void main() {
     expect(repository.lastListingType, 'wanted');
   });
 
+  testWidgets('评分首页使用紧凑首屏布局', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final router = _createRouter(CampusPreviewRepository());
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    final intro = find.byKey(const ValueKey('campus-rating-intro'));
+    expect(intro, findsOneWidget);
+    expect(tester.getSize(intro).height, lessThanOrEqualTo(110));
+    final sort = find.byKey(const ValueKey('campus-sort-segment'));
+    expect(tester.getSize(sort).height, lessThanOrEqualTo(36));
+    expect(tester.getSize(sort).width, lessThanOrEqualTo(108));
+    final firstBoard = find.byKey(const ValueKey('rating-board-card-board-1'));
+    expect(firstBoard, findsOneWidget);
+    expect(tester.getSize(firstBoard).height, lessThanOrEqualTo(96));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('校园搜索入口统一在右上角并按当前栏目切换搜索域', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    final router = _createRouter(repository);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    // 默认进入评分栏目。
+    expect(find.byKey(const ValueKey('campus-search')), findsNothing);
+    expect(find.byTooltip('搜索评分'), findsOneWidget);
+
+    // 三个栏目位于“校园”标题和搜索入口之间，保持同一行。
+    final titleRect = tester.getRect(find.text('校园'));
+    final tabsRect = tester.getRect(
+      find.byKey(const ValueKey('campus-area-segment')),
+    );
+    final searchRect = tester.getRect(
+      find.byKey(const ValueKey('campus-search-toggle')),
+    );
+    expect(titleRect.right, lessThanOrEqualTo(tabsRect.left));
+    expect(tabsRect.right, lessThanOrEqualTo(searchRect.left));
+    expect((titleRect.center.dy - tabsRect.center.dy).abs(), lessThan(1));
+
+    await tester.tap(find.byKey(const ValueKey('campus-search-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('campus-search')), findsOneWidget);
+    expect(find.text('搜索评分板块'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('campus-search')), '食堂');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(repository.lastBoardQuery, '食堂');
+
+    // 切换栏目会关闭搜索并切到新栏目的搜索域。
+    await tester.tap(find.text('二手'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('campus-search')), findsNothing);
+    expect(find.byTooltip('搜索二手'), findsOneWidget);
+    expect(find.byKey(const ValueKey('campus-create-listing')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('campus-search-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('搜索想要的闲置'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('campus-search')), '自行车');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(repository.lastListingQuery, '自行车');
+
+    await tester.tap(find.text('论坛'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('campus-search')), findsNothing);
+    expect(find.byTooltip('搜索论坛'), findsOneWidget);
+    expect(find.byKey(const ValueKey('campus-create-thread')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('campus-search-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.text('搜索帖子'), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('campus-search')), '图书馆');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(repository.lastForumQuery, '图书馆');
+  });
+
+  testWidgets('评分和二手二级页沿用校园统一白底石墨黑', (tester) async {
+    final repository = CampusPreviewRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(home: RatingEditorPage(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    final ratingContext = tester.element(find.byType(PageScaffold));
+    expect(pageAccent(ratingContext), const Color(0xFF1A1A1A));
+    expect(
+      Theme.of(ratingContext).colorScheme.surface,
+      const Color(0xFFFFFFFF),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(home: MarketplaceMinePage(repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    final marketplaceContext = tester.element(find.byType(PageScaffold));
+    expect(pageAccent(marketplaceContext), const Color(0xFF1A1A1A));
+    expect(
+      Theme.of(marketplaceContext).colorScheme.surface,
+      const Color(0xFFFFFFFF),
+    );
+  });
+
   testWidgets('评分广场会进入评分板块创建表单', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -77,6 +197,8 @@ void main() {
     final router = _createRouter(CampusPreviewRepository());
     addTearDown(router.dispose);
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('评分'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('campus-create-board')));
@@ -94,6 +216,8 @@ void main() {
     final router = _createRouter(repository);
     addTearDown(router.dispose);
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('评分'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('食堂推荐'));
     await tester.pumpAndSettle();
