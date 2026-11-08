@@ -4,7 +4,14 @@
     <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <!-- Show a splash screen on the activity. Automatically removed when
              the Flutter engine draws its first frame -->
-        <item name="android:windowBackground">@drawable/launch_background</item>
+        <!-- 深色模式下同样用应用背景色，避免启动瞬间闪白 -->
+        <item name="android:windowBackground">@color/normal_window_background</item>
+        <item name="android:windowSplashScreenBackground">@color/normal_window_background</item>
+        <!-- 深色模式下系统栏同样透明，图标保持浅色（不设 light 标记即为浅色） -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
     <!-- Theme applied to the Android Window as soon as the process has started.
          This theme determines the color of the Android Window while your
@@ -13,6 +20,10 @@
 
          This Theme is only used starting with V2 of Flutter's Android embedding. -->
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">@color/normal_window_background</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 </resources>

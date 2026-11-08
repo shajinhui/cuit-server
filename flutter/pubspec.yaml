@@ -27,6 +27,9 @@ dependencies:
   native_collator:
     path: packages/native_collator
   image_picker: ^1.2.3
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
+  flutter_local_notifications: ^23.0.0
   shorebird_code_push: ^2.0.7
   path_provider_ohos:
     path: packages/ohos_plugins/path_provider_ohos
@@ -58,4 +61,19 @@ flutter:
     - assets/maps/
     - assets/avatars/
     - assets/data/autorun/
+    - assets/fonts/HARMONYOS_SANS_LICENSE.txt
     - shorebird.yaml
+  # 安卓单独使用 HarmonyOS Sans SC；iOS 继续用系统苹方 / SF Pro。
+  # 该字体许可禁止修改（不能 subset），只能原样打包，见 assets/fonts 中的许可文本。
+  fonts:
+    - family: HarmonyOS Sans SC
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+          weight: 400
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 500
+        # 该家族没有 Semibold；把 Medium 再登记成 600，避免 w600 落到 Bold。
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
+          weight: 600
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
+          weight: 700

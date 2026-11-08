@@ -130,8 +130,20 @@ class ProfileAvatarButton extends StatelessWidget {
               Positioned.fill(
                 child: ClipOval(
                   child: avatar.customImage == null
-                      ? Image.asset(avatar.assetPath, fit: BoxFit.cover)
-                      : Image.memory(avatar.customImage!, fit: BoxFit.cover),
+                      ? Image.asset(
+                          avatar.assetPath,
+                          cacheWidth:
+                              (size * MediaQuery.devicePixelRatioOf(context))
+                                  .ceil(),
+                          fit: BoxFit.cover,
+                        )
+                      : Image.memory(
+                          avatar.customImage!,
+                          cacheWidth:
+                              (size * MediaQuery.devicePixelRatioOf(context))
+                                  .ceil(),
+                          fit: BoxFit.cover,
+                        ),
                 ),
               ),
               const Positioned(

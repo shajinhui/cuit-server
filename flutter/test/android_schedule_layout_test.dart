@@ -113,6 +113,52 @@ void main() {
     }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
 
+  testWidgets('系统栏透明后课表背景铺到顶部和底部，导航胶囊避让三键系统栏', (tester) async {
+    const size = Size(360, 800);
+    const topInset = 24.0;
+    // 三键导航的系统栏比手势导航高得多，最容易露出黑边。
+    const bottomInset = 48.0;
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(
+      top: topInset,
+      bottom: bottomInset,
+    );
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+
+    final dependencies = (await tester.runAsync(testDependencies))!;
+    await dependencies.settings.setLightweightGlass(true);
+    dependencies.session.enterDemo();
+    await tester.pumpWidget(ChengxinApp(dependencies: dependencies));
+    await tester.pumpAndSettle();
+
+    // 课表背景由页面自己绘制，必须覆盖到屏幕上下边缘：
+    // 任何一端缩进系统栏，透明系统栏后面就会透出窗口底色，看起来就是黑边/灰边。
+    final backdrop = find.byWidgetPredicate(
+      (widget) =>
+          widget is ColoredBox && widget.color == const Color(0xffc9d5e7),
+    );
+    expect(backdrop, findsOneWidget);
+    expect(tester.getRect(backdrop), Offset.zero & size);
+
+    // 状态栏区域透明，但头部仍要躲在状态栏下方，不能被时间电量压住。
+    expect(
+      tester.getTopLeft(find.text(dependencies.schedule!.dateTitle)).dy,
+      greaterThanOrEqualTo(topInset),
+    );
+
+    // 导航胶囊整体位于系统导航栏之上，不再压着系统栏画。
+    final barRect = tester.getRect(find.byType(GlassNavigationBar));
+    expect(barRect.bottom, lessThanOrEqualTo(size.height - bottomInset));
+    expect(barRect.right, lessThanOrEqualTo(size.width));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    dependencies.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets('宽屏课表：日期与「当前为第 N 周」并在同一行且不重叠', (tester) async {
     tester.view.physicalSize = const Size(800, 800);
     tester.view.devicePixelRatio = 1;

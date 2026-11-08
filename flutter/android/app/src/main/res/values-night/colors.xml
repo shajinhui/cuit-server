@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式主背景，与 Flutter 深色主题的 scaffoldBackgroundColor 一致。 -->
+    <color name="normal_window_background">#101217</color>
+</resources>

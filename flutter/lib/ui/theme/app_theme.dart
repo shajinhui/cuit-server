@@ -1,8 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppTheme {
   static const accent = Color(0xFF2574F5);
   static const background = Color(0xFFF4F6FA);
+
+  /// 仅安卓使用内置的 HarmonyOS Sans SC；iOS 传 null，继续用系统的苹方 / SF Pro。
+  static const String androidFontFamily = 'HarmonyOS Sans SC';
+
+  static String? get _platformFontFamily {
+    if (kIsWeb) return null;
+    return defaultTargetPlatform == TargetPlatform.android
+        ? androidFontFamily
+        : null;
+  }
 
   static ThemeData build(Brightness brightness) {
     final dark = brightness == Brightness.dark;
@@ -17,7 +28,12 @@ class AppTheme {
       colorScheme: scheme,
       brightness: brightness,
       scaffoldBackgroundColor: dark ? const Color(0xFF101217) : background,
-      fontFamilyFallback: const ['PingFang SC', 'Noto Sans CJK SC'],
+      fontFamily: _platformFontFamily,
+      fontFamilyFallback: const [
+        'PingFang SC',
+        'Noto Sans CJK SC',
+        'sans-serif',
+      ],
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
           fontSize: 32,

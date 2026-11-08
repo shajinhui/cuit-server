@@ -4,10 +4,16 @@ import 'package:flutter/material.dart';
 
 import 'app/app.dart';
 import 'app/app_dependencies.dart';
+import 'ui/theme/app_system_ui.dart';
 import 'ui/theme/app_theme.dart';
+import 'ui/theme/font_licenses.dart';
 
 void main() {
   final binding = WidgetsFlutterBinding.ensureInitialized();
+  // 内置字体（安卓的 HarmonyOS Sans SC）的许可文本挂到开源许可页。
+  registerBundledFontLicenses();
+  // 状态栏与导航栏保持透明，页面背景直接铺到屏幕边缘。
+  configureAppSystemUi();
   // 本机初始化完成后直接提交实际页面，省去额外的品牌图标和转圈过渡。
   binding.deferFirstFrame();
   runApp(AppBootstrap(onInitialized: binding.allowFirstFrame));

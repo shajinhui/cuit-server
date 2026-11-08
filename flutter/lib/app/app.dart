@@ -22,6 +22,7 @@ import 'package:chengxin_youyou/features/campus/presentation/forum_thread_page.d
 import 'package:chengxin_youyou/features/campus/presentation/forum_editor_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/forum_mine_page.dart';
 import 'package:chengxin_youyou/ui/theme/app_theme.dart';
+import 'package:chengxin_youyou/ui/theme/app_system_ui.dart';
 import 'package:chengxin_youyou/features/tools/presentation/tools_page.dart';
 import 'package:chengxin_youyou/features/tools/presentation/academic_tool_pages.dart';
 import 'package:chengxin_youyou/features/tools/presentation/calendar_page.dart';
@@ -432,13 +433,16 @@ class _ChengxinAppState extends State<ChengxinApp> {
           listenable: widget.dependencies.session,
           builder: (context, _) => CommunityScope(
             model: widget.dependencies.community,
-            child: KeyedSubtree(
-              key: ValueKey(
-                widget.dependencies.session.student == null
-                    ? 'anonymous'
-                    : 'community-session-${widget.dependencies.session.generation}:${widget.dependencies.session.student!.number}:${widget.dependencies.session.isDemo}',
+            // 透明系统栏：状态栏与导航栏都不再叠默认的黑底/黑边。
+            child: AppSystemUiOverlay(
+              child: KeyedSubtree(
+                key: ValueKey(
+                  widget.dependencies.session.student == null
+                      ? 'anonymous'
+                      : 'community-session-${widget.dependencies.session.generation}:${widget.dependencies.session.student!.number}:${widget.dependencies.session.isDemo}',
+                ),
+                child: child ?? const SizedBox.shrink(),
               ),
-              child: child ?? const SizedBox.shrink(),
             ),
           ),
         ),

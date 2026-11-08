@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用主背景色，与 Flutter 的 AppTheme.background 保持一致；
+         作为系统栏透明后窗口底衬，避免首帧前闪黑。 -->
+    <color name="normal_window_background">#F4F6FA</color>
+</resources>

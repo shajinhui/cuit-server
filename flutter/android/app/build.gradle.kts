@@ -6,6 +6,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firebase configuration is supplied only for release builds. Keeping this
+// conditional lets local tests and non-Firebase builds run without secrets.
+if (file("google-services.json").isFile) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 // 发布密钥由本机独立保存；未提供签名配置时，Release 校验失败，避免分发调试签名包。
 val releaseKeyProperties = Properties()
 val releaseKeyPropertiesFile = rootProject.file("key.properties")

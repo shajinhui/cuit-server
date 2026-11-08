@@ -202,6 +202,9 @@ class _CommunityProfileEditorPageState
                             _image!,
                             width: 88,
                             height: 88,
+                            cacheWidth:
+                                (88 * MediaQuery.devicePixelRatioOf(context))
+                                    .ceil(),
                             fit: BoxFit.cover,
                           ),
                         )

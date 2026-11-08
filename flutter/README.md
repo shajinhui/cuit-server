@@ -180,6 +180,14 @@ python3 tool/sync_calendar.py --check  # 构建前检查
 
 不支持折射的设备，以及“我的 → 轻量效果”开启时，使用通透磨砂，不捕获整页模拟折射。系统高对比度使用实色，减少动态效果时取消选中项移动动画。字体放大时导航高度随文字增长。[方案比较与性能验证说明](docs/LIQUID_GLASS.md)记录了实现、截图和验收范围；模拟器预览不代表安卓真机帧率。
 
+## 安卓流畅度
+
+滚动卡顿的已知来源和已做处理见 [安卓性能](docs/ANDROID_PERFORMANCE.md)：导航隐藏不再叠加 `Opacity`、校园顶部收起只在局部重建、帖子列表按需构建、头像与预览图按显示尺寸解码。真机 `--profile` 的采集步骤和验收阈值也写在该文档里。
+
+## 字体
+
+安卓单独使用 HarmonyOS Sans SC（华为免费商用），iOS 继续用系统苹方 / SF Pro；Flutter 在安卓默认请求 Roboto，不同 ROM 回落到 MiSans / Noto Sans CJK，观感不一致。字重映射（该家族没有 Semibold，Medium 同时登记为 600）、许可限制（禁止 subset，只能原样打包）、APK 体积变化和回退方式见 [安卓字体](docs/ANDROID_TYPOGRAPHY.md)。
+
 ## 检查与截图
 
 ```bash

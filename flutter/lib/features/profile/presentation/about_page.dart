@@ -125,6 +125,16 @@ class AboutPage extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12),
         ),
+        const SizedBox(height: 8),
+        Text(
+          '安卓字体：HarmonyOS Sans SC\n© Huawei Device Co., Ltd. · HarmonyOS Sans Fonts License Agreement',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10,
+            height: 1.5,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     ),
   );
