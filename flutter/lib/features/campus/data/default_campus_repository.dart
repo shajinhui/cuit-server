@@ -499,6 +499,7 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
     required String title,
     required String body,
     List<String> imageAssetIds = const [],
+    ForumPollDraft? poll,
     String? requestId,
   }) async {
     final data = await _request(
@@ -509,6 +510,7 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
         'title': title,
         'body': body,
         'image_asset_ids': imageAssetIds,
+        'poll': ?poll?.toJson(),
         'create_request_id': requestId ?? createCampusRequestId(),
       },
     );
@@ -616,6 +618,32 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
       body: {'like': like},
     );
     return ForumThreadLike.fromJson(_asMap(data));
+  }
+
+  @override
+  Future<ForumThreadReaction> setForumThreadReaction({
+    required String threadId,
+    required String? emoji,
+  }) async {
+    final data = await _request(
+      '/api/v1/forum/threads/${_path(threadId)}/reaction',
+      method: 'POST',
+      body: {'emoji': emoji},
+    );
+    return ForumThreadReaction.fromJson(_asMap(data));
+  }
+
+  @override
+  Future<ForumPoll> voteForumPoll({
+    required String threadId,
+    required String optionId,
+  }) async {
+    final data = await _request(
+      '/api/v1/forum/threads/${_path(threadId)}/poll/vote',
+      method: 'POST',
+      body: {'option_id': optionId},
+    );
+    return ForumPoll.fromJson(_asMap(data));
   }
 
   @override

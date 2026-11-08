@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:chengxin_youyou/features/campus/presentation/campus_page.dart';
@@ -20,6 +22,55 @@ class _EmptyForumDirectoryRepository extends CampusPreviewRepository {
 }
 
 void main() {
+  test('帖子 JSON 解析表情和结构化投票，缺少字段时保持兼容', () {
+    Map<String, dynamic> base() => {
+      'id': 'thread-json',
+      'category_id': 'general',
+      'category': {'id': 'general', 'name': '日常'},
+      'title': '标题',
+      'body': '正文',
+      'author': {'id': 'user-1', 'display_name': '小高', 'avatar_preset': 0},
+      'image_asset_ids': <String>[],
+      'reply_count': 1,
+      'like_count': 2,
+      'is_pinned': false,
+      'is_locked': false,
+      'status': 'normal',
+      'version': 1,
+      'created_at': '2026-11-09T00:00:00Z',
+      'last_activity_at': '2026-11-09T00:00:00Z',
+      'capabilities': {'can_edit': true},
+    };
+    final legacy = ForumThread.fromJson(base());
+    expect(legacy.reactions, isEmpty);
+    expect(legacy.myReaction, isNull);
+    expect(legacy.poll, isNull);
+
+    final parsed = ForumThread.fromJson({
+      ...base(),
+      'reactions': [
+        {'emoji': '😂', 'count': 2},
+        {'emoji': '', 'count': 3},
+        {'emoji': '🔥', 'count': 0},
+      ],
+      'my_reaction': '😂',
+      'poll': {
+        'question': '今晚吃什么？',
+        'total_votes': 3,
+        'my_option_id': 'option-a',
+        'options': [
+          {'id': 'option-a', 'label': '食堂', 'count': 2, 'percent': 66.7},
+          {'id': 'option-b', 'label': '外卖', 'count': 1, 'percent': 33.3},
+        ],
+      },
+    });
+    expect(parsed.reactions.map((reaction) => reaction.emoji), ['😂']);
+    expect(parsed.myReaction, '😂');
+    expect(parsed.poll?.totalVotes, 3);
+    expect(parsed.poll?.myOptionId, 'option-a');
+    expect(parsed.poll?.options.last.percent, 33.3);
+  });
+
   testWidgets('论坛投票卡片选择后展示结果', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -47,6 +98,16 @@ void main() {
 
     expect(find.text('0人参与'), findsOneWidget);
     expect(find.text('0人 | 0.0%'), findsNWidgets(2));
+    final pollCard = tester.widget<Container>(
+      find.byKey(const ValueKey('forum-poll-card')),
+    );
+    final pollContext = tester.element(
+      find.byKey(const ValueKey('forum-poll-card')),
+    );
+    expect(
+      (pollCard.decoration! as BoxDecoration).color,
+      Theme.of(pollContext).colorScheme.surfaceContainerHighest,
+    );
     await tester.tap(find.text('社团活动'));
     await tester.pumpAndSettle();
 
@@ -62,6 +123,102 @@ void main() {
     expect(find.text('1人参与'), findsOneWidget);
     expect(find.text('1人 | 100.0%'), findsOneWidget);
     expect(find.text('0人 | 0.0%'), findsOneWidget);
+  });
+
+  testWidgets('帖子下方可以选择表情回应并显示人数', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    final thread = (await repository.listForumThreads()).items.first;
+    var openedPost = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ForumThreadCard(
+              thread: thread,
+              repository: repository,
+              onTap: () => openedPost++,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final reaction = find.byKey(const ValueKey('forum-reaction-thread-1'));
+    expect(reaction, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('forum-comment-thread-1')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('forum-share-thread-1')), findsOneWidget);
+
+    await tester.tap(reaction);
+    await tester.pumpAndSettle();
+    expect(find.text('选择一个表情'), findsOneWidget);
+    // 常用表情全部收纳在可滚动面板中，靠后的动物表情也可用。
+    expect(find.byKey(const ValueKey('forum-reaction-scroll')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('forum-reaction-option-💯')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('forum-reaction-option-🐰')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('forum-reaction-option-😂')));
+    await tester.pumpAndSettle();
+
+    // 选中的表情显示在帖子下方，而不是替换底部的表情入口。
+    final reactionChip = find.byKey(
+      const ValueKey('forum-reaction-chip-thread-1-😂'),
+    );
+    expect(reactionChip, findsOneWidget);
+    expect(
+      find.descendant(of: reactionChip, matching: find.text('😂')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: reactionChip, matching: find.text('1')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: reaction,
+        matching: find.byIcon(Icons.add_reaction_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: reaction, matching: find.text('1')),
+      findsOneWidget,
+    );
+
+    // 再次选择同一个表情会取消回应。
+    await tester.tap(reaction);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('forum-reaction-option-😂')));
+    await tester.pumpAndSettle();
+    expect(reactionChip, findsNothing);
+    expect(
+      find.descendant(
+        of: reaction,
+        matching: find.byIcon(Icons.add_reaction_outlined),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: reaction, matching: find.text('0')),
+      findsOneWidget,
+    );
+
+    // 评论和转发与表情回应并列，点击评论打开帖子详情。
+    await tester.tap(find.byKey(const ValueKey('forum-comment-thread-1')));
+    expect(openedPost, 1);
   });
 
   test('投票自动标题不会在卡片外重复展示', () {
@@ -323,11 +480,25 @@ void main() {
       lessThanOrEqualTo(56),
     );
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -240));
+    await tester.drag(
+      find.byKey(const ValueKey('campus-feed')),
+      const Offset(0, -240),
+    );
     await tester.pumpAndSettle();
     expect(tester.getSize(header).height, 0);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, 120));
+    // 顶部「校园 / 论坛评分二手」收起后，频道分区仍需固定可见。
+    final filterRow = find.byKey(const ValueKey('campus-forum-filter-row'));
+    expect(filterRow, findsOneWidget);
+    final filterRect = tester.getRect(filterRow);
+    expect(filterRect.top, greaterThanOrEqualTo(0));
+    expect(filterRect.bottom, lessThanOrEqualTo(600));
+    expect(find.byKey(const ValueKey('forum-channel-all')), findsOneWidget);
+
+    await tester.drag(
+      find.byKey(const ValueKey('campus-feed')),
+      const Offset(0, 120),
+    );
     await tester.pumpAndSettle();
     expect(tester.getSize(header).height, greaterThan(0));
   });
@@ -385,9 +556,7 @@ void main() {
 
     expect(find.text('全部回复 / 2'), findsOneWidget);
     expect(find.text('支持，上次十点被赶出来书还没看完。'), findsOneWidget);
-
-    await tester.tap(find.text('查看 1 条回复'));
-    await tester.pumpAndSettle();
+    // 第一条楼中楼回复默认展示，不需要再点展开。
     expect(find.textContaining('我也是，准备去反馈一下。'), findsOneWidget);
   });
 
@@ -406,8 +575,6 @@ void main() {
     await tester.tap(find.text('论坛'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('图书馆晚上能不能延长闭馆时间'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('查看 1 条回复'));
     await tester.pumpAndSettle();
 
     final likeButton = find.byKey(const ValueKey('forum-reply-like-reply-1-1'));
@@ -553,6 +720,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('帖子详情'), findsOneWidget);
+    // 结构化投票不再拼接进正文，详情页直接使用服务端返回的投票。
+    final created = repository.lastCreatedThread;
+    expect(created?.body, isEmpty);
+    expect(created?.poll?.question, '今晚吃什么？');
+    expect(created?.poll?.options.map((option) => option.label), ['食堂', '外卖']);
+    expect(find.byKey(const ValueKey('forum-poll-card')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('forum-poll-card')),
+        matching: find.text('今晚吃什么？'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('论坛编辑帖子保留原内容并保存修改', (tester) async {
@@ -670,6 +850,241 @@ void main() {
     // 删除主回复同时移除它的楼中楼，由重新读取的服务端计数确认。
     expect(find.text('全部回复 / 0'), findsOneWidget);
   });
+
+  testWidgets('论坛表情胶囊展示服务端聚合，点击已有胶囊加入回应', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    repository.seedForumReactions('thread-1', {'😂': 3, '🔥': 2});
+    final thread = (await repository.listForumThreads()).items.first;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ForumThreadCard(
+              thread: thread,
+              repository: repository,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('forum-reaction-chip-thread-1-😂')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('forum-reaction-chip-thread-1-🔥')),
+      findsOneWidget,
+    );
+    final action = find.byKey(const ValueKey('forum-reaction-thread-1'));
+    // 底部入口展示所有表情的总人数，而不是本地单人计数。
+    expect(
+      find.descendant(of: action, matching: find.text('5')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('forum-reaction-chip-thread-1-🔥')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.forumReactionState('thread-1').myReaction, '🔥');
+    expect(
+      find.descendant(of: action, matching: find.text('6')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('表情回应先乐观更新，失败后回滚并提示', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _FailingReactionRepository();
+    final thread = (await repository.listForumThreads()).items.first;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ForumThreadCard(
+              thread: thread,
+              repository: repository,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final reaction = find.byKey(const ValueKey('forum-reaction-thread-1'));
+    await tester.tap(reaction);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('forum-reaction-option-😂')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 网络还没返回时先显示用户刚选的表情。
+    final chip = find.byKey(const ValueKey('forum-reaction-chip-thread-1-😂'));
+    expect(chip, findsOneWidget);
+    expect(
+      find.descendant(of: reaction, matching: find.text('1')),
+      findsOneWidget,
+    );
+
+    repository.gate.completeError(StateError('offline'));
+    await tester.pumpAndSettle();
+
+    expect(chip, findsNothing);
+    expect(
+      find.descendant(of: reaction, matching: find.text('0')),
+      findsOneWidget,
+    );
+    expect(find.text('表情回应失败，请稍后重试'), findsOneWidget);
+  });
+
+  testWidgets('结构化投票写入服务端并展示人数与占比', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    const poll = ForumPoll(
+      question: '今晚吃什么？',
+      totalVotes: 6,
+      myOptionId: null,
+      options: [
+        ForumPollOption(
+          id: 'poll-option-1',
+          label: '食堂',
+          count: 4,
+          percent: 66.7,
+        ),
+        ForumPollOption(
+          id: 'poll-option-2',
+          label: '外卖',
+          count: 2,
+          percent: 33.3,
+        ),
+      ],
+    );
+    repository.seedForumPoll('thread-poll', poll);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ForumPollCard(
+              poll: poll,
+              repository: repository,
+              threadId: 'thread-poll',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('6人参与'), findsOneWidget);
+    expect(find.text('4人 | 66.7%'), findsOneWidget);
+    expect(find.text('2人 | 33.3%'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('forum-poll-option-食堂')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('7人参与'), findsOneWidget);
+    expect(find.text('5人 | 71.4%'), findsOneWidget);
+    expect(find.text('2人 | 28.6%'), findsOneWidget);
+  });
+
+  testWidgets('投票先乐观更新，失败后回滚并提示', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = _FailingVoteRepository();
+    const poll = ForumPoll(
+      question: '今晚吃什么？',
+      totalVotes: 6,
+      myOptionId: null,
+      options: [
+        ForumPollOption(
+          id: 'poll-option-1',
+          label: '食堂',
+          count: 4,
+          percent: 66.7,
+        ),
+        ForumPollOption(
+          id: 'poll-option-2',
+          label: '外卖',
+          count: 2,
+          percent: 33.3,
+        ),
+      ],
+    );
+    repository.seedForumPoll('thread-poll', poll);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: ForumPollCard(
+              poll: poll,
+              repository: repository,
+              threadId: 'thread-poll',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('forum-poll-option-食堂')));
+    await tester.pump();
+    expect(find.text('7人参与'), findsOneWidget);
+
+    repository.gate.completeError(StateError('offline'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('6人参与'), findsOneWidget);
+    expect(find.text('4人 | 66.7%'), findsOneWidget);
+    expect(find.text('投票失败，请稍后重试'), findsOneWidget);
+  });
+}
+
+class _FailingVoteRepository extends CampusPreviewRepository {
+  final gate = Completer<void>();
+
+  @override
+  Future<ForumPoll> voteForumPoll({
+    required String threadId,
+    required String optionId,
+  }) async {
+    await gate.future;
+    throw const CampusRepositoryException('离线');
+  }
+}
+
+class _FailingReactionRepository extends CampusPreviewRepository {
+  final gate = Completer<void>();
+
+  @override
+  Future<ForumThreadReaction> setForumThreadReaction({
+    required String threadId,
+    required String? emoji,
+  }) async {
+    await gate.future;
+    throw const CampusRepositoryException('离线');
+  }
 }
 
 GoRouter _createRouter(CampusRepository repository) => GoRouter(

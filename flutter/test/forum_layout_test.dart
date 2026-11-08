@@ -68,6 +68,13 @@ void main() {
       expect(find.text('校园论坛'), findsNothing);
       final publish = find.byKey(const ValueKey('campus-create-thread'));
       expect(publish, findsOneWidget);
+      // 发帖入口不再挤在版块和筛选按钮之间，改为右下角悬浮操作。
+      final filterRow = find.byKey(const ValueKey('campus-forum-filter-row'));
+      expect(find.descendant(of: filterRow, matching: publish), findsNothing);
+      expect(
+        tester.getTopLeft(publish).dy,
+        greaterThan(tester.getRect(filterRow).bottom),
+      );
       // 默认不展开搜索，首屏应该让给内容。
       expect(find.byKey(const ValueKey('campus-search')), findsNothing);
       final areaTabs = find.byKey(const ValueKey('campus-area-segment'));
@@ -85,8 +92,8 @@ void main() {
       final card = find.byKey(const ValueKey('forum-thread-card-compact-test'));
       // 去掉第二排主题栏后，首屏能更早露出正文。
       expect(tester.getTopLeft(card).dy, lessThanOrEqualTo(200));
-      // 作者头像移至主信息轴后，短帖仍控制在 136px 内。
-      expect(tester.getSize(card).height, lessThanOrEqualTo(136));
+      // 加入表情、评论和转发操作后，短帖仍保持在紧凑的信息流高度内。
+      expect(tester.getSize(card).height, lessThanOrEqualTo(170));
       expect(tester.widget<Text>(find.text('问候')).style?.fontSize, 15);
       // 搜索框只在点击右上角入口后展开，并保持 44 的点击高度。
       await tester.tap(find.byKey(const ValueKey('campus-search-toggle')));

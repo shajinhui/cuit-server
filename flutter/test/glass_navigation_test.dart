@@ -55,6 +55,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('液态导航的快速抬手仍能触发切页', (tester) async {
+    await tester.pumpWidget(const NavigationPreview());
+    await tester.pumpAndSettle();
+
+    final tapPoint = tester.getCenter(find.byKey(const ValueKey('nav-2')));
+    final gesture = await tester.startGesture(tapPoint);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('校园 · 导航预览'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('320 宽屏幕四倍字体时入口仍可点击且没有布局溢出', (tester) async {
     tester.view.physicalSize = const Size(320, 900);
     tester.view.devicePixelRatio = 1;

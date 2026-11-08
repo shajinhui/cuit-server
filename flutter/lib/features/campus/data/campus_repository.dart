@@ -122,6 +122,7 @@ abstract interface class CampusRepository {
     required String title,
     required String body,
     List<String> imageAssetIds = const [],
+    ForumPollDraft? poll,
     String? requestId,
   });
 
@@ -164,6 +165,18 @@ abstract interface class CampusRepository {
   Future<ForumThreadLike> toggleForumThreadLike({
     required String threadId,
     required bool like,
+  });
+
+  /// 设置或取消当前用户对帖子的表情回应；null 表示取消。
+  Future<ForumThreadReaction> setForumThreadReaction({
+    required String threadId,
+    required String? emoji,
+  });
+
+  /// 投票或改票，返回服务端重新统计后的完整投票。
+  Future<ForumPoll> voteForumPoll({
+    required String threadId,
+    required String optionId,
   });
 
   Future<ForumThreadLike> toggleForumReplyLike({

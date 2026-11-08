@@ -42,7 +42,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   List<String> _keptAssetIds = [];
   List<ForumCategory> _categories = [];
   String? _selectedCategoryId;
-  _PollDraft? _pollDraft;
+  ForumPollDraft? _pollDraft;
   String? _categoriesError;
   String? _imageError;
   String? _error;
@@ -142,16 +142,18 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
     final categoryId = _selectedCategoryId;
     final rawTitle = _titleController.text.trim();
     final body = _bodyController.text.trim();
-    final submittedBody = _composeBody(body);
-    final title = rawTitle.isEmpty ? _deriveTitle(submittedBody) : rawTitle;
+    final pollDraft = _pollDraft;
+    final title = rawTitle.isEmpty
+        ? _deriveTitle(body, fallback: pollDraft?.question)
+        : rawTitle;
     final titleLength = title.characters.length;
     if (repository == null ||
         categoryId == null ||
         titleLength < 2 ||
         titleLength > 50 ||
-        submittedBody.isEmpty ||
-        submittedBody.characters.length > 2000) {
-      setState(() => _error = '请选择版块，并填写 2 到 50 字的标题与正文。');
+        (body.isEmpty && pollDraft == null) ||
+        body.characters.length > 2000) {
+      setState(() => _error = '请选择版块，并填写 2 到 50 字的标题，以及正文或投票。');
       return;
     }
 
@@ -180,7 +182,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
           threadId: editing.id,
           categoryId: categoryId,
           title: title,
-          body: submittedBody,
+          body: body,
           imageAssetIds: imageAssetIds,
           expectedVersion: editing.version,
         );
@@ -189,8 +191,10 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
         final payloadKey = jsonEncode([
           categoryId,
           title,
-          submittedBody,
+          body,
           ...imageAssetIds,
+          pollDraft?.question,
+          if (pollDraft != null) ...pollDraft.options,
         ]);
         if (_lastPayload.isNotEmpty && _lastPayload != payloadKey) {
           _requestId = createCampusRequestId();
@@ -199,8 +203,9 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
         thread = await repository.createForumThread(
           categoryId: categoryId,
           title: title,
-          body: submittedBody,
+          body: body,
           imageAssetIds: imageAssetIds,
+          poll: pollDraft,
           requestId: _requestId,
         );
       }
@@ -217,24 +222,17 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
     }
   }
 
-  String _deriveTitle(String body) {
+  String _deriveTitle(String body, {String? fallback}) {
     final firstLine = body
         .split('\n')
         .map((line) => line.trim())
-        .firstWhere((line) => line.isNotEmpty, orElse: () => '校园分享');
+        .firstWhere(
+          (line) => line.isNotEmpty,
+          orElse: () => (fallback != null && fallback.trim().isNotEmpty)
+              ? fallback.trim()
+              : '校园分享',
+        );
     return firstLine.characters.take(50).toString();
-  }
-
-  String _composeBody(String body) {
-    final poll = _pollDraft;
-    if (poll == null) return body;
-    final lines = [
-      body,
-      '',
-      '投票：${poll.question}',
-      for (final option in poll.options) '□ $option',
-    ];
-    return lines.join('\n').trim();
   }
 
   void _insertEmoji(String emoji) {
@@ -319,7 +317,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
       for (final option in _pollDraft?.options ?? const <String>['', ''])
         TextEditingController(text: option),
     ];
-    final draft = await showDialog<_PollDraft>(
+    final draft = await showDialog<ForumPollDraft>(
       context: context,
       builder: (context) => Theme(
         data: campusTheme(context),
@@ -373,7 +371,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
                   if (question.isEmpty || options.length < 2) return;
                   Navigator.of(
                     context,
-                  ).pop(_PollDraft(question: question, options: options));
+                  ).pop(ForumPollDraft(question: question, options: options));
                 },
                 child: const Text('完成'),
               ),
@@ -501,7 +499,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
               key: const ValueKey('forum-tool-poll'),
               label: '投票',
               icon: Icons.how_to_vote_outlined,
-              onTap: _submitting ? null : _showPollComposer,
+              onTap: _submitting || _editing ? null : _showPollComposer,
               selected: _pollDraft != null,
             ),
             _EditorToolButton(
@@ -949,13 +947,6 @@ class _EditorToolButton extends StatelessWidget {
   }
 }
 
-class _PollDraft {
-  const _PollDraft({required this.question, required this.options});
-
-  final String question;
-  final List<String> options;
-}
-
 /// 待上传的附图：assetId 在上传成功后回填，重试时跳过已上传部分。
 class _ForumImage {
   _ForumImage({required this.bytes, required this.filename});
@@ -980,6 +971,8 @@ class _ImageThumbnail extends StatelessWidget {
           image.bytes,
           width: 88,
           height: 88,
+          // 选图后最多 1920px，缩略图只按 88 逻辑像素解码。
+          cacheWidth: (88 * MediaQuery.devicePixelRatioOf(context)).ceil(),
           fit: BoxFit.cover,
         ),
       ),

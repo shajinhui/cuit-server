@@ -32,6 +32,9 @@ class _RatingItemPageState extends State<RatingItemPage> {
   CampusRatingItemDetail? _detail;
   List<CampusComment> _comments = [];
   final Map<String, List<CampusComment>> _replies = {};
+  final Map<String, String?> _replyCursors = {};
+  final Set<String> _replyHasMore = {};
+  final Set<String> _replyLoading = {};
   final Set<String> _expandedReplies = {};
   CampusComment? _replyTarget;
   CampusUserRating? _myRating;
@@ -180,10 +183,18 @@ class _RatingItemPageState extends State<RatingItemPage> {
         combined[comment.id] = comment;
       }
       setState(() {
+        if (reset) {
+          _replies.clear();
+          _replyCursors.clear();
+          _replyHasMore.clear();
+          _replyLoading.clear();
+          _expandedReplies.clear();
+        }
         _comments = combined.values.toList();
         _commentCursor = page.nextCursor;
         _hasMoreComments = page.hasMore;
       });
+      _ensureFirstReplies();
     } catch (error) {
       if (mounted && version == _commentRequestVersion) {
         setState(() => _commentError = error.toString());
@@ -224,7 +235,14 @@ class _RatingItemPageState extends State<RatingItemPage> {
         if (replyTarget case final target?) {
           // 已加载的回复列表才可直接追加；未加载时保留可请求的状态。
           if (_replies.containsKey(target.id)) {
-            _replies[target.id] = [..._replies[target.id]!, created];
+            final replies = [..._replies[target.id]!];
+            final index = replies.indexWhere((item) => item.id == created.id);
+            if (index >= 0) {
+              replies[index] = created;
+            } else {
+              replies.add(created);
+            }
+            _replies[target.id] = replies;
             _expandedReplies.add(target.id);
           }
           final index = _comments.indexWhere((item) => item.id == target.id);
@@ -256,24 +274,64 @@ class _RatingItemPageState extends State<RatingItemPage> {
     }
   }
 
+  void _ensureFirstReplies() {
+    for (final comment in _comments) {
+      if (comment.replyCount > 0 &&
+          !_replies.containsKey(comment.id) &&
+          !_replyLoading.contains(comment.id)) {
+        unawaited(_loadReplies(comment.id, reset: true));
+      }
+    }
+  }
+
+  Future<void> _loadReplies(String commentId, {required bool reset}) async {
+    final repository = widget.repository;
+    if (repository == null ||
+        _replyLoading.contains(commentId) ||
+        (!reset && !_replyHasMore.contains(commentId))) {
+      return;
+    }
+    setState(() {
+      _replyLoading.add(commentId);
+      _commentError = null;
+    });
+    try {
+      final page = await repository.listReplies(
+        commentId: commentId,
+        cursor: reset ? null : _replyCursors[commentId],
+      );
+      if (!mounted) return;
+      final combined = <String, CampusComment>{
+        if (!reset)
+          for (final reply in _replies[commentId] ?? []) reply.id: reply,
+        for (final reply in page.items) reply.id: reply,
+      };
+      setState(() {
+        _replies[commentId] = combined.values.toList();
+        _replyCursors[commentId] = page.nextCursor;
+        if (page.hasMore) {
+          _replyHasMore.add(commentId);
+        } else {
+          _replyHasMore.remove(commentId);
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() => _commentError = error.toString());
+    } finally {
+      if (mounted) setState(() => _replyLoading.remove(commentId));
+    }
+  }
+
   Future<void> _toggleReplies(CampusComment comment) async {
     if (_expandedReplies.remove(comment.id)) {
       setState(() {});
       return;
     }
-    if (!_replies.containsKey(comment.id)) {
-      try {
-        final page = await widget.repository!.listReplies(
-          commentId: comment.id,
-        );
-        if (!mounted) return;
-        _replies[comment.id] = page.items;
-      } catch (error) {
-        if (mounted) setState(() => _commentError = error.toString());
-        return;
-      }
+    setState(() => _expandedReplies.add(comment.id));
+    if (!_replies.containsKey(comment.id) &&
+        !_replyLoading.contains(comment.id)) {
+      await _loadReplies(comment.id, reset: true);
     }
-    if (mounted) setState(() => _expandedReplies.add(comment.id));
   }
 
   Future<void> _deleteComment(CampusComment comment, {String? rootId}) async {
@@ -344,7 +402,7 @@ class _RatingItemPageState extends State<RatingItemPage> {
               child: Material(
                 elevation: 0,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -388,8 +446,8 @@ class _RatingItemPageState extends State<RatingItemPage> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
                               ),
                             ),
@@ -437,27 +495,36 @@ class _RatingItemPageState extends State<RatingItemPage> {
       await Future.wait([_loadPage(), _loadComments(reset: true)]);
     },
     child: ListView(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 28),
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 20),
       children: [
         _ItemHero(
           item: detail.item,
           boardTitle: detail.boardTitle,
           repository: widget.repository,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         TextButton.icon(
           onPressed: () => context.pushNamed(
             'rating-board',
             pathParameters: {'boardId': detail.item.boardId},
           ),
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: const Icon(Icons.arrow_back_rounded, size: 16),
           label: Text(detail.boardTitle),
-          style: TextButton.styleFrom(alignment: Alignment.centerLeft),
+          style: TextButton.styleFrom(
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size(0, 34),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            textStyle: const TextStyle(fontSize: 12.5),
+          ),
         ),
-        CampusRatingSummaryCard(summary: _summary ?? detail.item.rating),
-        const SizedBox(height: 12),
-        _buildRatingAction(detail),
+        CampusRatingSummaryCard(
+          key: const ValueKey('rating-summary-card'),
+          summary: _summary ?? detail.item.rating,
+        ),
         const SizedBox(height: 8),
+        _buildRatingAction(detail),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -513,8 +580,10 @@ class _RatingItemPageState extends State<RatingItemPage> {
     final active = _activeRating;
     final changed = _selectedStars != (active?.stars ?? 0);
     return Card(
+      key: const ValueKey('rating-action-card'),
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -524,11 +593,14 @@ class _RatingItemPageState extends State<RatingItemPage> {
                   : active == null
                   ? '立即评分'
                   : '已评 ${active.stars * 2} 分',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 2),
             Wrap(
-              spacing: 4,
+              spacing: 0,
               children: [
                 for (var stars = 1; stars <= 5; stars++)
                   IconButton(
@@ -536,12 +608,17 @@ class _RatingItemPageState extends State<RatingItemPage> {
                     onPressed: _ratingSubmitting || !detail.canRate
                         ? null
                         : () => setState(() => _selectedStars = stars),
+                    constraints: const BoxConstraints.tightFor(
+                      width: 34,
+                      height: 34,
+                    ),
+                    padding: EdgeInsets.zero,
                     icon: Icon(
                       stars <= _selectedStars
                           ? Icons.star_rounded
                           : Icons.star_outline_rounded,
                       color: Colors.amber.shade700,
-                      size: 32,
+                      size: 25,
                     ),
                   ),
               ],
@@ -560,11 +637,23 @@ class _RatingItemPageState extends State<RatingItemPage> {
                   if (active != null)
                     OutlinedButton(
                       onPressed: _ratingSubmitting ? null : _withdrawRating,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 34),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
                       child: const Text('撤回评分'),
                     ),
                   if (changed && _selectedStars > 0 && detail.canRate)
                     FilledButton(
                       onPressed: _ratingSubmitting ? null : _submitRating,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 34),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        textStyle: const TextStyle(fontSize: 12),
+                      ),
                       child: Text(
                         _ratingSubmitting
                             ? '正在保存…'
@@ -581,137 +670,171 @@ class _RatingItemPageState extends State<RatingItemPage> {
 
   Widget _buildComment(CampusComment comment) {
     final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: colors.outlineVariant.withValues(alpha: .65),
-            width: .6,
-          ),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 9, 0, 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CampusAuthorAvatar(author: comment.author, radius: 15),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          CampusAuthorName(
-                            author: comment.author,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                          if (comment.starsSnapshot != null)
-                            Text(
-                              '${comment.starsSnapshot! * 2} 分',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.amber.shade700,
-                              ),
-                            ),
-                          Text(
-                            campusFormatTime(comment.createdAt),
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        comment.body,
-                        style: const TextStyle(fontSize: 14, height: 1.45),
-                      ),
-                      const SizedBox(height: 2),
-                      Wrap(
-                        spacing: 2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          TextButton(
-                            onPressed: () {
-                              setState(() => _replyTarget = comment);
-                              _commentFocusNode.requestFocus();
-                            },
-                            style: _commentActionStyle,
-                            child: const Text('回复'),
-                          ),
-                          TextButton(
-                            onPressed: () => _report('comment', comment.id),
-                            style: _commentActionStyle,
-                            child: const Text('举报'),
-                          ),
-                          if (comment.canDelete)
-                            TextButton(
-                              onPressed: () => _deleteComment(comment),
-                              style: _commentActionStyle,
-                              child: const Text('删除'),
-                            ),
-                          if (comment.replyCount > 0)
-                            TextButton.icon(
-                              onPressed: () => _toggleReplies(comment),
-                              style: _commentActionStyle,
-                              icon: Icon(
-                                _expandedReplies.contains(comment.id)
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
-                                size: 16,
-                              ),
-                              label: Text(
-                                _expandedReplies.contains(comment.id)
-                                    ? '收起回复'
-                                    : '查看 ${comment.replyCount} 条回复',
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (_expandedReplies.contains(comment.id))
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(left: 39, top: 2),
-                padding: const EdgeInsets.fromLTRB(10, 2, 4, 4),
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerHighest.withValues(alpha: .45),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+    final replies = _replies[comment.id] ?? const <CampusComment>[];
+    final expanded = _expandedReplies.contains(comment.id);
+    final canExpand =
+        comment.replyCount > 1 ||
+        replies.length > 1 ||
+        _replyHasMore.contains(comment.id);
+    final hiddenReplyCount = comment.replyCount > 1
+        ? comment.replyCount - 1
+        : replies.length - 1;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 6, 0, 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CampusAuthorAvatar(
+                author: comment.author,
+                radius: 12,
+                linkToProfile: false,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final reply in _replies[comment.id] ?? [])
-                      _buildCommentReply(reply, rootId: comment.id),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        CampusAuthorName(
+                          author: comment.author,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                        if (comment.starsSnapshot != null)
+                          Text(
+                            '${comment.starsSnapshot! * 2} 分',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.amber.shade700,
+                            ),
+                          ),
+                        Text(
+                          campusFormatTime(comment.createdAt),
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      comment.body,
+                      style: const TextStyle(fontSize: 13, height: 1.4),
+                    ),
+                    const SizedBox(height: 1),
+                    Wrap(
+                      spacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _replyTarget = comment);
+                            _commentFocusNode.requestFocus();
+                          },
+                          style: _commentActionStyle,
+                          child: const Text('回复'),
+                        ),
+                        TextButton(
+                          onPressed: () => _report('comment', comment.id),
+                          style: _commentActionStyle,
+                          child: const Text('举报'),
+                        ),
+                        if (comment.canDelete)
+                          TextButton(
+                            onPressed: () => _deleteComment(comment),
+                            style: _commentActionStyle,
+                            child: const Text('删除'),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-          ],
-        ),
+            ],
+          ),
+          if (comment.replyCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(left: 31, top: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (replies.isNotEmpty)
+                    _buildCommentReply(replies.first, rootId: comment.id)
+                  else if (_replyLoading.contains(comment.id))
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 1.8),
+                      ),
+                    )
+                  else if (!_replies.containsKey(comment.id))
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        key: ValueKey('rating-replies-retry-${comment.id}'),
+                        onPressed: () => _loadReplies(comment.id, reset: true),
+                        style: _commentActionStyle,
+                        child: const Text('重新加载回复'),
+                      ),
+                    ),
+                  if (expanded)
+                    for (final reply in replies.skip(1))
+                      _buildCommentReply(reply, rootId: comment.id),
+                  if (expanded && _replyHasMore.contains(comment.id))
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        key: ValueKey('rating-replies-more-${comment.id}'),
+                        onPressed: _replyLoading.contains(comment.id)
+                            ? null
+                            : () => _loadReplies(comment.id, reset: false),
+                        style: _commentActionStyle,
+                        child: const Text('加载更多回复'),
+                      ),
+                    ),
+                  if (canExpand)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        key: ValueKey('rating-replies-toggle-${comment.id}'),
+                        onPressed: _replyLoading.contains(comment.id)
+                            ? null
+                            : () => _toggleReplies(comment),
+                        style: _commentActionStyle,
+                        child: Text(
+                          expanded
+                              ? '收起回复'
+                              : hiddenReplyCount > 0
+                              ? '展开其余 $hiddenReplyCount 条回复'
+                              : '展开更多回复',
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
   ButtonStyle get _commentActionStyle => TextButton.styleFrom(
-    minimumSize: const Size(40, 40),
+    minimumSize: const Size(0, 28),
     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
     textStyle: const TextStyle(fontSize: 10),
     foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
   );
@@ -723,8 +846,12 @@ class _RatingItemPageState extends State<RatingItemPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CampusAuthorAvatar(author: reply.author, radius: 12),
-          const SizedBox(width: 7),
+          CampusAuthorAvatar(
+            author: reply.author,
+            radius: 9,
+            linkToProfile: false,
+          ),
+          const SizedBox(width: 6),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -739,7 +866,7 @@ class _RatingItemPageState extends State<RatingItemPage> {
                 const SizedBox(height: 2),
                 Text(
                   reply.body,
-                  style: const TextStyle(fontSize: 12, height: 1.4),
+                  style: const TextStyle(fontSize: 11.5, height: 1.35),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -787,6 +914,7 @@ class _ItemHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CampusHero(
+    key: const ValueKey('rating-item-hero'),
     name: item.name,
     description: item.description,
     assetId: item.imageAssetId,

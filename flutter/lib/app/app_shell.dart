@@ -1,4 +1,5 @@
 import 'package:chengxin_youyou/core/config/app_settings.dart';
+import 'package:chengxin_youyou/ui/components/auto_hide_scaffold.dart';
 import 'package:chengxin_youyou/ui/components/glass_navigation_bar.dart';
 import 'package:chengxin_youyou/ui/platform/native_tab_bar.dart';
 import 'package:flutter/foundation.dart';
@@ -55,8 +56,8 @@ class AppShell extends StatelessWidget {
       );
     }
 
-    final scaffold = Scaffold(
-      extendBody: true,
+    final scaffold = AutoHideScaffold(
+      resetToken: navigationShell.currentIndex,
       body: navigationShell,
       // 功能详情页使用返回栏；校园跑有自己的三个导航入口。
       bottomNavigationBar: hideBottomBar ? null : bottomBar,

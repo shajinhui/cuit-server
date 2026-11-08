@@ -34,10 +34,10 @@ class CampusHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: campusCardDecoration(radius: 18),
+    decoration: campusCardDecoration(radius: 16),
     child: PageCard(
-      radius: 18,
-      padding: const EdgeInsets.all(15),
+      radius: 16,
+      padding: const EdgeInsets.all(11),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -48,11 +48,11 @@ class CampusHero extends StatelessWidget {
                 assetId: assetId,
                 repository: repository,
                 fallback: fallback,
-                height: 82,
-                width: 82,
-                radius: 14,
+                height: 60,
+                width: 60,
+                radius: 11,
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,36 +60,37 @@ class CampusHero extends StatelessWidget {
                     Text(
                       name,
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        height: 1.3,
-                        letterSpacing: -.3,
+                        height: 1.25,
+                        letterSpacing: -.25,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 3),
                     Row(
                       children: [
                         CampusAuthorAvatar(
                           author: author,
-                          radius: 10,
+                          radius: 7,
                           repository: repository,
+                          linkToProfile: false,
                         ),
-                        const SizedBox(width: 7),
+                        const SizedBox(width: 5),
                         Expanded(
                           child: CampusAuthorName(
                             author: author,
                             suffix: ' $authorSuffix',
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 10.5),
                           ),
                         ),
                       ],
                     ),
                     if (stats != null) ...[
-                      const SizedBox(height: 7),
+                      const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
+                          horizontal: 7,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
                           color: campusControlSurface,
@@ -98,7 +99,7 @@ class CampusHero extends StatelessWidget {
                         child: Text(
                           stats!,
                           style: const TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 9.5,
                             height: 1.2,
                             color: campusMuted,
                           ),
@@ -111,12 +112,12 @@ class CampusHero extends StatelessWidget {
             ],
           ),
           if (description.isNotEmpty) ...[
-            const SizedBox(height: 13),
+            const SizedBox(height: 8),
             Text(
               description,
               style: const TextStyle(
-                fontSize: 13,
-                height: 1.5,
+                fontSize: 12,
+                height: 1.4,
                 color: campusMuted,
               ),
             ),
@@ -388,16 +389,26 @@ class CampusAuthorAvatar extends StatelessWidget {
     final initial = resolved.displayName.isEmpty
         ? '?'
         : resolved.displayName.characters.first;
+    final hasPreset = resolved.avatarPreset >= 1 && resolved.avatarPreset <= 15;
+    // 头像最大只有 44 逻辑像素。预设图是 200KB 级别的 JPG，按原始尺寸解码
+    // 会给列表滚动带来额外的解码和内存压力，这里按实际显示像素解码。
+    final decodeSize = (radius * 2 * MediaQuery.devicePixelRatioOf(context))
+        .ceil()
+        .clamp(1, 256);
     final fallback = CircleAvatar(
       radius: radius,
       backgroundColor: colors.primary.withValues(alpha: .12),
       foregroundColor: colors.primary,
-      backgroundImage: resolved.avatarPreset >= 1 && resolved.avatarPreset <= 15
-          ? AssetImage(
-              'assets/avatars/avatar-${resolved.avatarPreset.toString().padLeft(2, '0')}.jpg',
+      backgroundImage: hasPreset
+          ? ResizeImage.resizeIfNeeded(
+              decodeSize,
+              decodeSize,
+              AssetImage(
+                'assets/avatars/avatar-${resolved.avatarPreset.toString().padLeft(2, '0')}.jpg',
+              ),
             )
           : null,
-      child: resolved.avatarPreset >= 1 && resolved.avatarPreset <= 15
+      child: hasPreset
           ? null
           : Text(initial, style: TextStyle(fontSize: radius * .9)),
     );
@@ -416,6 +427,7 @@ class CampusAuthorAvatar extends StatelessWidget {
                       snapshot.data!,
                       width: radius * 2,
                       height: radius * 2,
+                      cacheWidth: decodeSize,
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => fallback,
                     ),
@@ -519,22 +531,23 @@ class CampusRatingSummaryCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final score = summary.score;
     return Container(
-      decoration: campusCardDecoration(radius: 18),
+      key: const ValueKey('campus-rating-summary-card'),
+      decoration: campusCardDecoration(radius: 16),
       child: PageCard(
-        radius: 18,
-        padding: const EdgeInsets.all(15),
+        radius: 16,
+        padding: const EdgeInsets.all(11),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final stacked =
                 constraints.maxWidth < 300 ||
                 MediaQuery.textScalerOf(context).scale(12) > 17;
             final scorePanel = Container(
-              width: stacked ? double.infinity : 102,
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 11),
+              width: stacked ? double.infinity : 96,
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
               decoration: BoxDecoration(
                 color: campusCanvas,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: campusCardLine, width: .7),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: campusCardLine, width: .5),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -542,15 +555,22 @@ class CampusRatingSummaryCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        score == null ? '—' : score.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          height: 1,
-                          color: campusInk,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -1,
-                          fontFeatures: [FontFeature.tabularFigures()],
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            score == null ? '—' : score.toStringAsFixed(1),
+                            maxLines: 1,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              height: 1,
+                              color: campusInk,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -.8,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
                         ),
                       ),
                       Padding(
@@ -565,11 +585,11 @@ class CampusRatingSummaryCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 4),
                   Text(
                     summary.count == 0 ? '等待第一份评分' : '${summary.count} 人评分',
                     style: TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 9.5,
                       color: colors.onSurfaceVariant,
                     ),
                   ),
@@ -580,7 +600,7 @@ class CampusRatingSummaryCard extends StatelessWidget {
               children: [
                 for (var stars = 5; stars >= 1; stars--)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 1.2),
                     child: Row(
                       children: [
                         SizedBox(
@@ -588,7 +608,7 @@ class CampusRatingSummaryCard extends StatelessWidget {
                           child: Text(
                             '$stars★',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 9,
                               color: colors.onSurfaceVariant,
                             ),
                           ),
@@ -599,7 +619,7 @@ class CampusRatingSummaryCard extends StatelessWidget {
                                 ? 0
                                 : (summary.distribution[stars] ?? 0) /
                                       summary.count,
-                            minHeight: 5,
+                            minHeight: 4,
                             borderRadius: BorderRadius.circular(4),
                             backgroundColor: campusControlSurface,
                           ),
@@ -624,17 +644,13 @@ class CampusRatingSummaryCard extends StatelessWidget {
             if (stacked) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  scorePanel,
-                  const SizedBox(height: 12),
-                  distribution,
-                ],
+                children: [scorePanel, const SizedBox(height: 8), distribution],
               );
             }
             return Row(
               children: [
                 scorePanel,
-                const SizedBox(width: 15),
+                const SizedBox(width: 10),
                 Expanded(child: distribution),
               ],
             );

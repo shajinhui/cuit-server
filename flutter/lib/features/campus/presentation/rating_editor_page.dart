@@ -232,6 +232,13 @@ class _RatingEditorPageState extends State<RatingEditorPage> {
                             borderRadius: BorderRadius.circular(16),
                             child: Image.memory(
                               _imageBytes!,
+                              // 预览区不到 400 逻辑像素宽，按预览尺寸解码即可。
+                              cacheWidth:
+                                  (MediaQuery.sizeOf(context).width *
+                                          MediaQuery.devicePixelRatioOf(
+                                            context,
+                                          ))
+                                      .ceil(),
                               fit: BoxFit.cover,
                             ),
                           ),

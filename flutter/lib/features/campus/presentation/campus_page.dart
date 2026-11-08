@@ -10,6 +10,7 @@ import 'campus_widgets.dart';
 import 'forum_channels_sheet.dart';
 import 'campus_theme.dart';
 import 'forum_widgets.dart';
+import '../../../ui/components/auto_hide_scaffold.dart';
 import '../../../ui/components/page_layout.dart';
 import '../../community/presentation/community_scope.dart';
 
@@ -129,7 +130,7 @@ class _CampusPageState extends State<CampusPage> {
   final _threads = <ForumThread>[];
   final _forumCategories = <ForumCategory>[];
   final _forumHomeCategoryIds = <String>[];
-  String _area = 'ratings';
+  String _area = 'forum';
   String _sort = 'popular';
   String _listingType = 'sell';
   String _forumSort = 'latest';
@@ -143,7 +144,8 @@ class _CampusPageState extends State<CampusPage> {
   bool _hasMore = false;
   bool _loading = true;
   bool _loadingMore = false;
-  bool _headerVisible = true;
+  // 顶部栏显隐只驱动顶部这一小块，不通过 setState 重建整页帖子。
+  final _headerVisible = ValueNotifier<bool>(true);
   int _requestVersion = 0;
 
   @override
@@ -154,8 +156,8 @@ class _CampusPageState extends State<CampusPage> {
   }
 
   void _setHeaderVisible(bool visible) {
-    if (visible == _headerVisible) return;
-    setState(() => _headerVisible = visible);
+    // ValueNotifier 自己做了相等判断，滚动时不会产生多余的重建。
+    _headerVisible.value = visible;
   }
 
   @override
@@ -213,6 +215,7 @@ class _CampusPageState extends State<CampusPage> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _scrollController.dispose();
+    _headerVisible.dispose();
     super.dispose();
   }
 
@@ -299,13 +302,13 @@ class _CampusPageState extends State<CampusPage> {
     _searchFocusNode.unfocus();
     setState(() {
       _area = value;
-      _headerVisible = true;
       _submittedQuery = '';
       _searchOpen = false;
       _forumTopic = null;
       _searchController.clear();
       _nextCursor = null;
     });
+    _headerVisible.value = true;
     // 两个栏目内容长度不同，切换后回到顶部，确保筛选和发布入口可见。
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
     if (value == 'forum') {
@@ -620,68 +623,86 @@ class _CampusPageState extends State<CampusPage> {
 
   Widget _buildPage(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final navigation = AutoHideNavigationScope.maybeOf(context);
+    final navigationVisible = navigation?.visible ?? false;
+    final navigationHeight = navigation?.bottomBarHeight ?? 0;
+    // 底部导航可见时，发帖按钮停在导航上方；导航收起后回落到页面右下角。
+    final createButtonBottom = navigationVisible
+        ? (navigationHeight > 0 ? navigationHeight + 8 : 96.0)
+        : 18.0;
     return SafeArea(
       bottom: false,
-      child: Column(
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          ClipRect(
-            child: AnimatedAlign(
-              key: const ValueKey('campus-collapsible-header'),
-              alignment: Alignment.topCenter,
-              heightFactor: _headerVisible ? 1 : 0,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              child: _buildHeader(context),
-            ),
-          ),
-          if (_searchOpen) _buildSearchBar(),
-          Expanded(
-            child: ColoredBox(
-              color: _area == 'forum' ? scheme.surface : campusCanvas,
-              child: NotificationListener<ScrollNotification>(
-                onNotification: (notification) {
-                  if (notification.metrics.axis != Axis.vertical) {
-                    return false;
-                  }
-                  if (notification.metrics.pixels <= 0) {
-                    _setHeaderVisible(true);
-                  } else if (notification is ScrollUpdateNotification &&
-                      notification.scrollDelta != null &&
-                      notification.scrollDelta!.abs() > .5) {
-                    _setHeaderVisible(notification.scrollDelta! < 0);
-                  } else if (notification is UserScrollNotification &&
-                      notification.direction != ScrollDirection.idle) {
-                    _setHeaderVisible(
-                      notification.direction == ScrollDirection.reverse,
-                    );
-                  }
-                  return false;
-                },
-                child: RefreshIndicator(
-                  onRefresh: () => _load(reset: true),
-                  child: _area == 'marketplace'
-                      ? _buildMarketplaceList()
-                      : ListView(
-                          controller: _scrollController,
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: _area == 'forum'
-                              ? const EdgeInsets.only(bottom: 120)
-                              : const EdgeInsets.fromLTRB(16, 4, 16, 120),
-                          children: [
-                            if (_area == 'ratings') _buildRatingIntro(scheme),
-                            if (_area == 'ratings') ...[
-                              _buildRatingHeading(context),
-                              ..._buildRatingContent(),
-                            ] else if (_area == 'forum') ...[
-                              _buildForumFilters(context),
-                              ..._buildForumContent(),
-                            ],
-                          ],
-                        ),
+          Column(
+            children: [
+              // 显隐只重建顶部这一块。之前滚动时 setState 会连同下面的
+              // 帖子列表一起重建，等于每换一次滚动方向就重建整页。
+              ClipRect(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _headerVisible,
+                  builder: (context, visible, header) => AnimatedAlign(
+                    key: const ValueKey('campus-collapsible-header'),
+                    alignment: Alignment.topCenter,
+                    heightFactor: visible ? 1 : 0,
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    child: header,
+                  ),
+                  child: _buildHeader(context),
                 ),
               ),
-            ),
+              if (_searchOpen) _buildSearchBar(),
+              if (_area == 'forum') _buildForumFilters(context),
+              Expanded(
+                child: ColoredBox(
+                  key: const ValueKey('campus-body-background'),
+                  // 评分列表仍使用浅灰画布；二手和论坛与顶部统一为页面底色。
+                  color: _area == 'ratings' ? campusCanvas : scheme.surface,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification.metrics.axis != Axis.vertical) {
+                        return false;
+                      }
+                      if (notification.metrics.pixels <= 0) {
+                        _setHeaderVisible(true);
+                      } else if (notification is ScrollUpdateNotification &&
+                          notification.scrollDelta != null &&
+                          notification.scrollDelta!.abs() > .5) {
+                        _setHeaderVisible(notification.scrollDelta! < 0);
+                      } else if (notification is UserScrollNotification &&
+                          notification.direction != ScrollDirection.idle) {
+                        _setHeaderVisible(
+                          notification.direction == ScrollDirection.reverse,
+                        );
+                      }
+                      return false;
+                    },
+                    child: RefreshIndicator(
+                      onRefresh: () => _load(reset: true),
+                      child: _area == 'marketplace'
+                          ? _buildMarketplaceList()
+                          : _buildFeedList(context, scheme),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
+          if (_area == 'forum')
+            AnimatedPositioned(
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              right: 16,
+              bottom: createButtonBottom,
+              child: _buildForumCreateButton(context),
+            ),
         ],
       ),
     );
@@ -692,7 +713,7 @@ class _CampusPageState extends State<CampusPage> {
     final tabs = PageSegmentedControl<String>(
       key: const ValueKey('campus-area-segment'),
       compact: true,
-      values: const {'ratings': '评分', 'marketplace': '二手', 'forum': '论坛'},
+      values: const {'forum': '论坛', 'ratings': '评分', 'marketplace': '二手'},
       selected: _area,
       onChanged: _changeArea,
       trackColor: campusControlSurface,
@@ -1021,8 +1042,49 @@ class _CampusPageState extends State<CampusPage> {
   Widget _buildMarketplaceHeading(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final wanted = _listingType == 'wanted';
+    final largeText = MediaQuery.textScalerOf(context).scale(13) > 20;
+    final typeSelector = PageSegmentedControl<String>(
+      key: const ValueKey('campus-listing-type'),
+      compact: true,
+      values: const {'sell': '出售', 'wanted': '求购'},
+      selected: _listingType,
+      onChanged: (value) => _changeListingType(value),
+      trackColor: campusControlSurface,
+      selectedColor: campusInk,
+      selectedForegroundColor: campusOnInk,
+    );
+    final countAndRefresh = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${_listings.length} 件',
+          style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
+        ),
+        const SizedBox(width: 4),
+        SizedBox(
+          key: const ValueKey('campus-marketplace-refresh'),
+          width: 34,
+          height: 34,
+          child: IconButton(
+            tooltip: '刷新二手',
+            onPressed: _loading ? null : () => _load(reset: true),
+            padding: EdgeInsets.zero,
+            style: IconButton.styleFrom(
+              minimumSize: const Size(34, 34),
+              maximumSize: const Size(34, 34),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              foregroundColor: campusInk,
+              backgroundColor: campusSurface,
+              side: const BorderSide(color: campusCardBorder, width: .5),
+              shape: const CircleBorder(),
+            ),
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+          ),
+        ),
+      ],
+    );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1054,119 +1116,146 @@ class _CampusPageState extends State<CampusPage> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               FilledButton.icon(
                 key: const ValueKey('campus-create-listing'),
                 onPressed: _createListing,
                 style: FilledButton.styleFrom(
                   backgroundColor: campusInk,
                   foregroundColor: campusOnInk,
-                  minimumSize: const Size(44, 42),
+                  minimumSize: const Size(44, 34),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 9,
+                    horizontal: 10,
+                    vertical: 7,
                   ),
                   shape: const StadiumBorder(),
                   textStyle: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                icon: const Icon(Icons.add_rounded, size: 18),
+                icon: const Icon(Icons.add_rounded, size: 15),
                 label: const Text('发布'),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              SizedBox(
-                width: 152,
-                child: PageSegmentedControl<String>(
-                  key: const ValueKey('campus-listing-type'),
-                  values: const {'sell': '出售', 'wanted': '求购'},
-                  selected: _listingType,
-                  onChanged: (value) => _changeListingType(value),
-                  trackColor: campusControlSurface,
-                  selectedColor: campusInk,
-                  selectedForegroundColor: campusOnInk,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${_listings.length} 件',
-                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
-              ),
-              const SizedBox(width: 6),
-              IconButton(
-                tooltip: '刷新二手',
-                onPressed: _loading ? null : () => _load(reset: true),
-                constraints: const BoxConstraints.tightFor(
-                  width: 38,
-                  height: 38,
-                ),
-                padding: EdgeInsets.zero,
-                style: IconButton.styleFrom(
-                  foregroundColor: campusInk,
-                  backgroundColor: campusSurface,
-                  side: const BorderSide(color: campusCardLine, width: .8),
-                  shape: const CircleBorder(),
-                ),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-              ),
-            ],
-          ),
+          const SizedBox(height: 10),
+          if (largeText) ...[
+            SizedBox(width: double.infinity, child: typeSelector),
+            const SizedBox(height: 6),
+            Align(alignment: Alignment.centerRight, child: countAndRefresh),
+          ] else
+            Row(
+              children: [
+                SizedBox(width: 128, child: typeSelector),
+                const Spacer(),
+                countAndRefresh,
+              ],
+            ),
         ],
       ),
     );
   }
 
-  List<Widget> _buildRatingContent() {
+  /// 评分/论坛列表为空时的占位；列表已有内容时返回 null。
+  Widget? _buildRatingState() {
     if (_loading && _boards.isEmpty) {
-      return [const CampusPageState(title: '正在加载评分板块', loading: true)];
+      return const CampusPageState(title: '正在加载评分板块', loading: true);
     }
     if (_error != null && _boards.isEmpty) {
-      return [
-        CampusPageState(
-          title: '暂时无法打开评分广场',
-          description: _error,
-          actionLabel: '重新加载',
-          onAction: () => _load(reset: true),
-        ),
-      ];
+      return CampusPageState(
+        title: '暂时无法打开评分广场',
+        description: _error,
+        actionLabel: '重新加载',
+        onAction: () => _load(reset: true),
+      );
     }
     if (_boards.isEmpty) {
-      return [
-        CampusPageState(
-          title: _submittedQuery.isEmpty ? '还没有评分板块' : '没有找到相关板块',
-          description: _submittedQuery.isEmpty
-              ? '创建第一个主题，邀请大家参与评分。'
-              : '换个关键词试试。',
-          actionLabel: _submittedQuery.isEmpty ? '创建板块' : '清空搜索',
-          onAction: _submittedQuery.isEmpty
-              ? _createBoard
-              : () {
-                  _searchController.clear();
-                  _submitSearch('');
-                },
-        ),
-      ];
+      return CampusPageState(
+        title: _submittedQuery.isEmpty ? '还没有评分板块' : '没有找到相关板块',
+        description: _submittedQuery.isEmpty ? '创建第一个主题，邀请大家参与评分。' : '换个关键词试试。',
+        actionLabel: _submittedQuery.isEmpty ? '创建板块' : '清空搜索',
+        onAction: _submittedQuery.isEmpty
+            ? _createBoard
+            : () {
+                _searchController.clear();
+                _submitSearch('');
+              },
+      );
     }
-    return [
-      if (_error != null)
-        _InlineError(message: _error!, onRetry: () => _load(reset: true)),
-      for (final board in _boards)
-        _RatingBoardCard(
-          board: board,
-          repository: widget.repository,
-          onTap: () => _openBoard(board),
-        ),
-      if (_hasMore)
-        _LoadMoreButton(
+    return null;
+  }
+
+  /// 评分与论坛共用的分页列表。
+  ///
+  /// 评分首项是头图和标题；论坛的频道筛选栏固定在滚动区外。其余条目交给
+  /// ListView.builder 按需创建，屏幕外卡片不会在进入页面时一起请求。
+  Widget _buildFeedList(BuildContext context, ColorScheme scheme) {
+    final isForum = _area == 'forum';
+    final header = isForum
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [_buildRatingIntro(scheme), _buildRatingHeading(context)],
+          );
+    final emptyState = isForum ? _buildForumState() : _buildRatingState();
+    final itemCount = isForum ? _threads.length : _boards.length;
+    // 已有内容时，加载失败以一条内联提示呈现，不打断已显示的列表。
+    final inlineError = _error != null && itemCount > 0;
+    final contentCount = emptyState != null ? 1 : itemCount;
+    final headerCount = header == null ? 0 : 1;
+    return ListView.builder(
+      key: const ValueKey('campus-feed'),
+      controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: isForum
+          ? const EdgeInsets.only(bottom: 120)
+          : const EdgeInsets.fromLTRB(12, 3, 12, 120),
+      itemCount:
+          headerCount +
+          (inlineError ? 1 : 0) +
+          contentCount +
+          (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (header != null && index == 0) return header;
+        var cursor = index - headerCount;
+        if (inlineError) {
+          if (cursor == 0) {
+            return _InlineError(
+              message: _error!,
+              onRetry: () => _load(reset: true),
+            );
+          }
+          cursor -= 1;
+        }
+        if (emptyState != null) {
+          if (cursor == 0) return emptyState;
+        } else if (cursor < itemCount) {
+          if (isForum) {
+            final thread = _threads[cursor];
+            return ForumThreadCard(
+              key: ValueKey(thread.id),
+              thread: thread,
+              repository: widget.repository,
+              showCategory: true,
+              onTap: () => _openThread(thread),
+            );
+          }
+          final board = _boards[cursor];
+          return _RatingBoardCard(
+            key: ValueKey(board.id),
+            board: board,
+            repository: widget.repository,
+            onTap: () => _openBoard(board),
+          );
+        }
+        return _LoadMoreButton(
           loading: _loadingMore,
           onPressed: () => _load(reset: false),
-        ),
-    ];
+        );
+      },
+    );
   }
 
   Widget _buildMarketplaceList() {
@@ -1376,7 +1465,6 @@ class _CampusPageState extends State<CampusPage> {
             key: const ValueKey('campus-forum-filter-row'),
             children: [
               Expanded(child: _buildForumCategoryChips(context)),
-              _buildForumCreateButton(context),
               _buildForumMoreButton(context),
               _buildForumFilterButton(context),
             ],
@@ -1414,24 +1502,20 @@ class _CampusPageState extends State<CampusPage> {
     );
   }
 
-  Widget _buildForumCreateButton(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final accent = pageAccent(context);
-    return IconButton(
-      key: const ValueKey('campus-create-thread'),
-      tooltip: '发帖',
-      onPressed: _createThread,
-      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
-      padding: EdgeInsets.zero,
-      style: IconButton.styleFrom(
-        foregroundColor: accent,
-        backgroundColor: _area == 'forum'
-            ? campusControlSurface
-            : colors.primaryContainer,
-      ),
-      icon: const Icon(Icons.add_rounded, size: 20),
-    );
-  }
+  Widget _buildForumCreateButton(BuildContext context) => FilledButton.icon(
+    key: const ValueKey('campus-create-thread'),
+    onPressed: _createThread,
+    style: FilledButton.styleFrom(
+      minimumSize: const Size(88, 40),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      backgroundColor: campusInk,
+      foregroundColor: campusOnInk,
+      shape: const StadiumBorder(),
+      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    ),
+    icon: const Icon(Icons.add_rounded, size: 18),
+    label: const Text('发帖'),
+  );
 
   Widget _buildForumMoreButton(BuildContext context) => SizedBox(
     width: 58,
@@ -1643,56 +1727,39 @@ class _CampusPageState extends State<CampusPage> {
     );
   }
 
-  List<Widget> _buildForumContent() {
+  /// 论坛列表为空时的占位；列表已有内容时返回 null。
+  Widget? _buildForumState() {
     if (_loading && _threads.isEmpty) {
-      return [const CampusPageState(title: '正在加载帖子', loading: true)];
+      return const CampusPageState(title: '正在加载帖子', loading: true);
     }
     if (_error != null && _threads.isEmpty) {
-      return [
-        CampusPageState(
-          title: '暂时无法打开论坛',
-          description: _error,
-          actionLabel: '重新加载',
-          onAction: () => _load(reset: true),
-        ),
-      ];
+      return CampusPageState(
+        title: '暂时无法打开论坛',
+        description: _error,
+        actionLabel: '重新加载',
+        onAction: () => _load(reset: true),
+      );
     }
     if (_threads.isEmpty) {
-      return [
-        CampusPageState(
-          title: _submittedQuery.isEmpty ? '还没有帖子' : '没有找到相关帖子',
-          description: _submittedQuery.isEmpty ? '发出第一帖，和同学们聊聊。' : '换个关键词试试。',
-          actionLabel: _submittedQuery.isEmpty ? '发帖' : '清空搜索',
-          onAction: _submittedQuery.isEmpty
-              ? _createThread
-              : () {
-                  _searchController.clear();
-                  _submitSearch('');
-                },
-        ),
-      ];
+      return CampusPageState(
+        title: _submittedQuery.isEmpty ? '还没有帖子' : '没有找到相关帖子',
+        description: _submittedQuery.isEmpty ? '发出第一帖，和同学们聊聊。' : '换个关键词试试。',
+        actionLabel: _submittedQuery.isEmpty ? '发帖' : '清空搜索',
+        onAction: _submittedQuery.isEmpty
+            ? _createThread
+            : () {
+                _searchController.clear();
+                _submitSearch('');
+              },
+      );
     }
-    return [
-      if (_error != null)
-        _InlineError(message: _error!, onRetry: () => _load(reset: true)),
-      for (final thread in _threads)
-        ForumThreadCard(
-          thread: thread,
-          repository: widget.repository,
-          showCategory: true,
-          onTap: () => _openThread(thread),
-        ),
-      if (_hasMore)
-        _LoadMoreButton(
-          loading: _loadingMore,
-          onPressed: () => _load(reset: false),
-        ),
-    ];
+    return null;
   }
 }
 
 class _RatingBoardCard extends StatelessWidget {
   const _RatingBoardCard({
+    super.key,
     required this.board,
     required this.repository,
     required this.onTap,
@@ -1707,9 +1774,9 @@ class _RatingBoardCard extends StatelessWidget {
     final image = CampusAssetImage(
       assetId: board.coverAssetId,
       repository: repository,
-      height: 64,
-      width: 64,
-      radius: 12,
+      height: 56,
+      width: 56,
+      radius: 10,
       fallback: Icons.forum_outlined,
     );
     final title = Text(
@@ -1717,7 +1784,7 @@ class _RatingBoardCard extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: const TextStyle(
-        fontSize: 15,
+        fontSize: 14.5,
         height: 1.25,
         fontWeight: FontWeight.w600,
         letterSpacing: -.1,
@@ -1728,7 +1795,7 @@ class _RatingBoardCard extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(
-        fontSize: 12,
+        fontSize: 11.5,
         height: 1.35,
         color: colors.onSurfaceVariant,
       ),
@@ -1737,10 +1804,11 @@ class _RatingBoardCard extends StatelessWidget {
       children: [
         CampusAuthorAvatar(
           author: board.creator,
-          radius: 8,
+          radius: 7,
           repository: repository,
+          linkToProfile: false,
         ),
-        const SizedBox(width: 5),
+        const SizedBox(width: 4),
         Expanded(
           child: CampusAuthorName(
             author: board.creator,
@@ -1758,7 +1826,7 @@ class _RatingBoardCard extends StatelessWidget {
         Text(
           '${board.itemCount}',
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 17,
             height: 1,
             fontWeight: FontWeight.w700,
             color: campusInk,
@@ -1770,9 +1838,9 @@ class _RatingBoardCard extends StatelessWidget {
           '个对象',
           style: TextStyle(fontSize: 9, color: colors.onSurfaceVariant),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
             color: campusControlSurface,
             borderRadius: BorderRadius.circular(99),
@@ -1797,16 +1865,16 @@ class _RatingBoardCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   image,
-                  const SizedBox(width: 11),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [title, const SizedBox(height: 3), description],
+                      children: [title, const SizedBox(height: 2), description],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               // 大字体下把作者和统计信息换到第二行，避免右侧固定信息
               // 把标题区域挤成一条窄缝。
               Wrap(
@@ -1819,10 +1887,11 @@ class _RatingBoardCard extends StatelessWidget {
                     children: [
                       CampusAuthorAvatar(
                         author: board.creator,
-                        radius: 8,
+                        radius: 7,
                         repository: repository,
+                        linkToProfile: false,
                       ),
-                      const SizedBox(width: 5),
+                      const SizedBox(width: 4),
                       CampusAuthorName(
                         author: board.creator,
                         maxLines: 1,
@@ -1848,35 +1917,35 @@ class _RatingBoardCard extends StatelessWidget {
         : Row(
             children: [
               image,
-              const SizedBox(width: 11),
+              const SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     title,
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     description,
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     author,
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               statistics,
             ],
           );
     return Container(
       key: ValueKey('rating-board-card-${board.id}'),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: campusCardDecoration(radius: 16),
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: campusCardDecoration(radius: 14),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-          child: Padding(padding: const EdgeInsets.all(10), child: content),
+          child: Padding(padding: const EdgeInsets.all(8), child: content),
         ),
       ),
     );

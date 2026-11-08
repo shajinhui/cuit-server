@@ -295,6 +295,8 @@ class CampusPreviewRepository implements CampusRepository {
             ? 0
             : 2 - deletedReplyIds.toSet().length,
         likeCount: 5,
+        reactions: forumReactionState('thread-1').reactions,
+        myReaction: forumReactionState('thread-1').myReaction,
         isPinned: true,
         isLocked: false,
         status: 'normal',
@@ -304,7 +306,7 @@ class CampusPreviewRepository implements CampusRepository {
         canEdit: true,
         canDelete: true,
       ),
-      const ForumThread(
+      ForumThread(
         id: 'thread-2',
         categoryId: 'cat-study',
         categoryName: '学习',
@@ -318,6 +320,8 @@ class CampusPreviewRepository implements CampusRepository {
         imageAssetIds: ['asset-template-1'],
         replyCount: 0,
         likeCount: 12,
+        reactions: forumReactionState('thread-2').reactions,
+        myReaction: forumReactionState('thread-2').myReaction,
         isPinned: false,
         isLocked: false,
         status: 'normal',
@@ -345,6 +349,77 @@ class CampusPreviewRepository implements CampusRepository {
   String lastForumSort = 'latest';
   String lastForumQuery = '';
 
+  /// 按帖子模拟服务端表情聚合，供界面测试观察回显与取消。
+  final _reactionStates = <String, ForumThreadReaction>{};
+
+  /// 新建帖子与投票的服务端副本，供详情页重新读取。
+  final _createdThreads = <String, ForumThread>{};
+  final _polls = <String, ForumPoll>{};
+  ForumThread? lastCreatedThread;
+
+  /// 测试预置：模拟其他用户已经投出的票数。
+  void seedForumPoll(String threadId, ForumPoll poll) {
+    _polls[threadId] = poll;
+  }
+
+  ForumThreadReaction forumReactionState(String threadId) =>
+      _reactionStates[threadId] ??
+      const ForumThreadReaction(reactions: [], myReaction: null);
+
+  @override
+  Future<ForumThreadReaction> setForumThreadReaction({
+    required String threadId,
+    required String? emoji,
+  }) async {
+    final current = forumReactionState(threadId);
+    final counts = {
+      for (final reaction in current.reactions) reaction.emoji: reaction.count,
+    };
+    final previous = current.myReaction;
+    if (previous != null) {
+      final remaining = (counts[previous] ?? 1) - 1;
+      if (remaining <= 0) {
+        counts.remove(previous);
+      } else {
+        counts[previous] = remaining;
+      }
+    }
+    if (emoji != null) counts[emoji] = (counts[emoji] ?? 0) + 1;
+    final reactions =
+        [
+          for (final entry in counts.entries)
+            if (entry.value > 0)
+              ForumReaction(emoji: entry.key, count: entry.value),
+        ]..sort((left, right) {
+          final byCount = right.count.compareTo(left.count);
+          return byCount != 0 ? byCount : left.emoji.compareTo(right.emoji);
+        });
+    final state = ForumThreadReaction(reactions: reactions, myReaction: emoji);
+    _reactionStates[threadId] = state;
+    return state;
+  }
+
+  /// 测试预置：模拟其他用户已经留下的表情聚合。
+  void seedForumReactions(
+    String threadId,
+    Map<String, int> counts, {
+    String? mine,
+  }) {
+    final reactions =
+        [
+          for (final entry in counts.entries)
+            if (entry.value > 0)
+              ForumReaction(emoji: entry.key, count: entry.value),
+        ]..sort((left, right) {
+          final byCount = right.count.compareTo(left.count);
+          return byCount != 0 ? byCount : left.emoji.compareTo(right.emoji);
+        });
+    _reactionStates[threadId] = ForumThreadReaction(
+      reactions: reactions,
+      myReaction: mine,
+    );
+  }
+
   /// 供测试断言：被删除的帖子与回复、最近一次编辑结果。
   final deletedThreadIds = <String>[];
   final deletedReplyIds = <String>[];
@@ -354,10 +429,17 @@ class CampusPreviewRepository implements CampusRepository {
 
   @override
   Future<ForumThreadDetail> getForumThread(String threadId) async {
-    final thread = (await listForumThreads()).items.firstWhere(
-      (item) => item.id == threadId,
-      orElse: () => throw const CampusRepositoryException('帖子不存在。'),
-    );
+    ForumThread? thread;
+    for (final item in (await listForumThreads()).items) {
+      if (item.id == threadId) {
+        thread = item;
+        break;
+      }
+    }
+    thread ??= _createdThreads[threadId];
+    if (thread == null) {
+      throw const CampusRepositoryException('帖子不存在。');
+    }
     return ForumThreadDetail(thread: thread, liked: false, canReply: true);
   }
 
@@ -367,40 +449,104 @@ class CampusPreviewRepository implements CampusRepository {
     required String title,
     required String body,
     List<String> imageAssetIds = const [],
+    ForumPollDraft? poll,
     String? requestId,
-  }) async => ForumThread(
-    id: 'thread-new',
-    categoryId: categoryId,
-    categoryName: forumCategories
-        .firstWhere(
-          (category) => category.id == categoryId,
-          orElse: () => const ForumCategory(
-            id: '',
-            name: '日常',
-            description: '',
-            sortOrder: 0,
+  }) async {
+    final structured = poll == null
+        ? null
+        : ForumPoll(
+            question: poll.question,
+            totalVotes: 0,
+            myOptionId: null,
+            options: [
+              for (var index = 0; index < poll.options.length; index++)
+                ForumPollOption(
+                  id: 'poll-option-${index + 1}',
+                  label: poll.options[index],
+                  count: 0,
+                  percent: 0,
+                ),
+            ],
+          );
+    final thread = ForumThread(
+      id: 'thread-new',
+      categoryId: categoryId,
+      categoryName: forumCategories
+          .firstWhere(
+            (category) => category.id == categoryId,
+            orElse: () => const ForumCategory(
+              id: '',
+              name: '日常',
+              description: '',
+              sortOrder: 0,
+            ),
+          )
+          .name,
+      title: title,
+      body: body,
+      author: const CampusAuthor(
+        id: 'user-1',
+        displayName: '小高',
+        avatarPreset: 0,
+      ),
+      imageAssetIds: imageAssetIds,
+      replyCount: 0,
+      likeCount: 0,
+      poll: structured,
+      isPinned: false,
+      isLocked: false,
+      status: 'normal',
+      version: 1,
+      createdAt: '2026-10-13T00:00:00Z',
+      lastActivityAt: '2026-10-13T00:00:00Z',
+      canEdit: true,
+      canDelete: true,
+    );
+    _createdThreads[thread.id] = thread;
+    lastCreatedThread = thread;
+    if (structured != null) _polls[thread.id] = structured;
+    return thread;
+  }
+
+  @override
+  Future<ForumPoll> voteForumPoll({
+    required String threadId,
+    required String optionId,
+  }) async {
+    final poll = _polls[threadId];
+    if (poll == null) throw const CampusRepositoryException('投票不存在。');
+    final counts = {for (final option in poll.options) option.id: option.count};
+    if (!counts.containsKey(optionId)) {
+      throw const CampusRepositoryException('投票选项无效。');
+    }
+    final previous = poll.myOptionId;
+    if (previous != null) {
+      counts[previous] = (counts[previous] ?? 1) - 1;
+    }
+    counts[optionId] = (counts[optionId] ?? 0) + 1;
+    final total = counts.values.fold<int>(
+      0,
+      (sum, count) => sum + (count > 0 ? count : 0),
+    );
+    final updated = ForumPoll(
+      question: poll.question,
+      totalVotes: total,
+      myOptionId: optionId,
+      options: [
+        for (final option in poll.options)
+          ForumPollOption(
+            id: option.id,
+            label: option.label,
+            count: (counts[option.id] ?? 0) < 0 ? 0 : counts[option.id] ?? 0,
+            percent: total == 0
+                ? 0
+                : ((counts[option.id] ?? 0) / total * 1000).round() / 10,
           ),
-        )
-        .name,
-    title: title,
-    body: body,
-    author: const CampusAuthor(
-      id: 'user-1',
-      displayName: '小高',
-      avatarPreset: 0,
-    ),
-    imageAssetIds: imageAssetIds,
-    replyCount: 0,
-    likeCount: 0,
-    isPinned: false,
-    isLocked: false,
-    status: 'normal',
-    version: 1,
-    createdAt: '2026-10-13T00:00:00Z',
-    lastActivityAt: '2026-10-13T00:00:00Z',
-    canEdit: true,
-    canDelete: true,
-  );
+      ],
+    );
+    _polls[threadId] = updated;
+    return updated;
+  }
 
   @override
   Future<ForumThread> updateForumThread({

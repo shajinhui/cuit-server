@@ -33,10 +33,30 @@ BoxDecoration campusCardDecoration({
       : null,
 );
 
+/// 缓存上一份父主题对应的校园主题。
+///
+/// `ColorScheme.fromSeed` 要做一整套色彩空间换算，校园页每次 setState
+/// （筛选、加载、滚动）都会请求主题；按父主题引用缓存后，只有真正切换
+/// 主题时才重新生成。
+ThemeData? _cachedCampusTheme;
+ThemeData? _cachedCampusThemeParent;
+
 /// 校园评分、二手和校园统一的白底石墨黑主题。
 ///
 /// 白色占大面积，黑色只用于文字、主按钮、选中态和少量强调。
 ThemeData campusTheme(BuildContext context) {
+  final parent = Theme.of(context);
+  final cached = _cachedCampusTheme;
+  if (cached != null && identical(parent, _cachedCampusThemeParent)) {
+    return cached;
+  }
+  final theme = _buildCampusTheme(context);
+  _cachedCampusTheme = theme;
+  _cachedCampusThemeParent = parent;
+  return theme;
+}
+
+ThemeData _buildCampusTheme(BuildContext context) {
   final scheme =
       ColorScheme.fromSeed(
         seedColor: campusInk,

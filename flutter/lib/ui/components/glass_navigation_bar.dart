@@ -196,7 +196,10 @@ class _LiquidNavigationBar extends StatelessWidget {
                       button: true,
                       label: GlassNavigationBar.labels[index],
                       onTap: () => onSelected(index),
-                      child: const SizedBox.expand(),
+                      child: _FastNavigationTapCell(
+                        key: ValueKey('nav-tap-$index'),
+                        onTap: () => onSelected(index),
+                      ),
                     ),
                   ),
               ],
@@ -204,6 +207,59 @@ class _LiquidNavigationBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A small raw-pointer tap layer over the glass package's own cells.
+///
+/// The package uses an InkWell for the visual tab cells. On Android, a very
+/// fast tap can lose the gesture arena to the glass/drag recognizer before
+/// InkWell gets its `onTap`. This listener never joins that arena; it only
+/// treats a short down/up sequence as a tap and leaves drags to the glass bar.
+class _FastNavigationTapCell extends StatefulWidget {
+  const _FastNavigationTapCell({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_FastNavigationTapCell> createState() => _FastNavigationTapCellState();
+}
+
+class _FastNavigationTapCellState extends State<_FastNavigationTapCell> {
+  static const _maxTapDistance = 18.0;
+  final Map<int, Offset> _pointerStarts = <int, Offset>{};
+
+  @override
+  void dispose() {
+    _pointerStarts.clear();
+    super.dispose();
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerStarts[event.pointer] = event.position;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    final start = _pointerStarts.remove(event.pointer);
+    if (start == null) return;
+    if ((event.position - start).distance <= _maxTapDistance) {
+      widget.onTap();
+    }
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _pointerStarts.remove(event.pointer);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: _onPointerDown,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
+      child: const SizedBox.expand(),
     );
   }
 }

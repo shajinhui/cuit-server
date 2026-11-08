@@ -397,6 +397,106 @@ class ForumCategory {
   );
 }
 
+/// 结构化投票的单个选项，人数与占比均由服务端计算。
+class ForumPollOption {
+  const ForumPollOption({
+    required this.id,
+    required this.label,
+    required this.count,
+    required this.percent,
+  });
+
+  final String id;
+  final String label;
+  final int count;
+
+  /// 0 至 100 的百分比，保留一位小数。
+  final double percent;
+
+  factory ForumPollOption.fromJson(Map<String, dynamic> json) =>
+      ForumPollOption(
+        id: _string(json['id']),
+        label: _string(json['label']),
+        count: _integer(json['count']),
+        percent: _decimal(json['percent']),
+      );
+}
+
+/// 帖子附带的单选投票。旧帖子正文里的投票仍由 parseForumPoll 兼容。
+class ForumPoll {
+  const ForumPoll({
+    required this.question,
+    required this.totalVotes,
+    required this.myOptionId,
+    required this.options,
+  });
+
+  final String question;
+  final int totalVotes;
+  final String? myOptionId;
+  final List<ForumPollOption> options;
+
+  factory ForumPoll.fromJson(Map<String, dynamic> json) {
+    final options = <ForumPollOption>[];
+    final raw = json['options'];
+    if (raw is List) {
+      for (final item in raw) {
+        final map = _map(item);
+        if (map == null) continue;
+        final option = ForumPollOption.fromJson(map);
+        if (option.id.isEmpty || option.label.isEmpty) continue;
+        options.add(option);
+      }
+    }
+    return ForumPoll(
+      question: _string(json['question']),
+      totalVotes: _integer(json['total_votes']),
+      myOptionId: _optionalString(json['my_option_id']),
+      options: options,
+    );
+  }
+}
+
+/// 发帖时提交给服务端的投票草稿。
+class ForumPollDraft {
+  const ForumPollDraft({required this.question, required this.options});
+
+  final String question;
+  final List<String> options;
+
+  Map<String, dynamic> toJson() => {'question': question, 'options': options};
+}
+
+/// 一条帖子下某个表情的聚合人数。
+class ForumReaction {
+  const ForumReaction({required this.emoji, required this.count});
+
+  final String emoji;
+  final int count;
+
+  factory ForumReaction.fromJson(Map<String, dynamic> json) => ForumReaction(
+    emoji: _string(json['emoji']),
+    count: _integer(json['count']),
+  );
+}
+
+/// 切换表情回应后的服务端最新聚合，客户端据此覆盖乐观状态。
+class ForumThreadReaction {
+  const ForumThreadReaction({
+    required this.reactions,
+    required this.myReaction,
+  });
+
+  final List<ForumReaction> reactions;
+  final String? myReaction;
+
+  factory ForumThreadReaction.fromJson(Map<String, dynamic> json) =>
+      ForumThreadReaction(
+        reactions: _reactionList(json['reactions']),
+        myReaction: _optionalString(json['my_reaction']),
+      );
+}
+
 /// 论坛帖子。列表与详情共用同一结构，字段对齐后端 snake_case 契约。
 class ForumThread {
   const ForumThread({
@@ -409,6 +509,9 @@ class ForumThread {
     required this.imageAssetIds,
     required this.replyCount,
     required this.likeCount,
+    this.reactions = const [],
+    this.myReaction,
+    this.poll,
     required this.isPinned,
     required this.isLocked,
     required this.status,
@@ -430,6 +533,15 @@ class ForumThread {
   final List<String> imageAssetIds;
   final int replyCount;
   final int likeCount;
+
+  /// 所有用户的表情聚合，按人数和表情排序；页面直接渲染，不再本地计数。
+  final List<ForumReaction> reactions;
+
+  /// 当前登录用户选中的表情，null 表示未回应。
+  final String? myReaction;
+
+  /// 结构化投票；旧帖子可能仍把投票写在 body 中，此时为 null。
+  final ForumPoll? poll;
   final bool isPinned;
   final bool isLocked;
   final String status;
@@ -444,6 +556,7 @@ class ForumThread {
   factory ForumThread.fromJson(Map<String, dynamic> json) {
     final category = _map(json['category']);
     final capabilities = _map(json['capabilities']);
+    final poll = _map(json['poll']);
     return ForumThread(
       id: _string(json['id']),
       categoryId: _string(
@@ -457,6 +570,9 @@ class ForumThread {
       imageAssetIds: _stringList(json['image_asset_ids']),
       replyCount: _integer(json['reply_count']),
       likeCount: _integer(json['like_count']),
+      reactions: _reactionList(json['reactions']),
+      myReaction: _optionalString(json['my_reaction']),
+      poll: poll == null ? null : ForumPoll.fromJson(poll),
       isPinned: json['is_pinned'] == true,
       isLocked: json['is_locked'] == true,
       status: _string(json['status'], fallback: 'normal'),
@@ -569,4 +685,25 @@ List<String> _stringList(Object? value) => value is List
     ? value.whereType<String>().where((item) => item.isNotEmpty).toList()
     : const [];
 
+/// 表情聚合丢弃空表情和非正数人数，避免后端异常数据撑出空胶囊。
+List<ForumReaction> _reactionList(Object? value) {
+  if (value is! List) return const [];
+  final reactions = <ForumReaction>[];
+  for (final item in value) {
+    final map = _map(item);
+    if (map == null) continue;
+    final emoji = _string(map['emoji']);
+    final count = _integer(map['count']);
+    if (emoji.isEmpty || count <= 0) continue;
+    reactions.add(ForumReaction(emoji: emoji, count: count));
+  }
+  reactions.sort((left, right) {
+    final byCount = right.count.compareTo(left.count);
+    return byCount != 0 ? byCount : left.emoji.compareTo(right.emoji);
+  });
+  return reactions;
+}
+
 int _integer(Object? value) => value is num ? value.toInt() : 0;
+
+double _decimal(Object? value) => value is num ? value.toDouble() : 0;

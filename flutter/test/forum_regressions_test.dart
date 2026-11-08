@@ -54,7 +54,10 @@ void main() {
   testWidgets('楼中楼可继续分页并按 id 去重，刷新重新获取展开内容', (tester) async {
     final repository = _ChildrenRepository();
     await _mount(tester, repository);
-    await tester.tap(find.text('查看 1 条回复'));
+    expect(find.textContaining('第一页正文'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('forum-replies-toggle-reply-1')),
+    );
     await tester.pumpAndSettle();
     final more = find.byKey(const ValueKey('forum-children-more-reply-1'));
     await tester.ensureVisible(more);
@@ -76,9 +79,8 @@ void main() {
   testWidgets('楼中楼加载失败后可以重试', (tester) async {
     final repository = _ChildrenRepository()..failNext = true;
     await _mount(tester, repository);
-    await tester.tap(find.text('查看 1 条回复'));
-    await tester.pumpAndSettle();
-    final retry = find.byKey(const ValueKey('forum-children-more-reply-1'));
+    final retry = find.byKey(const ValueKey('forum-replies-retry-reply-1'));
+    expect(retry, findsOneWidget);
     await tester.ensureVisible(retry);
     await tester.tap(retry);
     await tester.pumpAndSettle();
@@ -87,15 +89,26 @@ void main() {
   });
 
   testWidgets('刷新期间旧楼中楼请求迟到，不覆盖刷新后的内容', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final repository = _ChildrenRaceRepository();
-    await _mount(tester, repository);
-    final stale = await repository.firstPage();
-    await tester.tap(find.text('查看 1 条回复'));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ForumThreadPage(repository: repository, threadId: 'thread-1'),
+      ),
+    );
+    // 首条回复请求保持 pending，不能使用 pumpAndSettle 等待旋转指示器。
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final stale = await repository.firstPage();
     repository.body = '新回复正文';
     await tester
         .widget<RefreshIndicator>(find.byType(RefreshIndicator))
         .onRefresh();
+    await tester.pump();
     repository.pending.complete(stale);
     await tester.pumpAndSettle();
     expect(find.textContaining('新回复正文'), findsOneWidget);
