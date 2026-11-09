@@ -663,6 +663,9 @@ void main() {
       find.byKey(const ValueKey('forum-tool-long-article')),
       findsOneWidget,
     );
+    expect(find.byKey(const ValueKey('forum-tool-team')), findsOneWidget);
+    expect(find.text('添加图片或视频'), findsOneWidget);
+    expect(find.text('0/12'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('forum-category-selector')));
     await tester.pumpAndSettle();
     expect(find.text('学习'), findsOneWidget);
@@ -682,6 +685,57 @@ void main() {
 
     // 假数据仓库返回 thread-new，发帖成功后进入详情页。
     expect(find.text('帖子详情'), findsOneWidget);
+  });
+
+  testWidgets('发帖工具栏可以填写并插入组队信息', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    final router = _createRouter(repository);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('论坛'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('campus-create-thread')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('forum-tool-team')));
+    await tester.pumpAndSettle();
+    expect(find.text('发起组队'), findsWidgets);
+    await tester.enterText(
+      find.byKey(const ValueKey('forum-team-title')),
+      '今晚图书馆自习',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('forum-team-time')),
+      '今晚 19:00',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('forum-team-location')),
+      '图书馆三楼',
+    );
+    await tester.enterText(find.byKey(const ValueKey('forum-team-size')), '4');
+    await tester.enterText(
+      find.byKey(const ValueKey('forum-team-note')),
+      '有插座，带资料一起看。',
+    );
+    await tester.tap(find.byKey(const ValueKey('forum-team-confirm')));
+    await tester.pumpAndSettle();
+
+    final body = tester
+        .widget<TextField>(find.byKey(const ValueKey('forum-thread-body')))
+        .controller!
+        .text;
+    expect(body, contains('【发起组队】今晚图书馆自习'));
+    expect(body, contains('时间：今晚 19:00'));
+    expect(body, contains('地点：图书馆三楼'));
+    expect(body, contains('人数上限：4 人'));
+    expect(body, contains('说明：有插座，带资料一起看。'));
   });
 
   testWidgets('论坛投票可以在没有正文时发布', (tester) async {

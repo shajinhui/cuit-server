@@ -18,6 +18,20 @@ class CampusUploadImage {
   final String mimeType;
 }
 
+class CampusUploadMedia {
+  const CampusUploadMedia({
+    required this.bytes,
+    required this.filename,
+    required this.mimeType,
+    required this.isVideo,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String mimeType;
+  final bool isVideo;
+}
+
 class CampusImageException implements Exception {
   const CampusImageException(this.message);
   final String message;
@@ -51,6 +65,74 @@ Future<List<XFile>> pickCampusImages(ImagePicker picker, int remaining) async {
     limit: remaining,
   );
   return files.take(remaining).toList();
+}
+
+/// 发帖支持图片和视频混合多选。平台不支持混合媒体时回退到图片多选。
+Future<List<XFile>> pickCampusMedia(ImagePicker picker, int remaining) async {
+  if (remaining <= 0) return [];
+  try {
+    final files = await picker.pickMultipleMedia(
+      maxWidth: campusImageMaxDimension,
+      maxHeight: campusImageMaxDimension,
+      imageQuality: campusImageQuality,
+      requestFullMetadata: false,
+      limit: remaining,
+    );
+    return files.take(remaining).toList();
+  } catch (_) {
+    return pickCampusImages(picker, remaining);
+  }
+}
+
+const campusVideoMaxBytes = 50 * 1024 * 1024;
+
+/// 读取发帖媒体。图片沿用原压缩和格式校验；视频接受 MP4/MOV/WebM。
+Future<CampusUploadMedia> readCampusMedia(XFile file) async {
+  final name = file.name.toLowerCase();
+  final mime = (file.mimeType ?? '').toLowerCase();
+  final isVideo =
+      mime.startsWith('video/') ||
+      name.endsWith('.mp4') ||
+      name.endsWith('.m4v') ||
+      name.endsWith('.mov') ||
+      name.endsWith('.webm');
+  if (isVideo) {
+    if (await file.length() > campusVideoMaxBytes) {
+      throw const CampusImageException('视频不能超过 50 MB，请选择更短的视频。');
+    }
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty) {
+      throw const CampusImageException('视频内容为空，请重新选择。');
+    }
+    final mp4 =
+        name.endsWith('.mp4') || name.endsWith('.m4v') || mime == 'video/mp4';
+    final mov = name.endsWith('.mov') || mime == 'video/quicktime';
+    final webm = name.endsWith('.webm') || mime == 'video/webm';
+    if (!mp4 && !mov && !webm) {
+      throw const CampusImageException('仅支持 MP4、MOV 或 WebM 视频。');
+    }
+    return CampusUploadMedia(
+      bytes: bytes,
+      filename: mov
+          ? 'campus-video.mov'
+          : webm
+          ? 'campus-video.webm'
+          : 'campus-video.mp4',
+      mimeType: mov
+          ? 'video/quicktime'
+          : webm
+          ? 'video/webm'
+          : 'video/mp4',
+      isVideo: true,
+    );
+  }
+  final image = await readCampusUploadImage(file);
+  return CampusUploadMedia(
+    bytes: image.bytes,
+    filename: image.filename,
+    mimeType: image.mimeType,
+    isVideo: false,
+  );
 }
 
 Future<CampusUploadImage> readCampusUploadImage(XFile file) async {

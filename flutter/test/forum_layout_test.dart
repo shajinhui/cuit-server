@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:chengxin_youyou/features/campus/presentation/campus_page.dart';
+import 'package:chengxin_youyou/features/campus/presentation/forum_editor_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/forum_widgets.dart';
 import 'package:chengxin_youyou/ui/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -267,6 +268,27 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('发帖工具栏在 320 宽 3 倍字体下可横向滚动且无溢出', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 3;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.build(Brightness.light),
+        home: ForumEditorPage(repository: CampusPreviewRepository()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('forum-toolbar-scroll')), findsOneWidget);
+    expect(find.byKey(const ValueKey('forum-tool-team')), findsOneWidget);
   });
 
   // 可选的本机截图：不增加字体或图像依赖，普通 CI 不写截图文件。
