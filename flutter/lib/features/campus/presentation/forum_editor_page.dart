@@ -81,7 +81,10 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
       _categoriesError = null;
     });
     try {
-      final categories = await widget.repository!.listForumCategories();
+      // 用户版块先加入才能发帖；目录里公开的版块不一定可写。
+      final categories = (await widget.repository!.listForumCategories())
+          .where((category) => category.canPost)
+          .toList();
       if (!mounted) return;
       setState(() {
         _categories = categories;
@@ -308,408 +311,26 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   }
 
   Future<void> _showPollComposer() async {
-    final questionController = TextEditingController(
-      text: _pollDraft?.question ?? '',
-    );
-    final optionControllers = [
-      for (final option in _pollDraft?.options ?? const <String>['', ''])
-        TextEditingController(text: option),
-    ];
-    String? validation;
     final draft = await showModalBottomSheet<ForumPollDraft>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (sheetContext) => Theme(
-        data: campusTheme(sheetContext),
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-          ),
-          child: SafeArea(
-            top: false,
-            child: StatefulBuilder(
-              builder: (context, setSheetState) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            '发起投票',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: '关闭',
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      key: const ValueKey('forum-poll-question'),
-                      controller: questionController,
-                      autofocus: true,
-                      maxLength: 80,
-                      decoration: _composerFieldDecoration(
-                        label: '投票问题',
-                        hint: '问问大家吧',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    for (
-                      var index = 0;
-                      index < optionControllers.length;
-                      index++
-                    )
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              child: Text(
-                                '${index + 1}',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                key: ValueKey('forum-poll-option-$index'),
-                                controller: optionControllers[index],
-                                maxLength: 40,
-                                decoration: _composerFieldDecoration(
-                                  hint: '选项 ${index + 1}',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (optionControllers.length < 4)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () => setSheetState(
-                            () =>
-                                optionControllers.add(TextEditingController()),
-                          ),
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('添加选项'),
-                        ),
-                      ),
-                    if (validation != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          validation!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                              foregroundColor: campusMuted,
-                              side: const BorderSide(
-                                color: campusLine,
-                                width: .7,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('取消'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton(
-                            key: const ValueKey('forum-poll-confirm'),
-                            onPressed: () {
-                              final question = questionController.text.trim();
-                              final options = optionControllers
-                                  .map((controller) => controller.text.trim())
-                                  .where((option) => option.isNotEmpty)
-                                  .toList();
-                              if (question.isEmpty || options.length < 2) {
-                                setSheetState(
-                                  () => validation = '请填写投票问题和至少两个选项',
-                                );
-                                return;
-                              }
-                              Navigator.of(sheetContext).pop(
-                                ForumPollDraft(
-                                  question: question,
-                                  options: options,
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                              backgroundColor: campusInk,
-                              foregroundColor: campusOnInk,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('完成'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      builder: (context) => _PollComposerSheet(initial: _pollDraft),
     );
-    // 等弹层退出动画完成后再释放控制器，避免过渡帧仍在监听它们。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      questionController.dispose();
-      for (final controller in optionControllers) {
-        controller.dispose();
-      }
-    });
     if (mounted && draft != null) setState(() => _pollDraft = draft);
   }
 
   Future<void> _showTeamUpComposer() async {
-    final titleController = TextEditingController();
-    final timeController = TextEditingController();
-    final locationController = TextEditingController();
-    final sizeController = TextEditingController(text: '4');
-    final noteController = TextEditingController();
-    String? validation;
     final draft = await showModalBottomSheet<_ForumTeamDraft>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (sheetContext) => Theme(
-        data: campusTheme(sheetContext),
-        child: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-          ),
-          child: SafeArea(
-            top: false,
-            child: StatefulBuilder(
-              builder: (context, setSheetState) => SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            '发起组队',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: '关闭',
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      key: const ValueKey('forum-team-title'),
-                      controller: titleController,
-                      autofocus: true,
-                      maxLength: 30,
-                      decoration: _composerFieldDecoration(
-                        label: '组队主题',
-                        hint: '例如：今晚一起去图书馆自习',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            key: const ValueKey('forum-team-time'),
-                            controller: timeController,
-                            maxLength: 30,
-                            decoration: _composerFieldDecoration(
-                              label: '时间',
-                              hint: '今晚 19:00',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            key: const ValueKey('forum-team-location'),
-                            controller: locationController,
-                            maxLength: 30,
-                            decoration: _composerFieldDecoration(
-                              label: '地点',
-                              hint: '图书馆三楼',
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: 132,
-                      child: TextField(
-                        key: const ValueKey('forum-team-size'),
-                        controller: sizeController,
-                        keyboardType: TextInputType.number,
-                        maxLength: 2,
-                        decoration: _composerFieldDecoration(
-                          label: '人数上限',
-                          hint: '2-20 人',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      key: const ValueKey('forum-team-note'),
-                      controller: noteController,
-                      maxLength: 100,
-                      maxLines: 2,
-                      decoration: _composerFieldDecoration(
-                        label: '补充说明',
-                        hint: '例如：有资料可以一起分享',
-                      ),
-                    ),
-                    if (validation != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          validation!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                              foregroundColor: campusMuted,
-                              side: const BorderSide(
-                                color: campusLine,
-                                width: .7,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('取消'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: FilledButton(
-                            key: const ValueKey('forum-team-confirm'),
-                            onPressed: () {
-                              final title = titleController.text.trim();
-                              final time = timeController.text.trim();
-                              final location = locationController.text.trim();
-                              final note = noteController.text.trim();
-                              final size = int.tryParse(
-                                sizeController.text.trim(),
-                              );
-                              if (title.characters.length < 2 ||
-                                  title.characters.length > 30) {
-                                setSheetState(
-                                  () => validation = '请填写 2-30 字的组队主题',
-                                );
-                                return;
-                              }
-                              if (time.isEmpty) {
-                                setSheetState(() => validation = '请填写组队时间');
-                                return;
-                              }
-                              if (size == null || size < 2 || size > 20) {
-                                setSheetState(
-                                  () => validation = '人数上限需在 2-20 人之间',
-                                );
-                                return;
-                              }
-                              Navigator.of(sheetContext).pop(
-                                _ForumTeamDraft(
-                                  title: title,
-                                  time: time,
-                                  location: location,
-                                  size: size,
-                                  note: note,
-                                ),
-                              );
-                            },
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                              backgroundColor: campusInk,
-                              foregroundColor: campusOnInk,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('加入正文'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      builder: (context) => const _TeamUpComposerSheet(),
     );
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      titleController.dispose();
-      timeController.dispose();
-      locationController.dispose();
-      sizeController.dispose();
-      noteController.dispose();
-    });
     if (!mounted || draft == null) return;
     final lines = [
       '【发起组队】${draft.title}',
@@ -1098,7 +719,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
               ],
             )
           else if (_categories.isEmpty)
-            _buildErrorBanner('暂时没有可用版块，请稍后再试。')
+            _buildErrorBanner('暂无可发帖的版块，可以先去「更多版块」加入感兴趣的用户版块。')
           else
             _buildCategoryRow(context),
           const SizedBox(height: 14),
@@ -1251,6 +872,399 @@ InputDecoration _composerFieldDecoration({String? label, String? hint}) =>
         ),
       ),
     );
+
+class _ComposerHeader extends StatelessWidget {
+  const _ComposerHeader({required this.title, required this.onClose});
+
+  final String title;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+        ),
+      ),
+      IconButton(
+        tooltip: '关闭',
+        onPressed: onClose,
+        icon: const Icon(Icons.close_rounded),
+      ),
+    ],
+  );
+}
+
+class _ComposerActions extends StatelessWidget {
+  const _ComposerActions({
+    required this.confirmLabel,
+    required this.confirmKey,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  final String confirmLabel;
+  final Key confirmKey;
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: OutlinedButton(
+          onPressed: onCancel,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+            foregroundColor: campusMuted,
+            side: const BorderSide(color: campusLine, width: .7),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text('取消'),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: FilledButton(
+          key: confirmKey,
+          onPressed: onConfirm,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+            backgroundColor: campusInk,
+            foregroundColor: campusOnInk,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(confirmLabel),
+        ),
+      ),
+    ],
+  );
+}
+
+class _PollComposerSheet extends StatefulWidget {
+  const _PollComposerSheet({this.initial});
+
+  final ForumPollDraft? initial;
+
+  @override
+  State<_PollComposerSheet> createState() => _PollComposerSheetState();
+}
+
+class _PollComposerSheetState extends State<_PollComposerSheet> {
+  late final TextEditingController _questionController;
+  late final List<TextEditingController> _optionControllers;
+  String? _validation;
+
+  @override
+  void initState() {
+    super.initState();
+    _questionController = TextEditingController(
+      text: widget.initial?.question ?? '',
+    );
+    _optionControllers = [
+      for (final option in widget.initial?.options ?? const <String>['', ''])
+        TextEditingController(text: option),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    for (final controller in _optionControllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _submit() {
+    final question = _questionController.text.trim();
+    final options = _optionControllers
+        .map((controller) => controller.text.trim())
+        .where((option) => option.isNotEmpty)
+        .toList();
+    if (question.isEmpty || options.length < 2) {
+      setState(() => _validation = '请填写投票问题和至少两个选项');
+      return;
+    }
+    Navigator.of(
+      context,
+    ).pop(ForumPollDraft(question: question, options: options));
+  }
+
+  @override
+  Widget build(BuildContext context) => Theme(
+    data: campusTheme(context),
+    child: Builder(
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ComposerHeader(
+                  title: '发起投票',
+                  onClose: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const ValueKey('forum-poll-question'),
+                  controller: _questionController,
+                  autofocus: true,
+                  maxLength: 80,
+                  decoration: _composerFieldDecoration(
+                    label: '投票问题',
+                    hint: '问问大家吧',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (var index = 0; index < _optionControllers.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          child: Text(
+                            '${index + 1}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            key: ValueKey('forum-poll-option-$index'),
+                            controller: _optionControllers[index],
+                            maxLength: 40,
+                            decoration: _composerFieldDecoration(
+                              hint: '选项 ${index + 1}',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_optionControllers.length < 4)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => setState(
+                        () => _optionControllers.add(TextEditingController()),
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: const Text('添加选项'),
+                    ),
+                  ),
+                if (_validation != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _validation!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                _ComposerActions(
+                  confirmLabel: '完成',
+                  confirmKey: const ValueKey('forum-poll-confirm'),
+                  onCancel: () => Navigator.of(context).pop(),
+                  onConfirm: _submit,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _TeamUpComposerSheet extends StatefulWidget {
+  const _TeamUpComposerSheet();
+
+  @override
+  State<_TeamUpComposerSheet> createState() => _TeamUpComposerSheetState();
+}
+
+class _TeamUpComposerSheetState extends State<_TeamUpComposerSheet> {
+  final _titleController = TextEditingController();
+  final _timeController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _sizeController = TextEditingController(text: '4');
+  final _noteController = TextEditingController();
+  String? _validation;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _timeController.dispose();
+    _locationController.dispose();
+    _sizeController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final title = _titleController.text.trim();
+    final time = _timeController.text.trim();
+    final location = _locationController.text.trim();
+    final note = _noteController.text.trim();
+    final size = int.tryParse(_sizeController.text.trim());
+    if (title.characters.length < 2 || title.characters.length > 30) {
+      setState(() => _validation = '请填写 2-30 字的组队主题');
+      return;
+    }
+    if (time.isEmpty) {
+      setState(() => _validation = '请填写组队时间');
+      return;
+    }
+    if (size == null || size < 2 || size > 20) {
+      setState(() => _validation = '人数上限需在 2-20 人之间');
+      return;
+    }
+    Navigator.of(context).pop(
+      _ForumTeamDraft(
+        title: title,
+        time: time,
+        location: location,
+        size: size,
+        note: note,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Theme(
+    data: campusTheme(context),
+    child: Builder(
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ComposerHeader(
+                  title: '发起组队',
+                  onClose: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const ValueKey('forum-team-title'),
+                  controller: _titleController,
+                  autofocus: true,
+                  maxLength: 30,
+                  decoration: _composerFieldDecoration(
+                    label: '组队主题',
+                    hint: '例如：今晚一起去图书馆自习',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey('forum-team-time'),
+                        controller: _timeController,
+                        maxLength: 30,
+                        decoration: _composerFieldDecoration(
+                          label: '时间',
+                          hint: '今晚 19:00',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey('forum-team-location'),
+                        controller: _locationController,
+                        maxLength: 30,
+                        decoration: _composerFieldDecoration(
+                          label: '地点',
+                          hint: '图书馆三楼',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 132,
+                  child: TextField(
+                    key: const ValueKey('forum-team-size'),
+                    controller: _sizeController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 2,
+                    decoration: _composerFieldDecoration(
+                      label: '人数上限',
+                      hint: '2-20 人',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const ValueKey('forum-team-note'),
+                  controller: _noteController,
+                  maxLength: 100,
+                  maxLines: 2,
+                  decoration: _composerFieldDecoration(
+                    label: '补充说明',
+                    hint: '例如：有资料可以一起分享',
+                  ),
+                ),
+                if (_validation != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      _validation!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                _ComposerActions(
+                  confirmLabel: '加入正文',
+                  confirmKey: const ValueKey('forum-team-confirm'),
+                  onCancel: () => Navigator.of(context).pop(),
+                  onConfirm: _submit,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 class _EditorToolButton extends StatelessWidget {
   const _EditorToolButton({

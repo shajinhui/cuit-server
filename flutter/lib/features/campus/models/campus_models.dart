@@ -364,6 +364,10 @@ String createCampusRequestId() {
 }
 
 /// 论坛版块。官方版块由后端预置，用户也可以创建自己的版块。
+///
+/// 用户版块默认「未列出」：知道版块 ID 的登录用户可以阅读，但不会出现在
+/// 公共目录、首页默认和热门里；加入后才能发帖。管理权限只由服务端的
+/// `capabilities` 决定，客户端不根据 `isMine` 推断。
 class ForumCategory {
   const ForumCategory({
     required this.id,
@@ -372,6 +376,19 @@ class ForumCategory {
     required this.sortOrder,
     this.isOfficial = true,
     this.isMine = false,
+    this.isMember = false,
+    this.isModerator = false,
+    this.visibility = 'public',
+    this.status = 'active',
+    this.rules = '',
+    this.memberCount = 0,
+    this.version = 1,
+    this.createdAt,
+    this.canManage = false,
+    this.canPost = true,
+    this.canJoin = false,
+    this.canReviewReports = false,
+    this.moderators = const [],
   });
 
   final String id;
@@ -385,16 +402,171 @@ class ForumCategory {
   /// 当前登录用户创建的版块。
   final bool isMine;
 
-  factory ForumCategory.fromJson(Map<String, dynamic> json) => ForumCategory(
-    id: _string(json['id']),
-    name: _string(json['name']),
-    description: _string(json['description']),
-    sortOrder: _integer(json['sort_order']),
-    isOfficial:
-        json['is_official'] == true ||
-        (json['is_official'] is num && (json['is_official'] as num) != 0),
-    isMine: json['is_mine'] == true,
+  /// 当前登录用户是否已加入该用户版块。
+  final bool isMember;
+
+  /// 当前登录用户是否是版主（含 owner）。
+  final bool isModerator;
+
+  /// `unlisted` 表示不进入公共目录；官方版块始终为 `public`。
+  final String visibility;
+
+  /// `archived` 为只读状态，由管理员恢复。
+  final String status;
+  final String rules;
+  final int memberCount;
+  final int version;
+  final String? createdAt;
+
+  final bool canManage;
+  final bool canPost;
+  final bool canJoin;
+  final bool canReviewReports;
+
+  /// 仅在版块详情接口返回；列表接口为空。
+  final List<ForumCategoryModerator> moderators;
+
+  bool get isUnlisted => visibility != 'public';
+  bool get isArchived => status == 'archived';
+
+  ForumCategory copyWith({
+    String? name,
+    String? description,
+    bool? isMember,
+    bool? isModerator,
+    String? visibility,
+    String? status,
+    String? rules,
+    int? memberCount,
+    int? version,
+    bool? canManage,
+    bool? canPost,
+    bool? canJoin,
+    bool? canReviewReports,
+    List<ForumCategoryModerator>? moderators,
+  }) => ForumCategory(
+    id: id,
+    name: name ?? this.name,
+    description: description ?? this.description,
+    sortOrder: sortOrder,
+    isOfficial: isOfficial,
+    isMine: isMine,
+    isMember: isMember ?? this.isMember,
+    isModerator: isModerator ?? this.isModerator,
+    visibility: visibility ?? this.visibility,
+    status: status ?? this.status,
+    rules: rules ?? this.rules,
+    memberCount: memberCount ?? this.memberCount,
+    version: version ?? this.version,
+    createdAt: createdAt,
+    canManage: canManage ?? this.canManage,
+    canPost: canPost ?? this.canPost,
+    canJoin: canJoin ?? this.canJoin,
+    canReviewReports: canReviewReports ?? this.canReviewReports,
+    moderators: moderators ?? this.moderators,
   );
+
+  factory ForumCategory.fromJson(Map<String, dynamic> json) {
+    final capabilities = _map(json['capabilities']);
+    final official =
+        json['is_official'] == true ||
+        (json['is_official'] is num && (json['is_official'] as num) != 0);
+    final member = json['is_member'] == true;
+    final moderator = json['is_moderator'] == true;
+    final rawModerators = json['moderators'];
+    return ForumCategory(
+      id: _string(json['id']),
+      name: _string(json['name']),
+      description: _string(json['description']),
+      sortOrder: _integer(json['sort_order']),
+      isOfficial: official,
+      isMine: json['is_mine'] == true,
+      isMember: member,
+      isModerator: moderator,
+      visibility: _string(json['visibility'], fallback: 'public'),
+      status: _string(json['status'], fallback: 'active'),
+      rules: _string(json['rules']),
+      memberCount: _integer(json['member_count']),
+      version: _integer(json['version'], fallback: 1),
+      createdAt: _optionalString(json['created_at']),
+      canManage: capabilities?['can_manage'] == true || moderator,
+      canPost:
+          capabilities?['can_post'] == true || official || member || moderator,
+      canJoin: capabilities?['can_join'] == true || (!official && !member),
+      canReviewReports:
+          capabilities?['can_review_reports'] == true || moderator,
+      moderators: rawModerators is List
+          ? rawModerators
+                .whereType<Map<String, dynamic>>()
+                .map(ForumCategoryModerator.fromJson)
+                .toList()
+          : const [],
+    );
+  }
+}
+
+/// 版块版主。`owner` 是创建者或管理员指定的所有者，同一版块仅一人。
+class ForumCategoryModerator {
+  const ForumCategoryModerator({required this.author, required this.role});
+
+  final CampusAuthor author;
+  final String role;
+
+  bool get isOwner => role == 'owner';
+
+  factory ForumCategoryModerator.fromJson(Map<String, dynamic> json) =>
+      ForumCategoryModerator(
+        author: CampusAuthor.fromJson(json),
+        role: _string(json['role'], fallback: 'moderator'),
+      );
+}
+
+/// 版块成员；加入后才能在该版块发帖。
+class ForumCategoryMember {
+  const ForumCategoryMember({required this.author, required this.joinedAt});
+
+  final CampusAuthor author;
+  final String joinedAt;
+
+  factory ForumCategoryMember.fromJson(Map<String, dynamic> json) =>
+      ForumCategoryMember(
+        author: CampusAuthor.fromJson(json),
+        joinedAt: _string(json['joined_at']),
+      );
+}
+
+/// 版块管理日志。只保留操作类型、目标和理由，不包含帖子正文。
+class ForumModerationLogEntry {
+  const ForumModerationLogEntry({
+    required this.id,
+    required this.action,
+    required this.targetType,
+    required this.targetId,
+    required this.reason,
+    required this.createdAt,
+    required this.actor,
+  });
+
+  final String id;
+  final String action;
+  final String targetType;
+  final String? targetId;
+  final String? reason;
+  final String createdAt;
+  final CampusAuthor actor;
+
+  factory ForumModerationLogEntry.fromJson(Map<String, dynamic> json) {
+    final actor = _map(json['actor']);
+    return ForumModerationLogEntry(
+      id: _string(json['id']),
+      action: _string(json['action']),
+      targetType: _string(json['target_type']),
+      targetId: _optionalString(json['target_id']),
+      reason: _optionalString(json['reason']),
+      createdAt: _string(json['created_at']),
+      actor: CampusAuthor.fromJson(actor),
+    );
+  }
 }
 
 /// 结构化投票的单个选项，人数与占比均由服务端计算。
@@ -553,6 +725,42 @@ class ForumThread {
 
   bool get isHidden => status != 'normal';
 
+  ForumThread copyWith({
+    String? categoryId,
+    String? categoryName,
+    String? title,
+    String? body,
+    int? replyCount,
+    int? likeCount,
+    bool? isPinned,
+    bool? isLocked,
+    String? status,
+    int? version,
+    bool? canEdit,
+    bool? canDelete,
+  }) => ForumThread(
+    id: id,
+    categoryId: categoryId ?? this.categoryId,
+    categoryName: categoryName ?? this.categoryName,
+    title: title ?? this.title,
+    body: body ?? this.body,
+    author: author,
+    imageAssetIds: imageAssetIds,
+    replyCount: replyCount ?? this.replyCount,
+    likeCount: likeCount ?? this.likeCount,
+    reactions: reactions,
+    myReaction: myReaction,
+    poll: poll,
+    isPinned: isPinned ?? this.isPinned,
+    isLocked: isLocked ?? this.isLocked,
+    status: status ?? this.status,
+    version: version ?? this.version,
+    createdAt: createdAt,
+    lastActivityAt: lastActivityAt,
+    canEdit: canEdit ?? this.canEdit,
+    canDelete: canDelete ?? this.canDelete,
+  );
+
   factory ForumThread.fromJson(Map<String, dynamic> json) {
     final category = _map(json['category']);
     final capabilities = _map(json['capabilities']);
@@ -704,6 +912,7 @@ List<ForumReaction> _reactionList(Object? value) {
   return reactions;
 }
 
-int _integer(Object? value) => value is num ? value.toInt() : 0;
+int _integer(Object? value, {int fallback = 0}) =>
+    value is num ? value.toInt() : fallback;
 
 double _decimal(Object? value) => value is num ? value.toDouble() : 0;

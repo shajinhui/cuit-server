@@ -238,9 +238,18 @@ class CampusPreviewRepository implements CampusRepository {
       List.of(forumCategories);
 
   @override
+  Future<ForumCategory> getForumCategory(String categoryId) async {
+    for (final category in forumCategories) {
+      if (category.id == categoryId) return category;
+    }
+    throw const CampusRepositoryException('版块不存在或已关闭。', statusCode: 404);
+  }
+
+  @override
   Future<ForumCategory> createForumCategory({
     required String name,
     required String description,
+    String rules = '',
   }) async {
     final category = ForumCategory(
       id: 'cat-custom-${++_createdCategoryCount}',
@@ -249,9 +258,177 @@ class CampusPreviewRepository implements CampusRepository {
       sortOrder: forumCategories.length + 1,
       isOfficial: false,
       isMine: true,
+      isMember: true,
+      isModerator: true,
+      visibility: 'unlisted',
+      rules: rules,
+      memberCount: 1,
+      canManage: true,
+      canPost: true,
+      canJoin: false,
+      canReviewReports: true,
     );
     forumCategories.add(category);
     return category;
+  }
+
+  @override
+  Future<ForumCategory> updateForumCategory({
+    required String categoryId,
+    required int expectedVersion,
+    String? name,
+    String? description,
+    String? rules,
+  }) async {
+    final index = forumCategories.indexWhere(
+      (category) => category.id == categoryId,
+    );
+    if (index < 0) {
+      throw const CampusRepositoryException('版块不存在或已关闭。', statusCode: 404);
+    }
+    final current = forumCategories[index];
+    final updated = current.copyWith(
+      name: name,
+      description: description,
+      rules: rules,
+      version: current.version + 1,
+    );
+    forumCategories[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<ForumCategory> joinForumCategory(String categoryId) async {
+    final index = forumCategories.indexWhere(
+      (category) => category.id == categoryId,
+    );
+    if (index < 0) {
+      throw const CampusRepositoryException('版块不存在或已关闭。', statusCode: 404);
+    }
+    final current = forumCategories[index];
+    final updated = current.copyWith(
+      isMember: true,
+      memberCount: current.memberCount + 1,
+      canPost: true,
+      canJoin: false,
+    );
+    forumCategories[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<ForumCategory> leaveForumCategory(String categoryId) async {
+    final index = forumCategories.indexWhere(
+      (category) => category.id == categoryId,
+    );
+    if (index < 0) {
+      throw const CampusRepositoryException('版块不存在或已关闭。', statusCode: 404);
+    }
+    final current = forumCategories[index];
+    final updated = current.copyWith(
+      isMember: false,
+      memberCount: (current.memberCount - 1).clamp(0, 1 << 30),
+      canPost: false,
+      canJoin: true,
+    );
+    forumCategories[index] = updated;
+    return updated;
+  }
+
+  final List<ForumCategoryMember> forumMembers = [];
+
+  @override
+  Future<CampusPageResult<ForumCategoryMember>> listForumCategoryMembers(
+    String categoryId, {
+    String? cursor,
+  }) async => CampusPageResult(
+    items: List.of(forumMembers),
+    nextCursor: null,
+    hasMore: false,
+  );
+
+  @override
+  Future<void> removeForumCategoryMember({
+    required String categoryId,
+    required String userId,
+    required String reason,
+  }) async {
+    forumMembers.removeWhere((member) => member.author.id == userId);
+  }
+
+  @override
+  Future<List<ForumCategory>> listModeratedForumCategories() async =>
+      forumCategories.where((category) => category.canManage).toList();
+
+  @override
+  Future<void> reportForumCategory({
+    required String categoryId,
+    required String reason,
+  }) async {}
+
+  final List<ForumModerationLogEntry> forumModerationLogs = [];
+
+  @override
+  Future<CampusPageResult<ForumModerationLogEntry>> listForumModerationLogs(
+    String categoryId, {
+    String? cursor,
+  }) async => CampusPageResult(
+    items: List.of(forumModerationLogs),
+    nextCursor: null,
+    hasMore: false,
+  );
+
+  @override
+  Future<ForumThread> setForumThreadPinned({
+    required String categoryId,
+    required String threadId,
+    required bool pinned,
+  }) async {
+    final thread = (await getForumThread(
+      threadId,
+    )).thread.copyWith(isPinned: pinned);
+    _threadOverrides[threadId] = thread;
+    return thread;
+  }
+
+  @override
+  Future<ForumThread> setForumThreadLocked({
+    required String categoryId,
+    required String threadId,
+    required bool locked,
+  }) async {
+    final thread = (await getForumThread(
+      threadId,
+    )).thread.copyWith(isLocked: locked);
+    _threadOverrides[threadId] = thread;
+    return thread;
+  }
+
+  @override
+  Future<void> hideForumThread({
+    required String threadId,
+    required String reason,
+    required int expectedVersion,
+  }) async {
+    final thread = (await getForumThread(threadId)).thread;
+    _threadOverrides[threadId] = thread.copyWith(
+      status: 'hidden',
+      version: expectedVersion + 1,
+    );
+  }
+
+  @override
+  Future<ForumThread> restoreForumThread({
+    required String threadId,
+    required int expectedVersion,
+  }) async {
+    final thread = (await getForumThread(threadId)).thread;
+    final restored = thread.copyWith(
+      status: 'normal',
+      version: expectedVersion + 1,
+    );
+    _threadOverrides[threadId] = restored;
+    return restored;
   }
 
   @override

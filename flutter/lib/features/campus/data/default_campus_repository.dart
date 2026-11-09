@@ -450,15 +450,187 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
   }
 
   @override
+  Future<ForumCategory> getForumCategory(String categoryId) async =>
+      ForumCategory.fromJson(
+        _asMap(await _request('/api/v1/forum/categories/${_path(categoryId)}')),
+      );
+
+  @override
   Future<ForumCategory> createForumCategory({
     required String name,
     required String description,
+    String rules = '',
   }) async => ForumCategory.fromJson(
     _asMap(
       await _request(
         '/api/v1/forum/categories',
         method: 'POST',
-        body: {'name': name, 'description': description},
+        body: {
+          'name': name,
+          'description': description,
+          if (rules.trim().isNotEmpty) 'rules': rules.trim(),
+        },
+      ),
+    ),
+  );
+
+  @override
+  Future<ForumCategory> updateForumCategory({
+    required String categoryId,
+    required int expectedVersion,
+    String? name,
+    String? description,
+    String? rules,
+  }) async => ForumCategory.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/categories/${_path(categoryId)}',
+        method: 'PATCH',
+        body: {
+          'name': ?name,
+          'description': ?description,
+          'rules': ?rules,
+          'expected_version': expectedVersion,
+        },
+      ),
+    ),
+  );
+
+  @override
+  Future<ForumCategory> joinForumCategory(String categoryId) async =>
+      ForumCategory.fromJson(
+        _asMap(
+          await _request(
+            '/api/v1/forum/categories/${_path(categoryId)}/join',
+            method: 'POST',
+          ),
+        ),
+      );
+
+  @override
+  Future<ForumCategory> leaveForumCategory(String categoryId) async =>
+      ForumCategory.fromJson(
+        _asMap(
+          await _request(
+            '/api/v1/forum/categories/${_path(categoryId)}/join',
+            method: 'DELETE',
+          ),
+        ),
+      );
+
+  @override
+  Future<CampusPageResult<ForumCategoryMember>> listForumCategoryMembers(
+    String categoryId, {
+    String? cursor,
+  }) async => CampusPageResult.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/categories/${_path(categoryId)}/members',
+        query: {'cursor': cursor, 'limit': 20},
+      ),
+    ),
+    ForumCategoryMember.fromJson,
+  );
+
+  @override
+  Future<void> removeForumCategoryMember({
+    required String categoryId,
+    required String userId,
+    required String reason,
+  }) async {
+    await _request(
+      '/api/v1/forum/categories/${_path(categoryId)}/members/${_path(userId)}',
+      method: 'DELETE',
+      body: {'reason': reason},
+    );
+  }
+
+  @override
+  Future<List<ForumCategory>> listModeratedForumCategories() async {
+    final data = await _request('/api/v1/forum/me/moderated-categories');
+    final items = data is List
+        ? data.whereType<Map<String, dynamic>>()
+        : const Iterable<Map<String, dynamic>>.empty();
+    return items.map(ForumCategory.fromJson).toList();
+  }
+
+  @override
+  Future<void> reportForumCategory({
+    required String categoryId,
+    required String reason,
+  }) async {
+    await _request(
+      '/api/v1/forum/categories/${_path(categoryId)}/report',
+      method: 'POST',
+      body: {'reason': reason},
+    );
+  }
+
+  @override
+  Future<CampusPageResult<ForumModerationLogEntry>> listForumModerationLogs(
+    String categoryId, {
+    String? cursor,
+  }) async => CampusPageResult.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/categories/${_path(categoryId)}/moderation-log',
+        query: {'cursor': cursor, 'limit': 20},
+      ),
+    ),
+    ForumModerationLogEntry.fromJson,
+  );
+
+  @override
+  Future<ForumThread> setForumThreadPinned({
+    required String categoryId,
+    required String threadId,
+    required bool pinned,
+  }) async => ForumThread.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/categories/${_path(categoryId)}/threads/${_path(threadId)}/pin',
+        method: pinned ? 'POST' : 'DELETE',
+      ),
+    ),
+  );
+
+  @override
+  Future<ForumThread> setForumThreadLocked({
+    required String categoryId,
+    required String threadId,
+    required bool locked,
+  }) async => ForumThread.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/categories/${_path(categoryId)}/threads/${_path(threadId)}/lock',
+        method: locked ? 'POST' : 'DELETE',
+      ),
+    ),
+  );
+
+  @override
+  Future<void> hideForumThread({
+    required String threadId,
+    required String reason,
+    required int expectedVersion,
+  }) async {
+    await _request(
+      '/api/v1/forum/threads/${_path(threadId)}/hide',
+      method: 'POST',
+      body: {'reason': reason, 'expected_version': expectedVersion},
+    );
+  }
+
+  @override
+  Future<ForumThread> restoreForumThread({
+    required String threadId,
+    required int expectedVersion,
+  }) async => ForumThread.fromJson(
+    _asMap(
+      await _request(
+        '/api/v1/forum/threads/${_path(threadId)}/restore',
+        method: 'POST',
+        body: {'expected_version': expectedVersion},
       ),
     ),
   );

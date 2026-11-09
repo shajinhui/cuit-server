@@ -18,6 +18,7 @@ import 'package:chengxin_youyou/features/campus/presentation/ratings_mine_page.d
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_item_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_editor_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/marketplace_mine_page.dart';
+import 'package:chengxin_youyou/features/campus/presentation/forum_category_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/forum_thread_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/forum_editor_page.dart';
 import 'package:chengxin_youyou/features/campus/presentation/forum_mine_page.dart';
@@ -75,9 +76,7 @@ class _ChengxinAppState extends State<ChengxinApp> {
     _router.pushNamed(
       'forum-thread',
       pathParameters: {'threadId': target.threadId},
-      queryParameters: {
-        if (target.replyId != null) 'reply': target.replyId!,
-      },
+      queryParameters: {if (target.replyId != null) 'reply': target.replyId!},
     );
   }
 
@@ -313,6 +312,14 @@ class _ChengxinAppState extends State<ChengxinApp> {
                     name: 'forum-mine',
                     builder: (context, state) => ForumMinePage(
                       repository: widget.dependencies.campusRepository,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'forum/categories/:categoryId',
+                    name: 'forum-category',
+                    builder: (context, state) => ForumCategoryPage(
+                      repository: widget.dependencies.campusRepository,
+                      categoryId: state.pathParameters['categoryId']!,
                     ),
                   ),
                   GoRoute(

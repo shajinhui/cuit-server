@@ -10,6 +10,7 @@ import '../../../ui/components/page_layout.dart';
 import 'campus_report_dialog.dart';
 import 'campus_widgets.dart';
 import 'campus_theme.dart';
+import 'forum_moderation_dialog.dart';
 import 'forum_widgets.dart';
 import '../../community/data/community_repository.dart';
 
@@ -34,6 +35,8 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
   final _replyController = TextEditingController();
   final _replyFocusNode = FocusNode();
   ForumThreadDetail? _detail;
+  ForumCategory? _category;
+  bool _moderationBusy = false;
   List<ForumReply> _replies = [];
   final Map<String, List<ForumReply>> _replyChildren = {};
   final Map<String, String?> _childCursors = {};
@@ -186,6 +189,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
         _likeCount = detail.thread.likeCount;
         _replyCount = detail.thread.replyCount;
       });
+      unawaited(_loadCategory(detail.thread.categoryId, version));
     } catch (error) {
       if (mounted && version == _pageRequestVersion) {
         setState(() {
@@ -622,6 +626,85 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     }
   }
 
+  /// 版块能力只用于显示管理入口；失败时帖子仍可正常阅读和回复。
+  Future<void> _loadCategory(String categoryId, int version) async {
+    final repository = widget.repository;
+    if (repository == null) return;
+    try {
+      final category = await repository.getForumCategory(categoryId);
+      if (!mounted || version != _pageRequestVersion) return;
+      setState(() => _category = category);
+    } catch (_) {
+      // 管理入口不可用不影响阅读。
+    }
+  }
+
+  Future<void> _runModeration(_ThreadModerationAction action) async {
+    final detail = _detail;
+    final category = _category;
+    final repository = widget.repository;
+    if (detail == null ||
+        category == null ||
+        repository == null ||
+        _moderationBusy) {
+      return;
+    }
+    if (action == _ThreadModerationAction.hide) {
+      final reason = await askForumModerationReason(
+        context,
+        title: '隐藏帖子',
+        hint: '隐藏后普通用户不可见。你可以稍后在「版块管理日志」里恢复，管理员不受此限制。',
+        confirmLabel: '隐藏',
+      );
+      if (reason == null || !mounted) return;
+      setState(() => _moderationBusy = true);
+      try {
+        await repository.hideForumThread(
+          threadId: widget.threadId,
+          reason: reason,
+          expectedVersion: detail.thread.version,
+        );
+        if (mounted) context.pop(true);
+      } catch (error) {
+        if (mounted) _showMessage(error.toString());
+      } finally {
+        if (mounted) setState(() => _moderationBusy = false);
+      }
+      return;
+    }
+    setState(() => _moderationBusy = true);
+    try {
+      final updated = action == _ThreadModerationAction.pin
+          ? await repository.setForumThreadPinned(
+              categoryId: category.id,
+              threadId: widget.threadId,
+              pinned: !detail.thread.isPinned,
+            )
+          : await repository.setForumThreadLocked(
+              categoryId: category.id,
+              threadId: widget.threadId,
+              locked: !detail.thread.isLocked,
+            );
+      if (!mounted) return;
+      setState(() {
+        _detail = ForumThreadDetail(
+          thread: updated,
+          liked: detail.liked,
+          canReply: detail.canReply && !updated.isLocked,
+        );
+      });
+      _showMessage(
+        action == _ThreadModerationAction.pin
+            ? (updated.isPinned ? '已置顶' : '已取消置顶')
+            : (updated.isLocked ? '已锁定' : '已解锁'),
+      );
+    } catch (error) {
+      if (mounted) _showMessage(error.toString());
+    } finally {
+      if (mounted) setState(() => _moderationBusy = false);
+    }
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -648,6 +731,27 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
             icon: Icon(
               _favorited ? Icons.star_rounded : Icons.star_outline_rounded,
             ),
+          ),
+        if (detail != null && _category?.canManage == true)
+          PopupMenuButton<_ThreadModerationAction>(
+            key: const ValueKey('forum-thread-manage'),
+            tooltip: '管理帖子',
+            enabled: !_moderationBusy,
+            onSelected: (action) => unawaited(_runModeration(action)),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: _ThreadModerationAction.pin,
+                child: Text(detail.thread.isPinned ? '取消置顶' : '置顶帖子'),
+              ),
+              PopupMenuItem(
+                value: _ThreadModerationAction.lock,
+                child: Text(detail.thread.isLocked ? '解锁帖子' : '锁定帖子'),
+              ),
+              const PopupMenuItem(
+                value: _ThreadModerationAction.hide,
+                child: Text('隐藏帖子'),
+              ),
+            ],
           ),
         if (detail?.thread.canEdit == true)
           IconButton(
@@ -1067,6 +1171,19 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     }
   }
 
+  void _focusReplyComposer() {
+    // 等回复目标提示先完成重建，再请求焦点，确保 TextField 已经就位并调起键盘。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _replyFocusNode.requestFocus();
+    });
+  }
+
+  void _startReplyTo(ForumReply reply) {
+    if (_replySubmitting) return;
+    setState(() => _replyTarget = reply);
+    _focusReplyComposer();
+  }
+
   Widget _buildReply(ForumReply reply) {
     final colors = Theme.of(context).colorScheme;
     final isThreadAuthor = _detail?.thread.author.id == reply.author.id;
@@ -1082,6 +1199,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     return GestureDetector(
       key: ValueKey('forum-reply-${reply.id}'),
       behavior: HitTestBehavior.opaque,
+      onTap: () => _startReplyTo(reply),
       onLongPress: () => _showReplyActions(reply),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 9, 10, 4),
@@ -1154,10 +1272,7 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                           TextButton(
                             onPressed: _replySubmitting
                                 ? null
-                                : () {
-                                    setState(() => _replyTarget = reply);
-                                    _replyFocusNode.requestFocus();
-                                  },
+                                : () => _startReplyTo(reply),
                             style: _replyActionStyle,
                             child: const Text('回复'),
                           ),
@@ -1349,3 +1464,5 @@ ForumReply _copyReply(
   createdAt: reply.createdAt,
   canDelete: reply.canDelete,
 );
+
+enum _ThreadModerationAction { pin, lock, hide }

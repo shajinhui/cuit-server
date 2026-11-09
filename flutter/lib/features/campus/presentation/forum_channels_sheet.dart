@@ -13,12 +13,16 @@ class ForumChannelsSheetResult {
     required this.categories,
     required this.homeCategoryIds,
     this.selectedCategoryId,
+    this.openCategoryId,
     this.changed = false,
   });
 
   final List<ForumCategory> categories;
   final List<String> homeCategoryIds;
   final String? selectedCategoryId;
+
+  /// 用户想查看版块详情（规则、加入、管理）而不是直接筛选帖子。
+  final String? openCategoryId;
   final bool changed;
 }
 
@@ -42,6 +46,7 @@ class ForumChannelsSheet extends StatefulWidget {
 
 class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
   static const _maxHomeCategories = 8;
+  static const _maxOwnedCategories = 3;
 
   late List<ForumCategory> _categories;
   late Set<String> _homeCategoryIds;
@@ -78,11 +83,33 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
       _toggleHomeCategory(category);
       return;
     }
+    // 用户版块先进详情页确认规则并加入；官方版块保持一键筛选。
     Navigator.of(context).pop(
       ForumChannelsSheetResult(
         categories: List.unmodifiable(_categories),
         homeCategoryIds: List.unmodifiable(_orderedHomeCategoryIds),
-        selectedCategoryId: category.id,
+        selectedCategoryId: category.isOfficial ? category.id : null,
+        openCategoryId: category.isOfficial ? null : category.id,
+        changed: _changed,
+      ),
+    );
+  }
+
+  Future<void> _openJoinById() async {
+    final id = await showDialog<String>(
+      context: context,
+      useRootNavigator: true,
+      builder: (dialogContext) => Theme(
+        data: campusTheme(dialogContext),
+        child: const _JoinCategoryByIdDialog(),
+      ),
+    );
+    if (!mounted || id == null) return;
+    Navigator.of(context).pop(
+      ForumChannelsSheetResult(
+        categories: List.unmodifiable(_categories),
+        homeCategoryIds: List.unmodifiable(_orderedHomeCategoryIds),
+        openCategoryId: id,
         changed: _changed,
       ),
     );
@@ -103,6 +130,11 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
 
   Future<void> _createCategory() async {
     if (_creating || _saving) return;
+    final owned = _categories.where((category) => category.isMine).length;
+    if (owned >= _maxOwnedCategories) {
+      setState(() => _error = '每人最多创建 $_maxOwnedCategories 个版块。');
+      return;
+    }
     final draft = await showDialog<_ForumCategoryDraft>(
       context: context,
       useRootNavigator: true,
@@ -125,6 +157,7 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
       final category = await repository.createForumCategory(
         name: draft.name,
         description: draft.description,
+        rules: draft.rules,
       );
       if (!mounted) return;
       setState(() {
@@ -313,7 +346,23 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
                       ),
                     )
                   else
-                    _buildChannelGrid(),
+                    _buildSections(),
+                  if (!_editingHome)
+                    ListTile(
+                      key: const ValueKey('forum-channels-join-by-id'),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 2),
+                      leading: Icon(Icons.key_rounded, size: 18, color: accent),
+                      title: const Text(
+                        '输入版块号',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      subtitle: const Text(
+                        '用同学分享的版块号打开未公开版块',
+                        style: TextStyle(fontSize: 11.5),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: _creating || _saving ? null : _openJoinById,
+                    ),
                 ],
               ),
             ),
@@ -372,7 +421,64 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
         : Text(_editingHome ? '保存' : '完成'),
   );
 
-  Widget _buildChannelGrid() => LayoutBuilder(
+  Widget _buildSections() {
+    final managed = _categories
+        .where((category) => !category.isOfficial && category.canManage)
+        .toList();
+    final official = _categories
+        .where((category) => category.isOfficial)
+        .toList();
+    final joined = _categories
+        .where(
+          (category) =>
+              !category.isOfficial && category.isMember && !category.canManage,
+        )
+        .toList();
+    final others = _categories
+        .where(
+          (category) =>
+              !category.isOfficial && !category.isMember && !category.canManage,
+        )
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (managed.isNotEmpty) ...[
+          _sectionTitle('我管理的'),
+          _buildChannelGrid(managed),
+          const SizedBox(height: 12),
+        ],
+        if (official.isNotEmpty) ...[
+          _sectionTitle('官方版块'),
+          _buildChannelGrid(official),
+          const SizedBox(height: 12),
+        ],
+        if (joined.isNotEmpty) ...[
+          _sectionTitle('我加入的版块'),
+          _buildChannelGrid(joined),
+          if (others.isNotEmpty) const SizedBox(height: 12),
+        ],
+        if (others.isNotEmpty) ...[
+          _sectionTitle('校园版块'),
+          _buildChannelGrid(others),
+        ],
+      ],
+    );
+  }
+
+  Widget _sectionTitle(String title) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    ),
+  );
+
+  Widget _buildChannelGrid(List<ForumCategory> categories) => LayoutBuilder(
     builder: (context, constraints) {
       final columns = constraints.maxWidth < 310 ? 2 : 3;
       final tileWidth = (constraints.maxWidth - (columns - 1) * 8) / columns;
@@ -380,7 +486,7 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
         spacing: 8,
         runSpacing: 8,
         children: [
-          for (final category in _categories)
+          for (final category in categories)
             SizedBox(
               width: tileWidth,
               child: _ForumChannelTile(
@@ -452,6 +558,13 @@ class _ForumChannelTile extends StatelessWidget {
                     color: selected ? accent : colors.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
+                ] else if (category.isUnlisted) ...[
+                  Icon(
+                    Icons.lock_outline_rounded,
+                    size: 12,
+                    color: colors.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
                 ],
                 Flexible(
                   child: Text(
@@ -477,10 +590,15 @@ class _ForumChannelTile extends StatelessWidget {
 }
 
 class _ForumCategoryDraft {
-  const _ForumCategoryDraft({required this.name, required this.description});
+  const _ForumCategoryDraft({
+    required this.name,
+    required this.description,
+    required this.rules,
+  });
 
   final String name;
   final String description;
+  final String rules;
 }
 
 class _CreateForumCategoryDialog extends StatefulWidget {
@@ -495,12 +613,14 @@ class _CreateForumCategoryDialogState
     extends State<_CreateForumCategoryDialog> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _rulesController = TextEditingController();
   String? _error;
 
   @override
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _rulesController.dispose();
     super.dispose();
   }
 
@@ -515,9 +635,14 @@ class _CreateForumCategoryDialogState
       setState(() => _error = '版块介绍不能超过 100 个字。');
       return;
     }
-    Navigator.of(
-      context,
-    ).pop(_ForumCategoryDraft(name: name, description: description));
+    final rules = _rulesController.text.trim();
+    if (rules.characters.length > 1000) {
+      setState(() => _error = '版块规则不能超过 1000 个字。');
+      return;
+    }
+    Navigator.of(context).pop(
+      _ForumCategoryDraft(name: name, description: description, rules: rules),
+    );
   }
 
   @override
@@ -546,10 +671,31 @@ class _CreateForumCategoryDialogState
             controller: _descriptionController,
             maxLength: 100,
             minLines: 2,
-            maxLines: 4,
+            maxLines: 3,
             decoration: const InputDecoration(
               labelText: '版块介绍（可选）',
               hintText: '说明这个版块适合讨论什么',
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            key: const ValueKey('forum-channel-create-rules'),
+            controller: _rulesController,
+            maxLength: 1000,
+            minLines: 2,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: '版块规则（可选）',
+              hintText: '例如：只发本人作品、禁止广告和人身攻击',
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '创建后版块默认不公开，只有拿到版块号的同学能进入；管理员公开后才会出现在目录里。',
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.4,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
           if (_error != null) ...[
@@ -575,6 +721,77 @@ class _CreateForumCategoryDialogState
         key: const ValueKey('forum-channel-create-submit'),
         onPressed: _submit,
         child: const Text('创建'),
+      ),
+    ],
+  );
+}
+
+class _JoinCategoryByIdDialog extends StatefulWidget {
+  const _JoinCategoryByIdDialog();
+
+  @override
+  State<_JoinCategoryByIdDialog> createState() =>
+      _JoinCategoryByIdDialogState();
+}
+
+class _JoinCategoryByIdDialogState extends State<_JoinCategoryByIdDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final id = _controller.text.trim();
+    if (!RegExp(r'^[A-Za-z0-9_-]{8,80}$').hasMatch(id)) {
+      setState(() => _error = '版块号格式不正确，请检查后重试。');
+      return;
+    }
+    Navigator.of(context).pop(id);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    key: const ValueKey('forum-join-by-id-dialog'),
+    title: const Text('输入版块号'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('粘贴同学分享的版块号，打开版块并申请加入。'),
+        const SizedBox(height: 12),
+        TextField(
+          key: const ValueKey('forum-join-by-id-input'),
+          controller: _controller,
+          autofocus: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: const InputDecoration(hintText: '例如：3f2a9c1e-…'),
+        ),
+        if (_error != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        ],
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('取消'),
+      ),
+      FilledButton(
+        key: const ValueKey('forum-join-by-id-submit'),
+        onPressed: _submit,
+        child: const Text('打开'),
       ),
     ],
   );

@@ -452,6 +452,20 @@ class _CampusPageState extends State<CampusPage> {
         ..addAll(result.homeCategoryIds);
       _forumCategoriesLoaded = true;
     });
+    final openCategoryId = result.openCategoryId;
+    if (openCategoryId != null) {
+      // 从详情页返回时可能已经加入或退出版块，重新拉一次目录再决定筛选。
+      final selected = await context.pushNamed<String>(
+        'forum-category',
+        pathParameters: {'categoryId': openCategoryId},
+      );
+      if (!mounted) return;
+      setState(() => _forumCategoriesLoaded = false);
+      await _ensureForumCategories();
+      if (!mounted) return;
+      if (selected != null) _changeForumCategory(selected);
+      return;
+    }
     final selectedCategoryId = result.selectedCategoryId;
     if (selectedCategoryId != null) {
       _changeForumCategory(selectedCategoryId);

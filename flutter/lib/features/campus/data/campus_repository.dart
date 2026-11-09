@@ -97,9 +97,73 @@ abstract interface class CampusRepository {
 
   Future<List<ForumCategory>> listForumCategories();
 
+  Future<ForumCategory> getForumCategory(String categoryId);
+
   Future<ForumCategory> createForumCategory({
     required String name,
     required String description,
+    String rules = '',
+  });
+
+  /// 版主修改版块简介、规则或名称；版本不匹配时服务端返回 409。
+  Future<ForumCategory> updateForumCategory({
+    required String categoryId,
+    required int expectedVersion,
+    String? name,
+    String? description,
+    String? rules,
+  });
+
+  Future<ForumCategory> joinForumCategory(String categoryId);
+
+  Future<ForumCategory> leaveForumCategory(String categoryId);
+
+  Future<CampusPageResult<ForumCategoryMember>> listForumCategoryMembers(
+    String categoryId, {
+    String? cursor,
+  });
+
+  Future<void> removeForumCategoryMember({
+    required String categoryId,
+    required String userId,
+    required String reason,
+  });
+
+  /// 当前用户管理的版块；官方版块不会出现在这里。
+  Future<List<ForumCategory>> listModeratedForumCategories();
+
+  Future<void> reportForumCategory({
+    required String categoryId,
+    required String reason,
+  });
+
+  Future<CampusPageResult<ForumModerationLogEntry>> listForumModerationLogs(
+    String categoryId, {
+    String? cursor,
+  });
+
+  /// 版主置顶／取消置顶，返回更新后的帖子。
+  Future<ForumThread> setForumThreadPinned({
+    required String categoryId,
+    required String threadId,
+    required bool pinned,
+  });
+
+  Future<ForumThread> setForumThreadLocked({
+    required String categoryId,
+    required String threadId,
+    required bool locked,
+  });
+
+  Future<void> hideForumThread({
+    required String threadId,
+    required String reason,
+    required int expectedVersion,
+  });
+
+  Future<ForumThread> restoreForumThread({
+    required String threadId,
+    required int expectedVersion,
   });
 
   /// 首页展示的版块顺序；「全部」和「热门」是固定频道，不在此列表中。

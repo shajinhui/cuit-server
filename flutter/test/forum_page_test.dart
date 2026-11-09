@@ -560,6 +560,35 @@ void main() {
     expect(find.textContaining('我也是，准备去反馈一下。'), findsOneWidget);
   });
 
+  testWidgets('点击论坛评论正文即可进入回复', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    final router = _createRouter(repository);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('论坛'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('图书馆晚上能不能延长闭馆时间'));
+    await tester.pumpAndSettle();
+
+    final body = find.text('支持，上次十点被赶出来书还没看完。');
+    await tester.ensureVisible(body);
+    await tester.tap(body);
+    await tester.pumpAndSettle();
+
+    expect(find.text('回复 体验同学'), findsOneWidget);
+    final input = tester.widget<TextField>(
+      find.byKey(const ValueKey('forum-reply-input')),
+    );
+    expect(input.focusNode?.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+  });
+
   testWidgets('楼中楼点赞靠右，举报从长按菜单进入', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -736,6 +765,35 @@ void main() {
     expect(body, contains('地点：图书馆三楼'));
     expect(body, contains('人数上限：4 人'));
     expect(body, contains('说明：有插座，带资料一起看。'));
+  });
+
+  testWidgets('关闭投票和组队弹层后不会继续使用已销毁的控制器', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    final router = _createRouter(repository);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('论坛'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('campus-create-thread')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('forum-tool-team')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('forum-tool-poll')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('论坛投票可以在没有正文时发布', (tester) async {

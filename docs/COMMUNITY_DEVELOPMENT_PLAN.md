@@ -285,6 +285,7 @@
 ## 参考资料
 
 - [现有公告机制](./ANNOUNCEMENTS.md)：个人消息必须与平台公告区分。
+- [用户自建版块与版主](./FORUM_USER_BOARDS.md)：版块创建、版主权限与治理的延伸设计。
 - [Flutter 架构文档](./architecture/FLUTTER_ARCHITECTURE.md)。
 - [Flutter 开发说明](../flutter/README.md)。
 - [Web 开发说明](../apps/web/README.md)。
