@@ -16,9 +16,15 @@ import java.util.concurrent.Executors
 class MainActivity : FlutterActivity() {
     private var widgetChannel: MethodChannel? = null
     private var widgetClientReady = false
+    private var calendarBridge: SystemCalendarBridge? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        val calendar = SystemCalendarBridge(this)
+        calendarBridge = calendar
+        calendar.attach(
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "chengxin_youyou/system_calendar"),
+        )
         val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "chengxin_youyou/desktop_widgets")
         widgetChannel = channel
         channel.setMethodCallHandler { call, result ->
@@ -64,6 +70,16 @@ class MainActivity : FlutterActivity() {
             intent.action = Intent.ACTION_MAIN
             widgetChannel?.invokeMethod("openSchedule", null)
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        // 日历权限走原生一次性申请，回调交回桥接层兑现 Flutter 侧的 Future。
+        if (calendarBridge?.onRequestPermissionsResult(requestCode, grantResults) == true) return
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     companion object {

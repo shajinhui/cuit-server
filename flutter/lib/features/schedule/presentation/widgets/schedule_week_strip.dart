@@ -7,23 +7,34 @@ import '../schedule_view_model.dart';
 double scheduleStripTopGap(double screenHeight) => screenHeight <= 740 ? 7 : 12;
 
 class ScheduleWeekStrip extends StatelessWidget {
-  const ScheduleWeekStrip({super.key, required this.vm});
+  const ScheduleWeekStrip({
+    super.key,
+    required this.vm,
+    this.week,
+    this.date,
+    this.onDayTap,
+  });
+
   final ScheduleViewModel vm;
+  final int? week;
+  final DateTime? date;
+  final ValueChanged<int>? onDayTap;
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
     final ink = dark ? const Color(0xfff2f2f7) : const Color(0xff101722);
     final muted = dark ? const Color(0xb8d1d1d6) : const Color(0x9426343d);
-    final date = vm.selectedDate;
+    final date = this.date ?? vm.selectedDate;
     final monday = DateTime(date.year, date.month, date.day - date.weekday + 1);
     return Padding(
       padding: EdgeInsets.only(
         top: scheduleStripTopGap(size.height),
-        bottom: size.height <= 740 ? 5 : 8,
+        bottom: size.height <= 740 ? 2 : 3,
       ),
       child: SizedBox(
-        height: 44,
+        height: 36,
         child: Row(
           children: [
             SizedBox(
@@ -48,7 +59,7 @@ class ScheduleWeekStrip extends StatelessWidget {
             for (var day = 1; day <= 7; day++)
               Expanded(
                 child: InkWell(
-                  onTap: () => vm.selectDay(day),
+                  onTap: onDayTap == null ? null : () => onDayTap!(day),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

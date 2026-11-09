@@ -30,6 +30,9 @@ class ScheduleHeader extends StatelessWidget {
   static const double _capsuleHeight = 32;
   static const double _capsuleTapHeight = 44;
 
+  /// 胶囊行向上压入日期行下方，缩短顶部菜单到日期栏的视觉间距。
+  static const double _capsuleLift = 4;
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -45,12 +48,6 @@ class ScheduleHeader extends StatelessWidget {
       fontWeight: FontWeight.w500,
       letterSpacing: -.5,
     );
-    const badgeStyle = TextStyle(
-      fontSize: 11,
-      height: 1,
-      fontWeight: FontWeight.w600,
-    );
-    final badgeText = '当前为第 ${vm.currentWeek} 周';
     final weekText = '第 ${vm.selectedWeek} 周';
     const capsuleStyle = TextStyle(
       fontSize: 15,
@@ -79,14 +76,8 @@ class ScheduleHeader extends StatelessWidget {
                 final height =
                     _dateLine +
                     _capsuleTapHeight -
-                    scheduleStripTopGap(size.height);
-                // 「当前为第 N 周」只在放得下时显示（最多容忍 20% 的缩放）：
-                // 更窄时优先保证日期完整可读，而不是把两者都缩成一团。
-                final dateWidth = _textWidth(vm.dateTitle, dateStyle);
-                final badgeWidth = _textWidth(badgeText, badgeStyle) + 14;
-                final showBadge =
-                    (vm.currentWeek ?? 0) > 0 &&
-                    constraints.maxWidth >= dateWidth * .8 + 7 + badgeWidth;
+                    scheduleStripTopGap(size.height) -
+                    _capsuleLift;
                 return SizedBox(
                   height: height,
                   child: Stack(
@@ -100,40 +91,15 @@ class ScheduleHeader extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           // 极窄屏一起缩小，日期始终完整显示而不是被截断。
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(vm.dateTitle, maxLines: 1, style: dateStyle),
-                              if (showBadge) ...[
-                                const SizedBox(width: 7),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 7,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: vm.weekStatus == '本周'
-                                        ? Colors.white.withValues(alpha: .18)
-                                        : const Color(0x5565a6eb),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    badgeText,
-                                    maxLines: 1,
-                                    style: badgeStyle.copyWith(
-                                      color: vm.weekStatus == '本周'
-                                          ? muted
-                                          : const Color(0xff397db5),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
+                          child: Text(
+                            vm.dateTitle,
+                            maxLines: 1,
+                            style: dateStyle,
                           ),
                         ),
                       ),
                       Positioned(
-                        top: _dateLine,
+                        top: _dateLine - _capsuleLift,
                         left: 0,
                         right: 0,
                         child: Row(
@@ -148,28 +114,26 @@ class ScheduleHeader extends StatelessWidget {
                                 height: _capsuleTapHeight,
                                 child: Center(
                                   widthFactor: 1,
-                                  child: _HeaderGlass(
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      child: SizedBox(
-                                        height: _capsuleHeight,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              weekText,
-                                              key: const Key('selected-week'),
-                                              style: capsuleStyle,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            const Icon(
-                                              Icons.keyboard_arrow_down,
-                                              size: 12,
-                                            ),
-                                          ],
-                                        ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    child: SizedBox(
+                                      height: _capsuleHeight,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            weekText,
+                                            key: const Key('selected-week'),
+                                            style: capsuleStyle,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(
+                                            Icons.keyboard_arrow_down,
+                                            size: 12,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -202,7 +166,6 @@ class ScheduleHeader extends StatelessWidget {
             ink: ink,
             label: '添加课程',
             icon: Icons.add,
-            radius: 12,
             onPressed: vm.selectedSemester == null ? null : onAdd,
           ),
           SizedBox(width: gap),
@@ -242,19 +205,32 @@ class ScheduleHeader extends StatelessWidget {
     required Color ink,
     required String label,
     required IconData icon,
-    double radius = 24,
     required VoidCallback? onPressed,
-  }) => _HeaderGlass(
-    radius: radius,
-    child: IconButton(
-      key: key,
-      tooltip: label,
-      onPressed: onPressed,
-      // 固定 44：Material 默认的 48 触摸扩展会让安卓比 iOS 多占 12px 宽度。
-      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-      icon: Icon(icon, size: icon == Icons.add ? 30 : 26, color: ink),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+  }) => SizedBox(
+    width: 44,
+    height: 44,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        // 视觉玻璃缩到 40，外层仍保留 44 的点击热区。
+        const IgnorePointer(
+          child: _HeaderGlass(
+            radius: 20,
+            child: SizedBox(width: 40, height: 40),
+          ),
+        ),
+        IconButton(
+          key: key,
+          tooltip: label,
+          onPressed: onPressed,
+          style: const ButtonStyle(
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          icon: Icon(icon, size: icon == Icons.add ? 25 : 22, color: ink),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+        ),
+      ],
     ),
   );
 }

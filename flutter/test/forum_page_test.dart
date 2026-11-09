@@ -71,6 +71,55 @@ void main() {
     expect(parsed.poll?.options.last.percent, 33.3);
   });
 
+  testWidgets('论坛展示评分和二手关联卡片', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                ForumLinkedContentCard(
+                  content: ForumLinkedContent(
+                    type: 'rating_item',
+                    id: 'rating-1',
+                    title: '航空港一食堂',
+                    description: '大家可以给这个对象评分',
+                    imageAssetId: null,
+                    status: 'published',
+                    ratingCount: 12,
+                    ratingSum: 54,
+                    ratingScore: 4.5,
+                  ),
+                  repository: null,
+                ),
+                SizedBox(height: 12),
+                ForumLinkedContentCard(
+                  content: ForumLinkedContent(
+                    type: 'marketplace',
+                    id: 'listing-1',
+                    title: '二手台灯',
+                    description: '九成新',
+                    imageAssetId: null,
+                    status: 'on_sale',
+                    priceCents: 2900,
+                    listingType: 'sell',
+                  ),
+                  repository: null,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('评分对象'), findsOneWidget);
+    expect(find.text('4.5 分 · 12 人评分'), findsOneWidget);
+    expect(find.text('校园二手'), findsOneWidget);
+    expect(find.text('出售 · ¥29'), findsOneWidget);
+  });
+
   testWidgets('论坛投票卡片选择后展示结果', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

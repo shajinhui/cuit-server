@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		01CBE59F8E2BC57606D3BE30 /* DesktopWidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 936AE89226C67AA60F364906 /* DesktopWidgetBridge.swift */; };
+		0D2F3E3D7A8B4C5D9E0F1122 /* SystemCalendarBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2F3E3D7A8B4C5D9E0F1121 /* SystemCalendarBridge.swift */; };
 		11F6548C81C77FDF14330900 /* ScheduleWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 2A2AF95F5857B4B9ED99507E /* ScheduleWidget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		22D1881029D34F8727FD6F7C /* ScheduleWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4985841E1054BAA52F5E14E5 /* ScheduleWidget.swift */; };
@@ -82,6 +83,7 @@
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		85C840032E983C7200D137A1 /* NativeTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBar.swift; sourceTree = "<group>"; };
 		936AE89226C67AA60F364906 /* DesktopWidgetBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesktopWidgetBridge.swift; sourceTree = "<group>"; };
+		0D2F3E3D7A8B4C5D9E0F1121 /* SystemCalendarBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemCalendarBridge.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -175,6 +177,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				85C840032E983C7200D137A1 /* NativeTabBar.swift */,
 				936AE89226C67AA60F364906 /* DesktopWidgetBridge.swift */,
+				0D2F3E3D7A8B4C5D9E0F1121 /* SystemCalendarBridge.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 			);
@@ -385,6 +388,7 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				85C840042E983C7200D137A1 /* NativeTabBar.swift in Sources */,
 				01CBE59F8E2BC57606D3BE30 /* DesktopWidgetBridge.swift in Sources */,
+				0D2F3E3D7A8B4C5D9E0F1122 /* SystemCalendarBridge.swift in Sources */,
 				B08CAAB602682BA0F172F4FB /* ScheduleWidgetData.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
@@ -733,7 +737,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				APS_ENVIRONMENT = development;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Runner/Debug.entitlements;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 6N2B8WNHR8;
 				ENABLE_BITCODE = NO;

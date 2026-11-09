@@ -69,10 +69,19 @@ class ScheduleViewModel extends ChangeNotifier {
   ].reduce(math.max);
   int get sectionCount =>
       visibleEntries.fold(12, (max, b) => math.max(max, b.end));
-  List<CourseBlock> get visibleEntries => _blocks.putIfAbsent(
-    selectedWeek,
-    () => groupCourseBlocks(entriesFor(selectedWeek), selectedWeek, order),
+  List<CourseBlock> get visibleEntries => visibleEntriesFor(selectedWeek);
+  List<CourseBlock> visibleEntriesFor(int week) => _blocks.putIfAbsent(
+    week,
+    () => groupCourseBlocks(entriesFor(week), week, order),
   );
+  int sectionCountFor(int week) =>
+      visibleEntriesFor(week).fold(12, (max, b) => math.max(max, b.end));
+  DateTime? dateForWeek(int week) {
+    final semester = selectedSemester;
+    if (semester == null) return null;
+    return calendar.dateFor(semester, week, selectedDate.weekday);
+  }
+
   List<LocalCourse> get manualCourses => local.courses
       .where((c) => c.semesterId == selectedSemester?.id && c.targetId == null)
       .toList();

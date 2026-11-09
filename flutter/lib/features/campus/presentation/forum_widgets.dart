@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../ui/components/page_layout.dart';
@@ -67,6 +68,116 @@ String forumThreadDisplayTitle(ForumThread thread, ForumPollData? legacyPoll) {
 String forumDisplayTitle(String title, ForumPollData? poll) {
   if (poll != null && title.trim() == '投票：${poll.question}') return '';
   return title;
+}
+
+class ForumLinkedContentCard extends StatelessWidget {
+  const ForumLinkedContentCard({
+    super.key,
+    required this.content,
+    required this.repository,
+    this.onTap,
+  });
+
+  final ForumLinkedContent content;
+  final CampusRepository? repository;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final isRating = content.type == 'rating_item';
+    final score = content.ratingScore;
+    final listingStatus = content.status == 'sold'
+        ? (content.listingType == 'wanted' ? '已完成' : '已售出')
+        : null;
+    final detail = isRating
+        ? score == null
+              ? '暂无评分'
+              : '${score.toStringAsFixed(1)} 分 · ${content.ratingCount ?? 0} 人评分'
+        : '${listingStatus ?? (content.listingType == 'wanted' ? '求购' : '出售')} · ${content.priceCents == null ? '' : '¥${campusFormatPrice(content.priceCents!)}'}';
+    return Material(
+      color: colors.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              if (content.imageAssetId != null) ...[
+                CampusAssetImage(
+                  assetId: content.imageAssetId!,
+                  repository: repository,
+                  width: 64,
+                  height: 64,
+                  radius: 10,
+                  adaptive: true,
+                  fallback: isRating
+                      ? Icons.rate_review_outlined
+                      : Icons.shopping_bag_outlined,
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isRating ? '评分对象' : '校园二手',
+                      style: TextStyle(
+                        color: pageAccent(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      content.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (content.description.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        content.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 5),
+                    Text(
+                      detail,
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colors.onSurfaceVariant,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ForumPollCard extends StatefulWidget {
@@ -1024,8 +1135,13 @@ class ForumThreadCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     // 结构化投票不再写进正文；只有旧帖子才回退到正文解析。
     final legacyPoll = thread.poll == null ? parseForumPoll(thread.body) : null;
-    final plainBody = legacyPoll?.plainBody ?? thread.body;
-    final displayTitle = forumThreadDisplayTitle(thread, legacyPoll);
+    final linked = thread.linkedContent;
+    final plainBody = linked == null
+        ? legacyPoll?.plainBody ?? thread.body
+        : '';
+    final displayTitle = linked == null
+        ? forumThreadDisplayTitle(thread, legacyPoll)
+        : '';
     return Material(
       key: ValueKey('forum-thread-card-${thread.id}'),
       color: colors.surface,
@@ -1089,6 +1205,15 @@ class ForumThreadCard extends StatelessWidget {
                           const SizedBox(height: 9),
                         ForumPollCard(data: legacyPoll),
                       ],
+                      if (linked != null) ...[
+                        if (displayTitle.isNotEmpty || plainBody.isNotEmpty)
+                          const SizedBox(height: 9),
+                        ForumLinkedContentCard(
+                          content: linked,
+                          repository: repository,
+                          onTap: () => _openLinkedContent(context, linked),
+                        ),
+                      ],
                       if (thread.imageAssetIds.isNotEmpty) ...[
                         const SizedBox(height: 9),
                         _buildImages(),
@@ -1104,6 +1229,17 @@ class ForumThreadCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _openLinkedContent(BuildContext context, ForumLinkedContent content) {
+    if (content.type == 'rating_item') {
+      context.pushNamed('rating-item', pathParameters: {'itemId': content.id});
+    } else {
+      context.pushNamed(
+        'marketplace-item',
+        pathParameters: {'itemId': content.id},
+      );
+    }
   }
 
   Widget _buildHeader(BuildContext context) {

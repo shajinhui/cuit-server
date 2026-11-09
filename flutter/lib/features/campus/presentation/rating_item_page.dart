@@ -426,6 +426,7 @@ class _RatingItemPageState extends State<RatingItemPage> {
                         children: [
                           Expanded(
                             child: TextField(
+                              key: const ValueKey('rating-comment-input'),
                               controller: _commentController,
                               focusNode: _commentFocusNode,
                               minLines: 1,
@@ -668,6 +669,19 @@ class _RatingItemPageState extends State<RatingItemPage> {
     );
   }
 
+  void _focusCommentComposer() {
+    // 等回复目标提示先完成重建，再请求焦点，确保 TextField 已经就位并调起键盘。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _commentFocusNode.requestFocus();
+    });
+  }
+
+  void _startCommentReply(CampusComment comment) {
+    if (_commentSubmitting) return;
+    setState(() => _replyTarget = comment);
+    _focusCommentComposer();
+  }
+
   Widget _buildComment(CampusComment comment) {
     final colors = Theme.of(context).colorScheme;
     final replies = _replies[comment.id] ?? const <CampusComment>[];
@@ -679,154 +693,156 @@ class _RatingItemPageState extends State<RatingItemPage> {
     final hiddenReplyCount = comment.replyCount > 1
         ? comment.replyCount - 1
         : replies.length - 1;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 6, 0, 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CampusAuthorAvatar(
-                author: comment.author,
-                radius: 12,
-                linkToProfile: false,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 2,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        CampusAuthorName(
-                          author: comment.author,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        if (comment.starsSnapshot != null)
-                          Text(
-                            '${comment.starsSnapshot! * 2} 分',
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _startCommentReply(comment),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(2, 6, 0, 2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CampusAuthorAvatar(
+                  author: comment.author,
+                  radius: 12,
+                  linkToProfile: false,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          CampusAuthorName(
+                            author: comment.author,
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.amber.shade700,
+                              fontSize: 11,
+                              color: colors.onSurfaceVariant,
                             ),
                           ),
-                        Text(
-                          campusFormatTime(comment.createdAt),
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: colors.onSurfaceVariant,
+                          if (comment.starsSnapshot != null)
+                            Text(
+                              '${comment.starsSnapshot! * 2} 分',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.amber.shade700,
+                              ),
+                            ),
+                          Text(
+                            campusFormatTime(comment.createdAt),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: colors.onSurfaceVariant,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      comment.body,
-                      style: const TextStyle(fontSize: 13, height: 1.4),
-                    ),
-                    const SizedBox(height: 1),
-                    Wrap(
-                      spacing: 2,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setState(() => _replyTarget = comment);
-                            _commentFocusNode.requestFocus();
-                          },
-                          style: _commentActionStyle,
-                          child: const Text('回复'),
-                        ),
-                        TextButton(
-                          onPressed: () => _report('comment', comment.id),
-                          style: _commentActionStyle,
-                          child: const Text('举报'),
-                        ),
-                        if (comment.canDelete)
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        comment.body,
+                        style: const TextStyle(fontSize: 13, height: 1.4),
+                      ),
+                      const SizedBox(height: 1),
+                      Wrap(
+                        spacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
                           TextButton(
-                            onPressed: () => _deleteComment(comment),
+                            onPressed: () => _startCommentReply(comment),
                             style: _commentActionStyle,
-                            child: const Text('删除'),
+                            child: const Text('回复'),
                           ),
-                      ],
-                    ),
+                          TextButton(
+                            onPressed: () => _report('comment', comment.id),
+                            style: _commentActionStyle,
+                            child: const Text('举报'),
+                          ),
+                          if (comment.canDelete)
+                            TextButton(
+                              onPressed: () => _deleteComment(comment),
+                              style: _commentActionStyle,
+                              child: const Text('删除'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (comment.replyCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 31, top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (replies.isNotEmpty)
+                      _buildCommentReply(replies.first, rootId: comment.id)
+                    else if (_replyLoading.contains(comment.id))
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 6),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 1.8),
+                        ),
+                      )
+                    else if (!_replies.containsKey(comment.id))
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          key: ValueKey('rating-replies-retry-${comment.id}'),
+                          onPressed: () =>
+                              _loadReplies(comment.id, reset: true),
+                          style: _commentActionStyle,
+                          child: const Text('重新加载回复'),
+                        ),
+                      ),
+                    if (expanded)
+                      for (final reply in replies.skip(1))
+                        _buildCommentReply(reply, rootId: comment.id),
+                    if (expanded && _replyHasMore.contains(comment.id))
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          key: ValueKey('rating-replies-more-${comment.id}'),
+                          onPressed: _replyLoading.contains(comment.id)
+                              ? null
+                              : () => _loadReplies(comment.id, reset: false),
+                          style: _commentActionStyle,
+                          child: const Text('加载更多回复'),
+                        ),
+                      ),
+                    if (canExpand)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          key: ValueKey('rating-replies-toggle-${comment.id}'),
+                          onPressed: _replyLoading.contains(comment.id)
+                              ? null
+                              : () => _toggleReplies(comment),
+                          style: _commentActionStyle,
+                          child: Text(
+                            expanded
+                                ? '收起回复'
+                                : hiddenReplyCount > 0
+                                ? '展开其余 $hiddenReplyCount 条回复'
+                                : '展开更多回复',
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-            ],
-          ),
-          if (comment.replyCount > 0)
-            Padding(
-              padding: const EdgeInsets.only(left: 31, top: 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (replies.isNotEmpty)
-                    _buildCommentReply(replies.first, rootId: comment.id)
-                  else if (_replyLoading.contains(comment.id))
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 6),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 1.8),
-                      ),
-                    )
-                  else if (!_replies.containsKey(comment.id))
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        key: ValueKey('rating-replies-retry-${comment.id}'),
-                        onPressed: () => _loadReplies(comment.id, reset: true),
-                        style: _commentActionStyle,
-                        child: const Text('重新加载回复'),
-                      ),
-                    ),
-                  if (expanded)
-                    for (final reply in replies.skip(1))
-                      _buildCommentReply(reply, rootId: comment.id),
-                  if (expanded && _replyHasMore.contains(comment.id))
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        key: ValueKey('rating-replies-more-${comment.id}'),
-                        onPressed: _replyLoading.contains(comment.id)
-                            ? null
-                            : () => _loadReplies(comment.id, reset: false),
-                        style: _commentActionStyle,
-                        child: const Text('加载更多回复'),
-                      ),
-                    ),
-                  if (canExpand)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        key: ValueKey('rating-replies-toggle-${comment.id}'),
-                        onPressed: _replyLoading.contains(comment.id)
-                            ? null
-                            : () => _toggleReplies(comment),
-                        style: _commentActionStyle,
-                        child: Text(
-                          expanded
-                              ? '收起回复'
-                              : hiddenReplyCount > 0
-                              ? '展开其余 $hiddenReplyCount 条回复'
-                              : '展开更多回复',
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

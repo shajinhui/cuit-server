@@ -639,6 +639,61 @@ class ForumPollDraft {
   Map<String, dynamic> toJson() => {'question': question, 'options': options};
 }
 
+/// 评分对象或二手内容在论坛中的关联卡片。
+class ForumLinkedContent {
+  const ForumLinkedContent({
+    required this.type,
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.imageAssetId,
+    required this.status,
+    this.ratingCount,
+    this.ratingSum,
+    this.ratingScore,
+    this.priceCents,
+    this.listingType,
+    this.campus,
+  });
+
+  final String type;
+  final String id;
+  final String title;
+  final String description;
+  final String? imageAssetId;
+  final String status;
+  final int? ratingCount;
+  final int? ratingSum;
+  final double? ratingScore;
+  final int? priceCents;
+  final String? listingType;
+  final String? campus;
+
+  factory ForumLinkedContent.fromJson(Map<String, dynamic> json) =>
+      ForumLinkedContent(
+        type: _string(json['type']),
+        id: _string(json['id']),
+        title: _string(json['title']),
+        description: _string(json['description']),
+        imageAssetId: _optionalString(json['image_asset_id']),
+        status: _string(json['status']),
+        ratingCount: json['rating_count'] == null
+            ? null
+            : _integer(json['rating_count']),
+        ratingSum: json['rating_sum'] == null
+            ? null
+            : _integer(json['rating_sum']),
+        ratingScore: json['rating_score'] == null
+            ? null
+            : _decimal(json['rating_score']),
+        priceCents: json['price_cents'] == null
+            ? null
+            : _integer(json['price_cents']),
+        listingType: _optionalString(json['listing_type']),
+        campus: _optionalString(json['campus']),
+      );
+}
+
 /// 一条帖子下某个表情的聚合人数。
 class ForumReaction {
   const ForumReaction({required this.emoji, required this.count});
@@ -684,6 +739,7 @@ class ForumThread {
     this.reactions = const [],
     this.myReaction,
     this.poll,
+    this.linkedContent,
     required this.isPinned,
     required this.isLocked,
     required this.status,
@@ -714,6 +770,9 @@ class ForumThread {
 
   /// 结构化投票；旧帖子可能仍把投票写在 body 中，此时为 null。
   final ForumPoll? poll;
+
+  /// 评分对象或二手发布的来源数据，普通帖子为 null。
+  final ForumLinkedContent? linkedContent;
   final bool isPinned;
   final bool isLocked;
   final String status;
@@ -738,6 +797,7 @@ class ForumThread {
     int? version,
     bool? canEdit,
     bool? canDelete,
+    ForumLinkedContent? linkedContent,
   }) => ForumThread(
     id: id,
     categoryId: categoryId ?? this.categoryId,
@@ -751,6 +811,7 @@ class ForumThread {
     reactions: reactions,
     myReaction: myReaction,
     poll: poll,
+    linkedContent: linkedContent ?? this.linkedContent,
     isPinned: isPinned ?? this.isPinned,
     isLocked: isLocked ?? this.isLocked,
     status: status ?? this.status,
@@ -765,6 +826,7 @@ class ForumThread {
     final category = _map(json['category']);
     final capabilities = _map(json['capabilities']);
     final poll = _map(json['poll']);
+    final linkedContent = _map(json['linked_content']);
     return ForumThread(
       id: _string(json['id']),
       categoryId: _string(
@@ -781,6 +843,9 @@ class ForumThread {
       reactions: _reactionList(json['reactions']),
       myReaction: _optionalString(json['my_reaction']),
       poll: poll == null ? null : ForumPoll.fromJson(poll),
+      linkedContent: linkedContent == null
+          ? null
+          : ForumLinkedContent.fromJson(linkedContent),
       isPinned: json['is_pinned'] == true,
       isLocked: json['is_locked'] == true,
       status: _string(json['status'], fallback: 'normal'),

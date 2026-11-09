@@ -1,7 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'tool_page_scaffold.dart';
@@ -13,8 +17,10 @@ class PastExamsPage extends StatefulWidget {
 }
 
 class _PastExamsPageState extends State<PastExamsPage> {
-  static const _fileHost = 'https://cuit-server.pages.dev';
+  static const _rawFileHost =
+      'https://raw.githubusercontent.com/andream7/cuit_sharing';
   final _searchController = TextEditingController();
+  final _downloader = Dio();
   List<_PastFile> _files = [];
   String _commit = '';
   String _updatedAt = '';
@@ -22,6 +28,7 @@ class _PastExamsPageState extends State<PastExamsPage> {
   String _directory = '';
   String _query = '';
   String? _error;
+  String? _downloadingPath;
   bool _loading = true;
 
   @override
@@ -122,16 +129,58 @@ class _PastExamsPageState extends State<PastExamsPage> {
     return result;
   }
 
-  Future<void> _openFile(_PastFile file, {required bool download}) async {
+  Uri _fileUri(_PastFile file) {
     final encodedPath = file.path.split('/').map(Uri.encodeComponent).join('/');
-    final uri = Uri.parse(
-      '$_fileHost/past-exams/files/$_commit/$encodedPath?${download ? 'download' : 'view'}=1',
+    return Uri.parse('$_rawFileHost/$_commit/$encodedPath');
+  }
+
+  Future<void> _openFile(_PastFile file) async {
+    final opened = await launchUrl(
+      _fileUri(file),
+      mode: LaunchMode.externalApplication,
     );
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('无法打开文件链接，请检查网络后重试')));
+    }
+  }
+
+  Future<void> _downloadFile(_PastFile file) async {
+    if (_downloadingPath != null) return;
+    setState(() => _downloadingPath = file.path);
+    try {
+      final documents = await getApplicationDocumentsDirectory();
+      final segments = file.path.split('/').map(_safeFileName).toList();
+      final target = File('${documents.path}/past-exams/${segments.join('/')}');
+      await target.parent.create(recursive: true);
+      await _downloader.download(
+        _fileUri(file).toString(),
+        target.path,
+        deleteOnError: true,
+      );
+      if (!mounted) return;
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(target.path, mimeType: _mimeType(file.extension))],
+          title: file.name,
+        ),
+      );
+      if (!mounted) return;
+      final message = result.status == ShareResultStatus.success
+          ? '已下载并打开分享面板：${file.name}'
+          : '已下载：${file.name}';
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('下载失败，请检查网络后重试')));
+      }
+    } finally {
+      if (mounted) setState(() => _downloadingPath = null);
     }
   }
 
@@ -337,7 +386,7 @@ class _PastExamsPageState extends State<PastExamsPage> {
                       InkWell(
                         onTap: directory
                             ? () => setState(() => _directory = item.path)
-                            : () => _openFile(item.file!, download: false),
+                            : () => _openFile(item.file!),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -401,12 +450,21 @@ class _PastExamsPageState extends State<PastExamsPage> {
                                 )
                               else
                                 TextButton(
-                                  onPressed: () =>
-                                      _openFile(item.file!, download: true),
-                                  child: const Text(
-                                    '下载',
-                                    style: TextStyle(fontSize: 12),
-                                  ),
+                                  onPressed: _downloadingPath == item.file!.path
+                                      ? null
+                                      : () => _downloadFile(item.file!),
+                                  child: _downloadingPath == item.file!.path
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Text(
+                                          '下载',
+                                          style: TextStyle(fontSize: 12),
+                                        ),
                                 ),
                             ],
                           ),
@@ -434,6 +492,33 @@ class _PastExamsPageState extends State<PastExamsPage> {
     child: Text(label, style: const TextStyle(fontSize: 13)),
   );
 }
+
+String _safeFileName(String value) {
+  if (value == '.' || value == '..') return '_';
+  return value.replaceAll(RegExp(r'[<>:"/\\|?*\u0000-\u001F]'), '_');
+}
+
+String _mimeType(String extension) => switch (extension.toLowerCase()) {
+  'pdf' => 'application/pdf',
+  'doc' => 'application/msword',
+  'docx' =>
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'ppt' => 'application/vnd.ms-powerpoint',
+  'pptx' =>
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'xls' => 'application/vnd.ms-excel',
+  'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'zip' => 'application/zip',
+  'rar' => 'application/vnd.rar',
+  '7z' => 'application/x-7z-compressed',
+  'jpg' || 'jpeg' => 'image/jpeg',
+  'png' => 'image/png',
+  'gif' => 'image/gif',
+  'webp' => 'image/webp',
+  'txt' => 'text/plain',
+  'md' => 'text/markdown',
+  _ => 'application/octet-stream',
+};
 
 class _PastFile {
   const _PastFile(this.path, this.name, this.extension, this.size);

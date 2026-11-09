@@ -84,6 +84,7 @@ Future<T?> showPagePopover<T>(
   required GlobalKey anchor,
   required WidgetBuilder builder,
   double width = 238,
+  bool glass = false,
 }) {
   final box = anchor.currentContext?.findRenderObject();
   if (box is! RenderBox || !box.hasSize) return Future.value();
@@ -106,7 +107,7 @@ Future<T?> showPagePopover<T>(
     barrierColor: Colors.transparent,
     transitionDuration: media.disableAnimations
         ? Duration.zero
-        : const Duration(milliseconds: 150),
+        : const Duration(milliseconds: 190),
     pageBuilder: (dialog, _, _) => InheritedTheme.captureAll(
       context,
       Stack(
@@ -116,26 +117,101 @@ Future<T?> showPagePopover<T>(
             top: openAbove ? null : rect.bottom + 6,
             bottom: openAbove ? media.size.height - rect.top + 6 : null,
             width: menuWidth,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Material(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xEE242A34)
-                      : const Color(0xEEF4F7FC),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: maxHeight),
-                    child: builder(dialog),
-                  ),
-                ),
-              ),
+            child: _PopoverSurface(
+              glass: glass,
+              maxHeight: maxHeight,
+              child: builder(dialog),
             ),
           ),
         ],
       ),
     ),
-    transitionBuilder: (_, animation, _, child) =>
-        FadeTransition(opacity: animation, child: child),
+    transitionBuilder: (_, animation, _, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: Offset(0, openAbove ? .018 : -.018),
+            end: Offset.zero,
+          ).animate(curved),
+          child: ScaleTransition(
+            scale: Tween<double>(begin: .985, end: 1).animate(curved),
+            child: child,
+          ),
+        ),
+      );
+    },
   );
+}
+
+class _PopoverSurface extends StatelessWidget {
+  const _PopoverSurface({
+    required this.glass,
+    required this.maxHeight,
+    required this.child,
+  });
+
+  final bool glass;
+  final double maxHeight;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final surface = ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: glass ? 22 : 20,
+          sigmaY: glass ? 22 : 20,
+        ),
+        child: glass
+            ? DecoratedBox(
+                decoration: BoxDecoration(
+                  color: dark
+                      ? const Color(0xE6232933)
+                      : const Color(0xE6F7FAFE),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: dark ? .16 : .62),
+                    width: .8,
+                  ),
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxHeight),
+                    child: child,
+                  ),
+                ),
+              )
+            : Material(
+                color: dark ? const Color(0xEE242A34) : const Color(0xEEF4F7FC),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight),
+                  child: child,
+                ),
+              ),
+      ),
+    );
+    return glass
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: dark ? .28 : .12),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: surface,
+          )
+        : surface;
+  }
 }

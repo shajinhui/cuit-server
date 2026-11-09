@@ -8,6 +8,7 @@ import '../../../ui/components/page_menu.dart';
 
 import '../models/course_block.dart';
 import '../models/semester.dart';
+import '../platform/system_calendar.dart';
 import 'schedule_view_model.dart';
 import 'widgets/calendar_export_sheet.dart';
 import 'widgets/course_detail_sheet.dart';
@@ -36,16 +37,42 @@ class SchedulePage extends StatefulWidget {
 class _SchedulePageState extends State<SchedulePage>
     with WidgetsBindingObserver {
   final _weekAnchor = GlobalKey(), _moreAnchor = GlobalKey();
+  PageController? _pageController;
   bool _switching = false;
+  bool _weekPageSyncScheduled = false;
+  int _lastWeek = 1;
+  String? _lastSemesterId;
   ScheduleViewModel get vm => widget.viewModel;
+
+  // 延迟创建，兼容热重载时 State 不会重新执行 initState 的情况。
+  PageController get _weekPageController =>
+      _pageController ??= PageController(initialPage: vm.selectedWeek - 1);
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _lastWeek = vm.selectedWeek;
+    _lastSemesterId = vm.selectedSemester?.id;
+    vm.addListener(_handleViewModelChanged);
+    _scheduleWeekPageSync();
+  }
+
+  @override
+  void didUpdateWidget(covariant SchedulePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewModel == widget.viewModel) return;
+    oldWidget.viewModel.removeListener(_handleViewModelChanged);
+    _lastWeek = vm.selectedWeek;
+    _lastSemesterId = vm.selectedSemester?.id;
+    vm.addListener(_handleViewModelChanged);
+    _scheduleWeekPageSync();
   }
 
   @override
   void dispose() {
+    vm.removeListener(_handleViewModelChanged);
+    _pageController?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -130,13 +157,16 @@ class _SchedulePageState extends State<SchedulePage>
       ),
       width: 190,
     );
-    if (week != null && mounted) vm.selectWeek(week);
+    if (week != null && mounted && week != vm.selectedWeek) {
+      await _goToWeek(week);
+    }
   }
 
   Future<void> _more() async {
     final action = await showPagePopover<String>(
       context,
       anchor: _moreAnchor,
+      glass: true,
       builder: (dialog) => ListenableBuilder(
         listenable: vm,
         builder: (context, _) => SingleChildScrollView(
@@ -206,7 +236,7 @@ class _SchedulePageState extends State<SchedulePage>
                 leading: const Icon(Icons.event_available_outlined, size: 19),
                 title: const Text('导入系统日历', style: TextStyle(fontSize: 13)),
                 subtitle: const Text(
-                  '生成当前学期的 ICS 文件',
+                  '一键写入本机日历',
                   style: TextStyle(fontSize: 11),
                 ),
                 onTap: () => Navigator.pop(dialog, 'export'),
@@ -242,12 +272,68 @@ class _SchedulePageState extends State<SchedulePage>
       );
       if (semester != null && mounted) await _switchSemester(semester);
     } else if (action == 'export') {
-      final shared = await showScheduleSheet<bool>(
+      final result = await showScheduleSheet<SystemCalendarResult>(
         context,
         CalendarExportSheet(vm: vm, campus: widget.student.campus),
       );
-      if (shared == true && mounted) _notice('课表文件已交给系统日历');
+      if (result != null && mounted) {
+        _notice(switch (result.status) {
+          SystemCalendarStatus.imported => '已导入 ${result.eventCount} 个日程到系统日历',
+          SystemCalendarStatus.shared => '课表文件已交给系统日历',
+          SystemCalendarStatus.denied => result.message ?? '未获得日历权限',
+          SystemCalendarStatus.failed => result.message ?? '导入系统日历失败',
+        });
+      }
     }
+  }
+
+  void _handleViewModelChanged() {
+    final week = vm.selectedWeek;
+    final semesterId = vm.selectedSemester?.id;
+    final changed = week != _lastWeek || semesterId != _lastSemesterId;
+    _lastWeek = week;
+    _lastSemesterId = semesterId;
+    if (changed) _scheduleWeekPageSync();
+  }
+
+  void _scheduleWeekPageSync() {
+    if (_weekPageSyncScheduled) return;
+    _weekPageSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _weekPageSyncScheduled = false;
+      if (!mounted || !_weekPageController.hasClients) return;
+      final target = vm.selectedWeek - 1;
+      if (_weekPageController.page?.round() != target) {
+        _weekPageController.jumpToPage(target);
+      }
+    });
+  }
+
+  void _onWeekPageChanged(int index) {
+    final week = index + 1;
+    if (week != vm.selectedWeek) vm.selectWeek(week);
+  }
+
+  Future<void> _goToWeek(int week) async {
+    if (!_weekPageController.hasClients) {
+      vm.selectWeek(week);
+      return;
+    }
+    final maxIndex = vm.weekCount - 1;
+    final raw = week - 1;
+    final target = raw < 0
+        ? 0
+        : raw > maxIndex
+        ? maxIndex
+        : raw;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    await _weekPageController.animateToPage(
+      target,
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -256,7 +342,6 @@ class _SchedulePageState extends State<SchedulePage>
     builder: (context, _) {
       final dark = Theme.of(context).brightness == Brightness.dark;
       final ink = dark ? const Color(0xfff2f2f7) : const Color(0xff101722);
-      final muted = dark ? const Color(0xb8d1d1d6) : const Color(0x9426343d);
       return MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1,
         child: ColoredBox(
@@ -279,75 +364,14 @@ class _SchedulePageState extends State<SchedulePage>
                     onAdd: () => _edit(),
                     onRefresh: _refresh,
                   ),
-                  ScheduleWeekStrip(vm: vm),
                   Expanded(
-                    child: Stack(
-                      children: [
-                        if (vm.selectedSemester != null)
-                          CourseGrid(
-                            blocks: vm.visibleEntries,
-                            semester: vm.selectedSemester!,
-                            campus: widget.student.campus,
-                            rowCount: vm.sectionCount,
-                            opacity: vm.local.opacity,
-                            onCourse: _detail,
-                          ),
-                        if (vm.isLoading && !vm.hasData)
-                          const Center(child: HamsterLoader(label: '正在同步课表…')),
-                        if (!vm.isLoading && !vm.hasData)
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(28),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    vm.error == null ? '暂无可用学期' : '课表加载失败',
-                                    style: const TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    vm.error ?? '教务系统暂未返回学期信息。',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  TextButton(
-                                    onPressed: vm.retry,
-                                    child: const Text('重新加载'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        if (_switching)
-                          Positioned.fill(
-                            child: ClipRect(
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                                child: ColoredBox(
-                                  color: Colors.white.withValues(alpha: .12),
-                                  child: const Center(
-                                    child: HamsterLoader(label: '正在切换学期…'),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        // 演示标记不改变网格密度，避免把虚拟数据误认为真实教务数据。
-                        if (widget.isDemo)
-                          Positioned(
-                            right: 10,
-                            bottom: 112,
-                            child: IgnorePointer(
-                              child: Text(
-                                '演示模式',
-                                style: TextStyle(color: muted, fontSize: 10),
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: PageView.builder(
+                      key: const ValueKey('schedule-week-pager'),
+                      controller: _weekPageController,
+                      itemCount: vm.weekCount,
+                      onPageChanged: _onWeekPageChanged,
+                      itemBuilder: (context, index) =>
+                          _buildWeekBody(context, index + 1),
                     ),
                   ),
                 ],
@@ -358,4 +382,90 @@ class _SchedulePageState extends State<SchedulePage>
       );
     },
   );
+
+  Widget _buildWeekBody(BuildContext context, int week) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? const Color(0xb8d1d1d6) : const Color(0x9426343d);
+    return Column(
+      key: ValueKey(week),
+      children: [
+        ScheduleWeekStrip(
+          vm: vm,
+          week: week,
+          date: vm.dateForWeek(week),
+          onDayTap: week == vm.selectedWeek ? vm.selectDay : null,
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              if (vm.selectedSemester != null)
+                CourseGrid(
+                  blocks: vm.visibleEntriesFor(week),
+                  semester: vm.selectedSemester!,
+                  campus: widget.student.campus,
+                  rowCount: vm.sectionCountFor(week),
+                  opacity: vm.local.opacity,
+                  onCourse: _detail,
+                ),
+              if (vm.isLoading && !vm.hasData)
+                const Center(child: HamsterLoader(label: '正在同步课表…')),
+              if (!vm.isLoading && !vm.hasData)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          vm.error == null ? '暂无可用学期' : '课表加载失败',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          vm.error ?? '教务系统暂未返回学期信息。',
+                          textAlign: TextAlign.center,
+                        ),
+                        TextButton(
+                          onPressed: vm.retry,
+                          child: const Text('重新加载'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_switching)
+                Positioned.fill(
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                      child: ColoredBox(
+                        color: Colors.white.withValues(alpha: .12),
+                        child: const Center(
+                          child: HamsterLoader(label: '正在切换学期…'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              // 演示标记不改变网格密度，避免把虚拟数据误认为真实教务数据。
+              if (widget.isDemo)
+                Positioned(
+                  right: 10,
+                  bottom: 112,
+                  child: IgnorePointer(
+                    child: Text(
+                      '演示模式',
+                      style: TextStyle(color: muted, fontSize: 10),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }

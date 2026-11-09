@@ -15,9 +15,42 @@ class CalendarExport {
     required this.eventCount,
     required this.fileName,
     required this.calendarName,
+    required this.events,
   });
   final String content, fileName, calendarName;
   final int courseCount, eventCount;
+
+  /// 与 ICS 完全同源的结构化日程，供原生日历写入使用。
+  final List<CalendarEventDraft> events;
+}
+
+/// 一条待写入系统日历的日程。
+///
+/// [uid] 与 ICS 中的 UID 同源，原生侧也用它作为可重复导入的标记，
+/// 因此在同一学期内重复导入不会产生重复日程。
+class CalendarEventDraft {
+  const CalendarEventDraft({
+    required this.uid,
+    required this.title,
+    required this.start,
+    required this.end,
+    this.detail = '',
+    this.location = '',
+    this.reminderMinutes = 0,
+  });
+  final String uid, title, detail, location;
+  final DateTime start, end;
+  final int reminderMinutes;
+
+  Map<String, Object?> toJson() => {
+    'uid': uid,
+    'title': title,
+    'detail': detail,
+    'location': location,
+    'start': start.millisecondsSinceEpoch,
+    'end': end.millisecondsSinceEpoch,
+    'reminderMinutes': reminderMinutes,
+  };
 }
 
 CalendarExport createCalendarExport({
@@ -73,6 +106,7 @@ CalendarExport createCalendarExport({
     'END:VTIMEZONE',
   ];
   var count = 0;
+  final drafts = <CalendarEventDraft>[];
   // 必须用合并显示之前的条目导出，否则同一时段的冲突课会被吞掉。
   for (final entry in entries) {
     for (var week = 1; week <= weekCount; week++) {
@@ -93,7 +127,9 @@ CalendarExport createCalendarExport({
       final date = calendar.dateFor(semester, week, entry.day)!;
       final teachers = _unique(active.expand((a) => a.teachers));
       final effectiveTeachers = teachers.isEmpty ? entry.teachers : teachers;
-      final location = _unique(active.map((a) => a.room)).join(' / ');
+      final location = _unique(
+        active.map((a) => a.room).where((room) => room != '地点待定'),
+      ).join(' / ');
       final description = [
         if (first.activityType.isNotEmpty) '课程类型：${first.activityType}',
         if (first.projectName.isNotEmpty) '授课项目：${first.projectName}',
@@ -124,6 +160,17 @@ CalendarExport createCalendarExport({
         ],
         'END:VEVENT',
       ]);
+      drafts.add(
+        CalendarEventDraft(
+          uid: '$uid@fanxiaogao05.dpdns.org',
+          title: entry.name,
+          detail: description,
+          location: location,
+          start: _at(date, start),
+          end: _at(date, end),
+          reminderMinutes: reminderMinutes,
+        ),
+      );
       count++;
     }
   }
@@ -135,6 +182,7 @@ CalendarExport createCalendarExport({
     eventCount: count,
     fileName: '成信友友课表-${semester.schoolYear}-第${semester.term}学期.ics',
     calendarName: name,
+    events: drafts,
   );
 }
 
@@ -151,6 +199,12 @@ String _withTime(DateTime d, String time) {
   final parts = time.split(':').map(int.parse).toList();
   final normalized = DateTime(d.year, d.month, d.day, parts[0], parts[1]);
   return '${_date(normalized)}T${_two(normalized.hour)}${_two(normalized.minute)}00';
+}
+
+/// 与 [_withTime] 完全一致的时间点，供结构化日程复用。
+DateTime _at(DateTime d, String time) {
+  final parts = time.split(':').map(int.parse).toList();
+  return DateTime(d.year, d.month, d.day, parts[0], parts[1]);
 }
 
 String _escape(String value) => value

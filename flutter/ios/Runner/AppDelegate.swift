@@ -16,6 +16,10 @@ import UIKit
       DesktopWidgetBridge.register(messenger: registrar.messenger())
     }
 
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "SystemCalendar") {
+      SystemCalendarBridge.register(messenger: registrar.messenger())
+    }
+
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "NativeTabBar") {
       registrar.register(
         NativeTabBarFactory(messenger: registrar.messenger()),

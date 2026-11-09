@@ -1,5 +1,6 @@
 import 'package:chengxin_youyou/app/app.dart';
 import 'package:chengxin_youyou/features/schedule/presentation/widgets/course_grid.dart';
+import 'package:chengxin_youyou/features/schedule/presentation/widgets/schedule_week_strip.dart';
 import 'package:chengxin_youyou/ui/components/auto_hide_scaffold.dart';
 import 'package:chengxin_youyou/ui/components/glass_navigation_bar.dart';
 import 'package:flutter/material.dart';
@@ -46,14 +47,7 @@ void main() {
         tester.renderObject<RenderParagraph>(date).didExceedMaxLines,
         isFalse,
       );
-      final pill = find
-          .ancestor(
-            of: find.byKey(const Key('selected-week')),
-            matching: find.byType(DecoratedBox),
-          )
-          .first;
-      // 日期完整地压在周次胶囊上方：省高度靠胶囊下移，而不是让胶囊盖住日期。
-      expect(tester.getRect(pill).top, greaterThanOrEqualTo(dateRect.bottom));
+      // 周次现在只保留文字和下拉箭头，不再有玻璃底；日期仍需完整显示在它上方。
       expect(
         tester.getRect(find.byKey(const Key('selected-week'))).top,
         greaterThan(dateRect.bottom),
@@ -125,6 +119,59 @@ void main() {
     }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
 
+  testWidgets('课表左右滑动切换上一周和下一周', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = const FakeViewPadding(top: 24, bottom: 24);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPadding);
+
+    final dependencies = (await tester.runAsync(testDependencies))!;
+    await dependencies.settings.setLightweightGlass(true);
+    dependencies.session.enterDemo();
+    await tester.pumpWidget(ChengxinApp(dependencies: dependencies));
+    await tester.pumpAndSettle();
+    final vm = dependencies.schedule!;
+    vm.selectWeek(vm.weekCount > 1 ? 2 : 1);
+    await tester.pumpAndSettle();
+
+    final grid = find.byKey(const PageStorageKey('schedule-scroll'));
+    final pageController = tester
+        .widget<PageView>(find.byType(PageView))
+        .controller!;
+    expect(pageController.page, closeTo(1, .01));
+
+    final gesture = await tester.startGesture(tester.getCenter(grid));
+    for (var step = 0; step < 4; step++) {
+      await gesture.moveBy(const Offset(65, 0));
+      await tester.pump();
+    }
+    // 拖动过程中页码要跟着手指移动，而不是松手后才切页。
+    expect(pageController.page, greaterThan(0));
+    expect(pageController.page, lessThan(1));
+    await gesture.up();
+    await tester.pumpAndSettle();
+    // 未越过一半时松手会弹回原周。
+    expect(vm.selectedWeek, 2);
+
+    await tester.fling(grid, const Offset(260, 0), 1200);
+    await tester.pump(const Duration(milliseconds: 80));
+    // 日期条和课程网格作为同一页一起参与横向切换动画。
+    expect(find.byType(ScheduleWeekStrip), findsNWidgets(2));
+    expect(find.byKey(const Key('schedule-grid')), findsNWidgets(2));
+    await tester.pumpAndSettle();
+    expect(vm.selectedWeek, 1);
+
+    await tester.fling(grid, const Offset(-260, 0), 1200);
+    await tester.pumpAndSettle();
+    expect(vm.selectedWeek, 2);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    dependencies.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets('系统栏透明后课表背景铺到顶部和底部，导航胶囊避让三键系统栏', (tester) async {
     const size = Size(360, 800);
     const topInset = 24.0;
@@ -171,7 +218,7 @@ void main() {
     dependencies.dispose();
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets('宽屏课表：日期与「当前为第 N 周」并在同一行且不重叠', (tester) async {
+  testWidgets('宽屏课表：去掉当前周徽标后日期与操作按钮不重叠', (tester) async {
     tester.view.physicalSize = const Size(800, 800);
     tester.view.devicePixelRatio = 1;
     tester.view.padding = FakeViewPadding(top: 24, bottom: 24);
@@ -185,26 +232,21 @@ void main() {
     await tester.pumpWidget(ChengxinApp(dependencies: dependencies));
     await tester.pumpAndSettle();
     final vm = dependencies.schedule!;
-    // 选到非当前周，徽标才会显示当前周次。
     vm.selectWeek(12);
     await tester.pumpAndSettle();
     expect(vm.currentWeek, isNotNull);
     expect(vm.selectedWeek == vm.currentWeek, isFalse);
 
+    expect(find.textContaining('当前为第'), findsNothing);
     final dateRect = tester.getRect(find.text(vm.dateTitle));
-    final badge = find.textContaining('当前为第');
-    expect(badge, findsOneWidget);
-    final badgeRect = tester.getRect(badge);
-    expect(badgeRect.left, greaterThanOrEqualTo(dateRect.right));
-    final pill = tester.getRect(
-      find
-          .ancestor(
-            of: find.byKey(const Key('selected-week')),
-            matching: find.byType(DecoratedBox),
-          )
-          .first,
+    for (final label in ['添加课程', '重新同步课表', '更多操作']) {
+      final button = find.byTooltip(label);
+      expect(tester.getRect(button).left, greaterThanOrEqualTo(dateRect.right));
+    }
+    expect(
+      tester.getRect(find.byKey(const Key('selected-week'))).top,
+      greaterThan(dateRect.bottom),
     );
-    expect(badgeRect.bottom, lessThanOrEqualTo(pill.top));
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());

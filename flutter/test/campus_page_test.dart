@@ -412,6 +412,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('点击评分评论正文即可进入回复', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RatingItemPage(
+          repository: _CommentRepliesRepository(),
+          itemId: 'rating-item-1',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final body = find.text('主评论');
+    await tester.ensureVisible(body);
+    await tester.tap(body);
+    await tester.pumpAndSettle();
+
+    expect(find.text('回复 体验同学'), findsOneWidget);
+    expect(find.text('写下回复…'), findsOneWidget);
+    final input = tester.widget<TextField>(
+      find.byKey(const ValueKey('rating-comment-input')),
+    );
+    expect(input.focusNode?.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+  });
+
   test('校园发布表单的价格和联系方式校验与 Vue 规则一致', () {
     expect(parseCampusPrice('0.01'), 1);
     expect(parseCampusPrice('99999.99'), 9999999);

@@ -41,10 +41,10 @@ class CourseGrid extends StatelessWidget {
           // extendBody 的 Scaffold 会把应用导航高度放进 padding.bottom。导航
           // 自动收起后不能继续预留这条高度，否则课表底部会留下一条被截断的空带。
           final androidBottomPadding = navigation == null
-              ? scaffoldBottom + 8
+              ? scaffoldBottom + 4
               : navigation.visible
-              ? math.max(scaffoldBottom, navigation.bottomBarHeight) + 8
-              : navigation.systemBottomInset + 8;
+              ? math.max(scaffoldBottom, navigation.bottomBarHeight) + 4
+              : navigation.systemBottomInset + 4;
           final bottomPadding = android
               ? androidBottomPadding
               : math.max(64.0, 52 + scaffoldBottom);

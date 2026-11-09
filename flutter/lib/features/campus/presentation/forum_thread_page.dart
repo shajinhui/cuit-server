@@ -975,8 +975,13 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
     final thread = detail.thread;
     // 结构化投票不再写进正文；只有旧帖子才回退到正文解析。
     final legacyPoll = thread.poll == null ? parseForumPoll(thread.body) : null;
-    final plainBody = legacyPoll?.plainBody ?? thread.body;
-    final displayTitle = forumThreadDisplayTitle(thread, legacyPoll);
+    final linked = thread.linkedContent;
+    final plainBody = linked == null
+        ? legacyPoll?.plainBody ?? thread.body
+        : '';
+    final displayTitle = linked == null
+        ? forumThreadDisplayTitle(thread, legacyPoll)
+        : '';
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final likeButton = TextButton.icon(
@@ -1069,6 +1074,26 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
             ] else if (legacyPoll != null) ...[
               const SizedBox(height: 10),
               ForumPollCard(data: legacyPoll),
+            ],
+            if (linked != null) ...[
+              const SizedBox(height: 10),
+              ForumLinkedContentCard(
+                content: linked,
+                repository: widget.repository,
+                onTap: () {
+                  if (linked.type == 'rating_item') {
+                    context.pushNamed(
+                      'rating-item',
+                      pathParameters: {'itemId': linked.id},
+                    );
+                  } else {
+                    context.pushNamed(
+                      'marketplace-item',
+                      pathParameters: {'itemId': linked.id},
+                    );
+                  }
+                },
+              ),
             ],
             if (thread.imageAssetIds.isNotEmpty) ...[
               const SizedBox(height: 8),

@@ -53,7 +53,7 @@ class ProfilePage extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 148),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 148),
             children: [
               _ProfileHeader(
                 avatar: avatar,
@@ -73,20 +73,20 @@ class ProfilePage extends StatelessWidget {
                             if (community.profile != null)
                               CampusAuthorAvatar(
                                 author: community.profile!,
-                                radius: 48,
+                                radius: 38,
                                 linkToProfile: false,
                               )
                             else
                               const CircleAvatar(
-                                radius: 48,
+                                radius: 38,
                                 child: Icon(
                                   Icons.person_outline_rounded,
-                                  size: 44,
+                                  size: 36,
                                 ),
                               ),
                             const CircleAvatar(
-                              radius: 14,
-                              child: Icon(Icons.edit_outlined, size: 16),
+                              radius: 11,
+                              child: Icon(Icons.edit_outlined, size: 13),
                             ),
                           ],
                         ),
@@ -98,7 +98,7 @@ class ProfilePage extends StatelessWidget {
                     ? '离线信息'
                     : '已登录',
               ),
-              const SizedBox(height: 26),
+              const SizedBox(height: 12),
               _ProfileCard(
                 children: [
                   if (community != null)
@@ -107,16 +107,6 @@ class ProfilePage extends StatelessWidget {
                       title: '学校姓名（仅自己可见）',
                       value: _valueOrFallback(student?.name),
                     ),
-                  _InfoRow(
-                    icon: Icons.school_outlined,
-                    title: '学籍信息',
-                    value: _valueOrFallback(student?.campus),
-                  ),
-                  _InfoRow(
-                    icon: Icons.menu_book_outlined,
-                    title: '专业',
-                    value: _valueOrFallback(student?.major),
-                  ),
                   _InfoRow(
                     icon: Icons.badge_outlined,
                     title: '学号',
@@ -127,105 +117,116 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               if (community != null) ...[
                 const _SectionHeading(title: '校园社区'),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 _ProfileCard(
                   children: [
-                    ListTile(
-                      key: const Key('profile-public-info'),
-                      leading: const _SettingIcon(
-                        icon: Icons.person_outline_rounded,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
                       ),
-                      title: const Text('公开资料'),
-                      subtitle: Text(
-                        community.profile == null
-                            ? community.error ?? '设置校园昵称和头像'
-                            : '昵称和头像在评分、二手、论坛保持一致',
-                      ),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.pushNamed('community-profile-edit'),
-                    ),
-                    const _CardDivider(),
-                    ListTile(
-                      key: const Key('profile-community-messages'),
-                      leading: const _SettingIcon(
-                        icon: Icons.campaign_outlined,
-                      ),
-                      title: const Text('互动消息'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Row(
                         children: [
-                          if (community.unreadCount > 0)
-                            Text(
-                              community.unreadCount > 99
-                                  ? '99+'
-                                  : '${community.unreadCount}',
+                          Expanded(
+                            child: _ProfileQuickAction(
+                              actionKey: const Key('profile-public-info'),
+                              icon: Icons.person_outline_rounded,
+                              label: '公开资料',
+                              onTap: () =>
+                                  context.pushNamed('community-profile-edit'),
                             ),
-                          const Icon(Icons.chevron_right_rounded),
+                          ),
+                          Expanded(
+                            child: _ProfileQuickAction(
+                              actionKey: const Key(
+                                'profile-community-messages',
+                              ),
+                              icon: Icons.campaign_outlined,
+                              label: '互动消息',
+                              badge: community.unreadCount > 0
+                                  ? (community.unreadCount > 99
+                                        ? '99+'
+                                        : '${community.unreadCount}')
+                                  : null,
+                              onTap: () =>
+                                  context.pushNamed('community-notifications'),
+                            ),
+                          ),
+                          Expanded(
+                            child: _ProfileQuickAction(
+                              actionKey: const Key(
+                                'profile-community-favorites',
+                              ),
+                              icon: Icons.star_outline_rounded,
+                              label: '我的收藏',
+                              onTap: () =>
+                                  context.pushNamed('community-favorites'),
+                            ),
+                          ),
+                          if (community.profile != null)
+                            Expanded(
+                              child: _ProfileQuickAction(
+                                actionKey: const Key('profile-community-home'),
+                                icon: Icons.school_outlined,
+                                label: '公开主页',
+                                onTap: () => context.pushNamed(
+                                  'community-profile',
+                                  pathParameters: {
+                                    'profileId': community.profile!.id,
+                                  },
+                                ),
+                              ),
+                            ),
                         ],
                       ),
-                      onTap: () => context.pushNamed('community-notifications'),
                     ),
-                    const _CardDivider(),
-                    ListTile(
-                      key: const Key('profile-community-favorites'),
-                      leading: const _SettingIcon(
-                        icon: Icons.star_outline_rounded,
-                      ),
-                      title: const Text('我的收藏'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => context.pushNamed('community-favorites'),
-                    ),
-                    if (community.profile != null) ...[
-                      const _CardDivider(),
-                      ListTile(
-                        key: const Key('profile-community-home'),
-                        leading: const _SettingIcon(
-                          icon: Icons.school_outlined,
-                        ),
-                        title: const Text('我的公开主页'),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () => context.pushNamed(
-                          'community-profile',
-                          pathParameters: {'profileId': community.profile!.id},
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
               ],
               const _SectionHeading(title: '常用功能'),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               _ProfileCard(
                 children: [
-                  ListTile(
-                    key: const Key('profile-plan-completion'),
-                    leading: const _SettingIcon(icon: Icons.school_outlined),
-                    title: const Text('学业完成情况'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.pushNamed('plan-completion'),
-                  ),
-                  const _CardDivider(),
-                  ListTile(
-                    key: const Key('profile-feedback'),
-                    leading: const _SettingIcon(icon: Icons.feedback_outlined),
-                    title: const Text('问题反馈'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.pushNamed('feedback'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ProfileQuickAction(
+                            actionKey: const Key('profile-plan-completion'),
+                            icon: Icons.school_outlined,
+                            label: '学业完成情况',
+                            onTap: () => context.pushNamed('plan-completion'),
+                          ),
+                        ),
+                        Expanded(
+                          child: _ProfileQuickAction(
+                            actionKey: const Key('profile-feedback'),
+                            icon: Icons.feedback_outlined,
+                            label: '问题反馈',
+                            onTap: () => context.pushNamed('feedback'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               const _SectionHeading(title: '应用设置'),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               _ProfileCard(
                 children: [
                   SwitchListTile.adaptive(
                     key: const Key('lightweight-glass'),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 18),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                     secondary: const _SettingIcon(icon: Icons.blur_on_rounded),
                     title: const Text('轻量效果'),
                     subtitle: const Text('用磨砂效果替代液态折射'),
@@ -234,7 +235,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                   const _CardDivider(),
                   Padding(
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final label = Row(
@@ -242,7 +243,7 @@ class ProfilePage extends StatelessWidget {
                             const _SettingIcon(
                               icon: Icons.brightness_6_outlined,
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 12),
                             const Text('外观'),
                           ],
                         );
@@ -280,17 +281,17 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               if (desktopWidgetTile != null) ...[
                 _ProfileCard(children: [desktopWidgetTile!]),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
               ],
               const _SectionHeading(title: '关于'),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               _ProfileCard(
                 children: [
                   ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 18),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                     leading: const _SettingIcon(icon: Icons.info_outline),
                     title: const Text('关于成信友友'),
                     subtitle: const Text('Flutter 版 · 0.1.0'),
@@ -303,26 +304,23 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ],
               ),
-              const SizedBox(height: 24),
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 54),
-                child: OutlinedButton.icon(
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
                   key: const Key('logout'),
-                  style: OutlinedButton.styleFrom(
+                  style: TextButton.styleFrom(
                     foregroundColor: theme.colorScheme.error,
-                    backgroundColor: theme.colorScheme.surface,
-                    side: BorderSide.none,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                    minimumSize: const Size(0, 40),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                   ),
                   onPressed: session.isSubmitting ? null : session.logout,
                   icon: session.isSubmitting
                       ? const SizedBox.square(
-                          dimension: 18,
+                          dimension: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.logout_rounded, size: 19),
+                      : const Icon(Icons.logout_rounded, size: 17),
                   label: Text(
                     session.isSubmitting
                         ? '正在退出…'
@@ -332,7 +330,7 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               Text(
                 '非官方学生项目',
                 textAlign: TextAlign.center,
@@ -395,14 +393,14 @@ class _ProfileHeader extends StatelessWidget {
         if (publicAvatar != null)
           publicAvatar!
         else if (avatar != null)
-          ProfileAvatarButton(avatar: avatar!, size: 96)
+          ProfileAvatarButton(avatar: avatar!, size: 76)
         else
           CircleAvatar(
             radius: 48,
             backgroundColor: pageBackground(context),
             child: Icon(Icons.person_rounded, size: 48, color: color),
           ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         Text(
           name,
           textAlign: TextAlign.center,
@@ -412,7 +410,7 @@ class _ProfileHeader extends StatelessWidget {
             height: 1.2,
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 3),
         Text(
           subtitle,
           textAlign: TextAlign.center,
@@ -422,10 +420,88 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ),
         if (status != '已登录') ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(status, style: TextStyle(fontSize: 12, color: color)),
         ],
       ],
+    );
+  }
+}
+
+class _ProfileQuickAction extends StatelessWidget {
+  const _ProfileQuickAction({
+    required this.actionKey,
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.badge,
+  });
+
+  final Key actionKey;
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      key: actionKey,
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _SettingIcon(icon: icon),
+                if (badge != null)
+                  Positioned(
+                    right: -5,
+                    top: -5,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 15),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE5484D),
+                        borderRadius: BorderRadius.all(Radius.circular(99)),
+                      ),
+                      child: Text(
+                        badge!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8.5,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.2,
+                color: scheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -452,6 +528,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PageCard(
+    radius: 18,
     padding: EdgeInsets.zero,
     child: Column(mainAxisSize: MainAxisSize.min, children: children),
   );
@@ -477,18 +554,35 @@ class _InfoRow extends StatelessWidget {
     return Column(
       children: [
         ListTile(
-          minVerticalPadding: 10,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 17),
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          minVerticalPadding: 5,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
           leading: _SettingIcon(icon: icon),
-          title: Text(title),
-          subtitle: Text(value, style: const TextStyle(fontSize: 14)),
+          title: Text(
+            title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+          trailing: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 190),
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
         ),
         if (!isLast)
           Divider(
             height: 1,
-            indent: 70,
-            endIndent: 16,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: .45),
+            indent: 58,
+            endIndent: 14,
+            color: theme.colorScheme.outlineVariant.withValues(alpha: .35),
           ),
       ],
     );
@@ -506,14 +600,14 @@ class _SettingIcon extends StatelessWidget {
     final color = theme.colorScheme.onSurfaceVariant;
 
     return Container(
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         color: pageBackground(context),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(9),
       ),
       alignment: Alignment.center,
-      child: Icon(icon, color: color, size: 21),
+      child: Icon(icon, color: color, size: 18),
     );
   }
 }

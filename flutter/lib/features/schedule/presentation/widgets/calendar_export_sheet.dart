@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../ui/components/page_selection.dart';
 
 import '../../models/calendar_export.dart';
-import '../../platform/share_calendar.dart';
+import '../../platform/system_calendar.dart';
 import '../schedule_view_model.dart';
 import 'schedule_sheet.dart';
 
@@ -23,6 +23,7 @@ class _CalendarExportSheetState extends State<CalendarExportSheet> {
   int _reminder = 10;
   bool _busy = false;
   String? _error;
+  bool _denied = false;
   CalendarExport? _export;
   @override
   void initState() {
@@ -54,18 +55,39 @@ class _CalendarExportSheetState extends State<CalendarExportSheet> {
     }
   }
 
-  Future<void> _share() async {
+  Future<void> _import() async {
     if (_busy || _export == null) return;
-    final box = context.findRenderObject() as RenderBox;
-    final origin = box.localToGlobal(Offset.zero) & box.size;
-    setState(() => _busy = true);
-    try {
-      final shared = await shareCalendar(_export!, origin);
-      if (mounted) Navigator.pop(context, shared);
-    } catch (_) {
-      if (mounted) setState(() => _error = '无法打开系统分享面板，请重试');
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    final box = context.findRenderObject();
+    final origin = box is RenderBox
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+    setState(() {
+      _busy = true;
+      _error = null;
+      _denied = false;
+    });
+    final result = await importToSystemCalendar(
+      export: _export!,
+      semesterId: widget.vm.selectedSemester?.id ?? '',
+      shareOrigin: origin,
+    );
+    if (!mounted) return;
+    switch (result.status) {
+      case SystemCalendarStatus.imported:
+      case SystemCalendarStatus.shared:
+        // 写入完成直接关掉面板，由课表页给出结果提示。
+        Navigator.pop(context, result);
+      case SystemCalendarStatus.denied:
+        setState(() {
+          _busy = false;
+          _denied = true;
+          _error = result.message;
+        });
+      case SystemCalendarStatus.failed:
+        setState(() {
+          _busy = false;
+          _error = result.message ?? '导入系统日历失败，请重试';
+        });
     }
   }
 
@@ -205,21 +227,43 @@ class _CalendarExportSheetState extends State<CalendarExportSheet> {
                       ),
                     ),
                     if (_error != null)
-                      Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _error!,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  height: 1.45,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ),
+                            if (_denied)
+                              TextButton(
+                                onPressed: openCalendarPermissionSettings,
+                                child: const Text(
+                                  '去设置',
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
                         vertical: 11,
                         horizontal: 4,
                       ),
                       child: Text(
-                        '将包含教务课程、手动课程和本机修改。系统日历会在下一步让你确认导入。',
+                        nativeCalendarSupported
+                            ? '将直接写入本机日历「${widget.vm.selectedSemester?.label ?? ''}」。重复导入会覆盖上一次的结果，不会重复添加。'
+                            : '当前设备需要手动确认导入，系统会把日历文件交给日历应用。',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           height: 1.5,
                           color: Colors.grey,
@@ -239,8 +283,14 @@ class _CalendarExportSheetState extends State<CalendarExportSheet> {
                           borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                      onPressed: _busy || _export == null ? null : _share,
-                      child: Text(_busy ? '正在生成…' : '生成并导入'),
+                      onPressed: _busy || _export == null ? null : _import,
+                      child: Text(
+                        _busy
+                            ? '正在导入…'
+                            : nativeCalendarSupported
+                            ? '导入到系统日历'
+                            : '生成并导入',
+                      ),
                     ),
                   ],
                 ),

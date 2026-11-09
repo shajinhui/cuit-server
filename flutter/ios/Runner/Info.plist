@@ -39,6 +39,10 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>用于为评分板块和校园二手内容选择图片。</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>用于把课表直接写入系统日历，并在上课前提醒你。</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>用于把课表直接写入系统日历，并在上课前提醒你；重复导入时会先清理上一次写入的课程日程。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
