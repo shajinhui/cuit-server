@@ -47,6 +47,11 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
+# Firebase application configuration contains project identifiers and must be
+# provided by the release environment rather than committed to source control.
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
 # 平台签名文件只保存在本机，不随源码发布。
 *.p12
 *.pfx

@@ -31,7 +31,7 @@
 - 全部已读采用服务端字符串水位，防止清掉快照之后的新消息；个人消息不套用匿名公告缓存规则。
 - 收藏添加/删除幂等，只有本人能查询；删除、隐藏的目标不返回旧正文或作者，仍允许取消收藏。
 - 发帖、编辑、回复、点赞、资料、上传、收藏均有限流；举报和管理隐藏沿用原有机制。
-- 消息仅应用内拉取，无常驻轮询，也不是 APNs/FCM 系统推送。
+- 应用内消息仍按进入页面、回到前台和手动刷新拉取；Android/iOS 另通过 FCM/APNs 发送论坛回复系统推送。推送失败不影响应用内消息，Web/PWA 和鸿蒙暂不发送系统推送。
 
 ## 新增接口
 
@@ -46,6 +46,7 @@
 | `GET /me/notifications/unread` | 可见消息未读计数 |
 | `PUT /me/notifications/:id/read` | 本人单条消息已读 |
 | `PUT /me/notifications/read-all` | 按 `{read_watermark: "序号"}` 已读 |
+| `POST/DELETE /me/push-devices` | 绑定或解除当前 Android/iOS FCM 设备令牌 |
 | `GET /me/favorites` | 本人收藏，游标分页 |
 | `GET/PUT/DELETE /me/favorites/forum-threads/:id` | 查询、幂等添加/取消帖子收藏 |
 
@@ -76,4 +77,4 @@
 
 回退优先关闭新入口或回退服务/客户端版本，不通过删除新增表来丢弃已产生的用户资料、消息和收藏。
 
-后续见[校园社区发展计划](./COMMUNITY_DEVELOPMENT_PLAN.md)。失物招领、私聊、支付、系统级推送均不在本轮范围。
+后续见[校园社区发展计划](./COMMUNITY_DEVELOPMENT_PLAN.md)。失物招领、私聊、支付、评分评论回复提醒和 Web/PWA 系统推送仍不在本轮范围。

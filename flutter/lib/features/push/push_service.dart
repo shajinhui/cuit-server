@@ -33,9 +33,7 @@ class PushNotificationTarget {
     if (payload == null || payload.isEmpty) return null;
     try {
       final value = jsonDecode(payload);
-      return value is Map
-          ? fromData(Map<String, dynamic>.from(value))
-          : null;
+      return value is Map ? fromData(Map<String, dynamic>.from(value)) : null;
     } catch (_) {
       return null;
     }
@@ -71,6 +69,7 @@ class PushNotificationService {
   StreamSubscription<RemoteMessage>? _openedSubscription;
   Future<void>? _initializing;
   String? _token;
+  String? _registeredToken;
   bool _disposed = false;
   PushNotificationTarget? _pendingTarget;
   void Function(PushNotificationTarget target)? onNotificationTap;
@@ -114,7 +113,9 @@ class PushNotificationService {
     await _local.initialize(
       settings: const InitializationSettings(android: android, iOS: darwin),
       onDidReceiveNotificationResponse: (response) {
-        _deliverTarget(PushNotificationTarget.fromLocalPayload(response.payload));
+        _deliverTarget(
+          PushNotificationTarget.fromLocalPayload(response.payload),
+        );
       },
     );
     await _local
@@ -187,6 +188,10 @@ class PushNotificationService {
     _token = token;
     if (session.student == null || session.isDemo) return;
     try {
+      final previous = _registeredToken;
+      if (previous != null && previous != token) {
+        await _unregisterToken(previous);
+      }
       await api.request(
         '/api/v1/ratings/community/me/push-devices',
         method: 'POST',
@@ -197,15 +202,33 @@ class PushNotificationService {
           'locale': 'zh-CN',
         },
       );
+      _registeredToken = token;
     } catch (_) {
       // Retry on the next token refresh or foreground session change.
     }
   }
 
+  Future<void> _unregisterToken(String token) async {
+    try {
+      await api.request(
+        '/api/v1/ratings/community/me/push-devices',
+        method: 'DELETE',
+        data: {'token': token},
+      );
+    } catch (_) {
+      // Expired sessions are cleaned up by the next successful registration.
+    }
+  }
+
   void _onSessionChanged() {
-    if (_disposed || _token == null || session.student == null || session.isDemo) {
+    if (_disposed) return;
+    if (session.student == null || session.isDemo) {
+      final registered = _registeredToken;
+      _registeredToken = null;
+      if (registered != null) unawaited(_unregisterToken(registered));
       return;
     }
+    if (_token == null) return;
     unawaited(_registerToken(_token));
   }
 
