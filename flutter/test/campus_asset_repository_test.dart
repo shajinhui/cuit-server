@@ -101,6 +101,74 @@ void main() {
     expect(campus.requests.last.headers['Authorization'], 'Bearer A');
   });
 
+  test('投票后刷新落后快照仍保留本地已投选项', () async {
+    Map<String, dynamic> thread({required Map<String, dynamic> poll}) => {
+      'id': 'poll-thread',
+      'category_id': 'general',
+      'category': {'id': 'general', 'name': '日常'},
+      'title': '投票帖',
+      'body': '',
+      'author': {'id': 'user-1', 'display_name': '小高', 'avatar_preset': 1},
+      'image_asset_ids': <String>[],
+      'reply_count': 0,
+      'like_count': 0,
+      'my_like': false,
+      'is_pinned': false,
+      'is_locked': false,
+      'status': 'normal',
+      'version': 1,
+      'created_at': '2026-11-10T00:00:00.000Z',
+      'last_activity_at': '2026-11-10T00:00:00.000Z',
+      'capabilities': {'can_reply': true},
+      'poll': poll,
+    };
+
+    final stalePoll = {
+      'question': '你更喜欢哪种活动？',
+      'total_votes': 1,
+      'my_option_id': null,
+      'options': [
+        {'id': 'option-a', 'label': '社团活动', 'count': 1, 'percent': 100},
+        {'id': 'option-b', 'label': '体育活动', 'count': 0, 'percent': 0},
+      ],
+    };
+    campus.handler = (request) async {
+      if (request.method == 'POST' && request.path.endsWith('/poll/vote')) {
+        return FakeApi.response({
+          'question': '你更喜欢哪种活动？',
+          'total_votes': 1,
+          'my_option_id': 'option-a',
+          'options': stalePoll['options'],
+        });
+      }
+      if (request.method == 'GET' && request.path.endsWith('/threads')) {
+        return FakeApi.response({
+          'items': [thread(poll: stalePoll)],
+          'next_cursor': null,
+          'has_more': false,
+        });
+      }
+      if (request.method == 'GET' && request.path.endsWith('/poll-thread')) {
+        return FakeApi.response(thread(poll: stalePoll));
+      }
+      return FakeApi.response({'message': 'unexpected request'}, status: 500);
+    };
+
+    final voted = await repository.voteForumPoll(
+      threadId: 'poll-thread',
+      optionId: 'option-a',
+    );
+    expect(voted.myOptionId, 'option-a');
+    expect(
+      (await repository.listForumThreads()).items.single.poll?.myOptionId,
+      'option-a',
+    );
+    expect(
+      (await repository.getForumThread('poll-thread')).thread.poll?.myOptionId,
+      'option-a',
+    );
+  });
+
   testWidgets('鉴权超过图片总时限后不再启动过期的下载', (tester) async {
     final token = Completer<ResponseBody>();
     auth.handler = (_) => token.future;

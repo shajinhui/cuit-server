@@ -288,6 +288,7 @@ class _CampusAssetImageState extends State<CampusAssetImage> {
                           bytes,
                           loadOriginal: (refresh) =>
                               repository.loadAsset(assetId, refresh: refresh),
+                          downloadName: assetId,
                         );
                       },
                       child: Image(

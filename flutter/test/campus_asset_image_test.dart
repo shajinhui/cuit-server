@@ -29,6 +29,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsOneWidget);
     expect(cardTaps, 0);
+    expect(repository.calls, [false]);
+    expect(repository.variants, [true]);
+    expect(find.text('加载原图'), findsOneWidget);
+    expect(find.text('下载到本地'), findsOneWidget);
+    await tester.tap(find.text('加载原图'));
+    await tester.pumpAndSettle();
     expect(repository.calls, [false, false]);
     expect(repository.variants, [true, false]);
     await tester.tap(find.byTooltip('关闭大图'));
@@ -53,8 +59,11 @@ void main() {
     expect(repository.variants, [true]);
     await tester.tap(find.byType(CampusAssetImage));
     await tester.pumpAndSettle();
-    expect(find.text('正在加载原图…'), findsOneWidget);
+    expect(find.text('加载原图'), findsOneWidget);
     expect(find.byType(InteractiveViewer), findsOneWidget);
+    await tester.tap(find.text('加载原图'));
+    await tester.pump();
+    expect(find.text('正在加载…'), findsOneWidget);
     pending.complete(null);
     await tester.pumpAndSettle();
     expect(find.text('原图加载失败，点击重试'), findsOneWidget);
@@ -88,6 +97,8 @@ void main() {
     );
     await _settleImages(tester);
     await tester.tap(find.byType(CampusAssetImage));
+    await _settleImages(tester);
+    await tester.tap(find.text('加载原图'));
     await _settleImages(tester);
     expect(find.text('原图加载失败，点击重试'), findsOneWidget);
     expect(tester.takeException(), isNull);
