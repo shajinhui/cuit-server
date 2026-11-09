@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
@@ -172,6 +173,63 @@ void main() {
     expect(find.text('1人参与'), findsOneWidget);
     expect(find.text('1人 | 100.0%'), findsOneWidget);
     expect(find.text('0人 | 0.0%'), findsOneWidget);
+  });
+
+  testWidgets('刷新落后快照时保留刚确认的投票选择', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = CampusPreviewRepository();
+    const initial = ForumPoll(
+      question: '你更喜欢哪种活动？',
+      totalVotes: 0,
+      myOptionId: null,
+      options: [
+        ForumPollOption(id: 'option-a', label: '社团活动', count: 0, percent: 0),
+        ForumPollOption(id: 'option-b', label: '体育活动', count: 0, percent: 0),
+      ],
+    );
+    repository.seedForumPoll('poll-thread', initial);
+    var incoming = initial;
+    late void Function(VoidCallback) rebuild;
+
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, setState) {
+          rebuild = setState;
+          return MaterialApp(
+            home: Scaffold(
+              body: ForumPollCard(
+                poll: incoming,
+                repository: repository,
+                threadId: 'poll-thread',
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('forum-poll-option-社团活动')));
+    await tester.pumpAndSettle();
+    incoming = const ForumPoll(
+      question: '你更喜欢哪种活动？',
+      totalVotes: 1,
+      myOptionId: null,
+      options: [
+        ForumPollOption(id: 'option-a', label: '社团活动', count: 1, percent: 100),
+        ForumPollOption(id: 'option-b', label: '体育活动', count: 0, percent: 0),
+      ],
+    );
+    rebuild(() {});
+    await tester.pumpAndSettle();
+
+    final option = tester.getSemantics(
+      find.byKey(const ValueKey('forum-poll-option-社团活动')),
+    );
+    expect(option.flagsCollection.isSelected, Tristate.isTrue);
   });
 
   testWidgets('帖子下方可以选择表情回应并显示人数', (tester) async {
