@@ -252,6 +252,7 @@ void main() {
               return AutoHideNavigationScope(
                 visible: navigationVisible,
                 bottomBarHeight: 92,
+                systemBottomInset: 0,
                 child: CampusPage(repository: repository),
               );
             },

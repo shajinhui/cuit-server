@@ -1,5 +1,6 @@
 import 'package:chengxin_youyou/app/app.dart';
 import 'package:chengxin_youyou/features/schedule/presentation/widgets/course_grid.dart';
+import 'package:chengxin_youyou/ui/components/auto_hide_scaffold.dart';
 import 'package:chengxin_youyou/ui/components/glass_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -16,12 +17,10 @@ void main() {
     testWidgets('安卓课表在 ${size.width.toInt()} 宽屏幕：头部只占一行、节次不被导航遮挡', (
       tester,
     ) async {
+      final bottomInset = size.width == 320 ? 0.0 : 24.0;
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
-      tester.view.padding = FakeViewPadding(
-        top: 24,
-        bottom: size.width == 320 ? 0 : 24,
-      );
+      tester.view.padding = FakeViewPadding(top: 24, bottom: bottomInset);
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPadding);
@@ -91,16 +90,29 @@ void main() {
         expect(tester.getBottomLeft(time11).dy, lessThan(navigationTop));
       }
 
+      final scrollViewportBottomBefore = tester.getBottomLeft(scroll).dy;
       await tester.drag(
         find.byKey(const PageStorageKey('schedule-scroll')),
         const Offset(0, -1000),
       );
       await tester.pumpAndSettle();
+      final navigationScope = AutoHideNavigationScope.maybeOf(
+        tester.element(find.byType(CourseGrid)),
+      );
+      expect(navigationScope?.visible, isFalse);
+      // 导航收起后视口要真正铺到系统安全区上方，不能继续预留整条导航高度。
+      expect(
+        tester.getBottomLeft(scroll).dy,
+        greaterThan(scrollViewportBottomBefore),
+      );
       final lastSection = find.descendant(
         of: grid,
         matching: find.text('${vm.sectionCount}'),
       );
-      expect(tester.getBottomLeft(lastSection).dy, lessThan(navigationTop));
+      expect(
+        tester.getBottomLeft(lastSection).dy,
+        lessThanOrEqualTo(size.height - bottomInset + .5),
+      );
       expect(tester.takeException(), isNull);
 
       await tester.tap(find.byKey(const Key('selected-week')));

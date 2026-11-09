@@ -41,11 +41,15 @@ class AutoHideNavigationScope extends InheritedWidget {
     super.key,
     required this.visible,
     required this.bottomBarHeight,
+    required this.systemBottomInset,
     required super.child,
   });
 
   final bool visible;
   final double bottomBarHeight;
+
+  /// 不含应用底部导航的系统安全区，导航收起后供页面铺到底部。
+  final double systemBottomInset;
 
   static AutoHideNavigationScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<AutoHideNavigationScope>();
@@ -53,7 +57,8 @@ class AutoHideNavigationScope extends InheritedWidget {
   @override
   bool updateShouldNotify(AutoHideNavigationScope oldWidget) =>
       visible != oldWidget.visible ||
-      bottomBarHeight != oldWidget.bottomBarHeight;
+      bottomBarHeight != oldWidget.bottomBarHeight ||
+      systemBottomInset != oldWidget.systemBottomInset;
 }
 
 /// 主页面滚动时自动收起底部导航，向上回滑后恢复。
@@ -127,6 +132,7 @@ class _AutoHideScaffoldState extends State<AutoHideScaffold> {
   @override
   Widget build(BuildContext context) {
     final bar = widget.bottomNavigationBar;
+    final systemBottomInset = MediaQuery.paddingOf(context).bottom;
     final animationDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : _duration;
@@ -135,6 +141,7 @@ class _AutoHideScaffoldState extends State<AutoHideScaffold> {
       body: AutoHideNavigationScope(
         visible: _visible,
         bottomBarHeight: _bottomBarHeight,
+        systemBottomInset: systemBottomInset,
         child: NotificationListener<ScrollNotification>(
           onNotification: _handleScroll,
           child: widget.body,
