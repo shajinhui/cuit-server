@@ -368,10 +368,17 @@ class _SchedulePageState extends State<SchedulePage>
                     child: PageView.builder(
                       key: const ValueKey('schedule-week-pager'),
                       controller: _weekPageController,
+                      physics: const PageScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      // 预构建相邻页，滑动到下一周时不用临时构建整张课表。
+                      allowImplicitScrolling: true,
                       itemCount: vm.weekCount,
                       onPageChanged: _onWeekPageChanged,
-                      itemBuilder: (context, index) =>
-                          _buildWeekBody(context, index + 1),
+                      itemBuilder: (context, index) => RepaintBoundary(
+                        key: ValueKey('schedule-week-page-${index + 1}'),
+                        child: _buildWeekBody(context, index + 1),
+                      ),
                     ),
                   ),
                 ],
