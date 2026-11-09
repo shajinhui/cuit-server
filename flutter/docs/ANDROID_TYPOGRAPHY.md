@@ -26,42 +26,43 @@ iOS 的 `PingFang SC` + `SF Pro` 由系统提供，Flutter 通过 `CupertinoSyst
 
 | 文件 | 大小 |
 | --- | --- |
-| `HarmonyOS_Sans_SC_Regular.ttf` | 8.26 MB |
-| `HarmonyOS_Sans_SC_Medium.ttf` | 8.23 MB |
-| `HarmonyOS_Sans_SC_Bold.ttf` | 8.16 MB |
-| 合计（未压缩） | 24.6 MB |
+| `HarmonyOS_Sans_SC_Light.ttf` | 8.2 MB |
+| 合计（未压缩） | 8.2 MB |
 
-实测 APK 从 **69.1 MB → 86.0 MB（+16.9 MB）**，zip 会压缩一部分 TTF。Shorebird 的基础包也会跟着变大；字体属于 assets，**不能通过补丁下发**，要发新的基础版本。
+只打包 Light 一个文件，release APK 为 **75.7 MB**（三字体版本是 86.0 MB）。Regular/Medium/Bold 仍留在仓库里备用，未在 `fonts:` 声明就不会打进包。字体属于 assets，**不能通过 Shorebird 补丁下发**，要发新的基础版本。
 
-## 字重映射
+## 字重映射：只用 Light
 
-HarmonyOS Sans SC 只有 Thin / Light / Regular / Medium / Bold / Black，**没有 Semibold**。App 里 `w600` 用了 99 处，如果只登记 400/500/700，`w600` 会按 CSS 规则落到 700（Bold），比现在更粗。
+实测发现 HarmonyOS Sans SC 的各个字重并不在同一个内部 family 里：
 
-所以 `pubspec.yaml` 把 Medium 登记了两次：
+| 文件 | 内部 family | 内部 subfamily | OS/2 字重 |
+| --- | --- | --- | --- |
+| Light | `HarmonyOS Sans SC Light` | Regular | 300 |
+| Regular | `HarmonyOS Sans SC` | Regular | 400 |
+| Medium | `HarmonyOS Sans SC Medium` | Regular | 500 |
+| Bold | `HarmonyOS Sans SC` | Bold | 700 |
+
+Flutter 的资产字重匹配因此不可靠：把 Medium/Light 按 500/300 登记进同一个 `fonts:` family 时，它们不一定被当成该 family 的字重；而 `w600/w700` 更容易落到同 family 的 **Bold** 上——上一版“标签/标题偏粗”就是从这里来的（`w600` 的 99 处标签都拿到了 700 的字面）。
+
+现在只登记 **Light** 一个文件：
 
 ```yaml
 fonts:
   - family: HarmonyOS Sans SC
     fonts:
-      - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+      - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
         weight: 400
-      - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
-        weight: 500
-      - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
-        weight: 600
-      - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
-        weight: 700
 ```
 
-同一个文件登记两次不会被打包两份（`FontManifest.json` 里是两条记录、APK 里只有一个文件）。效果：
+所有字重都落到 Light，层级只靠字号。同一页实测文字墨量：
 
-| 代码里的字重 | 实际字形 |
-| --- | --- |
-| 400 | Regular |
-| 500 / 600 | Medium |
-| 700 / 800 | Bold（800 取最近） |
+| 位置 | 旧（Bold/Medium） | 新（Light） |
+| --- | --- | --- |
+| 页面标题 | 0.455 | 0.357 |
+| 工具名 | 0.478 | 0.366 |
+| 说明文字 | 0.266 | 0.185 |
 
-`w600` 和 `w500` 在视觉上会一致，这是这个字体的取舍；`w700` 仍与它们拉开层级，标题不会塌。
+代价是标题不再比正文“重”，只剩大小差异；如果觉得太细，把 `fonts:` 换成 Regular 即可（改一行、重新打包）。
 
 ## 代码位置
 
@@ -93,3 +94,10 @@ fonts:
 2. 删除 `AppTheme._platformFontFamily` 并在 `ThemeData` 去掉 `fontFamily`；
 3. 删除 `main.dart` 的 `registerBundledFontLicenses()`、`font_licenses.dart`、关于页脚注；
 4. 删除 `assets/fonts/`。
+
+## 顺带修复的 Android 构建
+
+接入 Firebase / flutter_local_notifications 后 release 构建失败，做了两处必要修改（与字体无关）：
+
+1. `compileSdk = 37`：`androidx.core:core:1.19.0` 要求 API 37，本机已安装 `android-37.0`；
+2. 打开 core library desugaring，并加 `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`，`flutter_local_notifications` 需要。

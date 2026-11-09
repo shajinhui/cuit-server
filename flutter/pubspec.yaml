@@ -65,15 +65,14 @@ flutter:
     - shorebird.yaml
   # 安卓单独使用 HarmonyOS Sans SC；iOS 继续用系统苹方 / SF Pro。
   # 该字体许可禁止修改（不能 subset），只能原样打包，见 assets/fonts 中的许可文本。
+  #
+  # 该字体的 Medium/Light 在文件内部是独立的 family 名（"HarmonyOS Sans SC
+  # Medium" / "... Light"），Flutter 的权重匹配无法把它们当成同一家族的字重，
+  # w600/w700 会落到同家族的 Bold。这里只登记 Light 一个字面，所有字重都落到
+  # 它，层级靠字号。
   fonts:
     - family: HarmonyOS Sans SC
       fonts:
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+        # 只登记 Light 一个字面，避免 w600/w700 落到 Bold。
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
           weight: 400
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
-          weight: 500
-        # 该家族没有 Semibold；把 Medium 再登记成 600，避免 w600 落到 Bold。
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
-          weight: 600
-        - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
-          weight: 700
