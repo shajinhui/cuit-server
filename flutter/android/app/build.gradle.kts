@@ -36,10 +36,13 @@ if (releaseSigningRequested) {
 
 android {
     namespace = "org.dpdns.fanxiaogao05.chengxin_youyou"
-    compileSdk = flutter.compileSdkVersion
+    // Firebase 的 androidx.core 1.19 要求 API 37；SDK 已安装 android-37.0
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // flutter_local_notifications 要求开启 core library desugaring。
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -92,6 +95,7 @@ flutter {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
 }
