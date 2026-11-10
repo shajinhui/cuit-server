@@ -973,15 +973,10 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
 
   Widget _buildMainPost(ForumThreadDetail detail) {
     final thread = detail.thread;
-    // 结构化投票不再写进正文；只有旧帖子才回退到正文解析。
-    final legacyPoll = thread.poll == null ? parseForumPoll(thread.body) : null;
+    // 投票只认服务端结构化字段，正文里的旧标记不再解析。
     final linked = thread.linkedContent;
-    final plainBody = linked == null
-        ? legacyPoll?.plainBody ?? thread.body
-        : '';
-    final displayTitle = linked == null
-        ? forumThreadDisplayTitle(thread, legacyPoll)
-        : '';
+    final plainBody = linked == null ? thread.body : '';
+    final displayTitle = linked == null ? forumThreadDisplayTitle(thread) : '';
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final likeButton = TextButton.icon(
@@ -1071,9 +1066,6 @@ class _ForumThreadPageState extends State<ForumThreadPage> {
                 repository: widget.repository,
                 threadId: thread.id,
               ),
-            ] else if (legacyPoll != null) ...[
-              const SizedBox(height: 10),
-              ForumPollCard(data: legacyPoll),
             ],
             if (linked != null) ...[
               const SizedBox(height: 10),

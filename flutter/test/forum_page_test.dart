@@ -328,11 +328,57 @@ void main() {
     expect(openedPost, 1);
   });
 
-  test('投票自动标题不会在卡片外重复展示', () {
-    const poll = ForumPollData(question: '今晚吃什么？', options: ['食堂', '外卖']);
-    expect(forumDisplayTitle('投票：今晚吃什么？', poll), isEmpty);
-    expect(forumDisplayTitle('今晚吃什么？', poll), '今晚吃什么？');
-    expect(forumDisplayTitle('周末聚餐征集', poll), '周末聚餐征集');
+  test('纯投票帖的标题不在卡片外重复展示', () {
+    Map<String, dynamic> pollThread({
+      required String title,
+      required String body,
+    }) => {
+      'id': 'thread-poll-title',
+      'category_id': 'general',
+      'category': {'id': 'general', 'name': '日常'},
+      'title': title,
+      'body': body,
+      'author': {'id': 'user-1', 'display_name': '小高', 'avatar_preset': 0},
+      'image_asset_ids': <String>[],
+      'reply_count': 0,
+      'like_count': 0,
+      'is_pinned': false,
+      'is_locked': false,
+      'status': 'normal',
+      'version': 1,
+      'created_at': '2026-11-09T00:00:00Z',
+      'last_activity_at': '2026-11-09T00:00:00Z',
+      'capabilities': {'can_edit': true},
+      'poll': {
+        'question': '今晚吃什么？',
+        'total_votes': 0,
+        'my_option_id': null,
+        'options': [
+          {'id': 'opt-a', 'label': '食堂', 'count': 0, 'percent': 0},
+          {'id': 'opt-b', 'label': '外卖', 'count': 0, 'percent': 0},
+        ],
+      },
+    };
+
+    expect(
+      forumThreadDisplayTitle(
+        ForumThread.fromJson(pollThread(title: '今晚吃什么？', body: '')),
+      ),
+      isEmpty,
+    );
+    expect(
+      forumThreadDisplayTitle(
+        ForumThread.fromJson(pollThread(title: '周末聚餐征集', body: '')),
+      ),
+      '周末聚餐征集',
+    );
+    // 有正文时标题是用户写的，照常展示。
+    expect(
+      forumThreadDisplayTitle(
+        ForumThread.fromJson(pollThread(title: '今晚吃什么？', body: '正文')),
+      ),
+      '今晚吃什么？',
+    );
   });
 
   testWidgets('论坛首次进入展示正式版块', (tester) async {

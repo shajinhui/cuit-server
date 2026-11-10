@@ -594,7 +594,7 @@ class ForumPollOption {
       );
 }
 
-/// 帖子附带的单选投票。旧帖子正文里的投票仍由 parseForumPoll 兼容。
+/// 帖子附带的单选投票。数据全部来自服务端，客户端不维护本地票数。
 class ForumPoll {
   const ForumPoll({
     required this.question,

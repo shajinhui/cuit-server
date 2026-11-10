@@ -10,64 +10,23 @@ import '../../../ui/components/page_layout.dart';
 import 'campus_theme.dart';
 import 'campus_widgets.dart';
 
+/// 投票卡片在发帖编辑器里的预览数据，不写入服务端、不参与线上投票。
 class ForumPollData {
-  const ForumPollData({
-    required this.question,
-    required this.options,
-    this.plainBody = '',
-  });
+  const ForumPollData({required this.question, required this.options});
 
   final String question;
   final List<String> options;
-  final String plainBody;
-}
-
-/// 兼容当前帖子正文里的投票标记，逐步过渡到结构化投票字段。
-ForumPollData? parseForumPoll(String body) {
-  final lines = body.split('\n');
-  final markerIndex = lines.indexWhere(
-    (line) => line.trimLeft().startsWith('投票：'),
-  );
-  if (markerIndex < 0) return null;
-
-  final marker = lines[markerIndex].trim();
-  final question = marker.substring(3).trim();
-  final options = <String>[];
-  var endIndex = markerIndex + 1;
-  while (endIndex < lines.length) {
-    final line = lines[endIndex].trim();
-    if (!line.startsWith('□')) break;
-    final option = line.substring(1).trim();
-    if (option.isNotEmpty) options.add(option);
-    endIndex++;
-  }
-  if (question.isEmpty || options.length < 2) return null;
-
-  final plainLines = <String>[
-    ...lines.take(markerIndex),
-    ...lines.skip(endIndex),
-  ];
-  return ForumPollData(
-    question: question,
-    options: List.unmodifiable(options),
-    plainBody: plainLines.join('\n').trim(),
-  );
 }
 
 /// 无正文投票自动沿用“投票：问题”作为帖子标题，卡片内不再重复展示。
 /// 纯投票帖的标题由问题派生，卡片和详情里不再重复展示同一句话。
-String forumThreadDisplayTitle(ForumThread thread, ForumPollData? legacyPoll) {
+String forumThreadDisplayTitle(ForumThread thread) {
   final poll = thread.poll;
-  if (poll != null && legacyPoll == null && thread.body.isEmpty) {
+  if (poll != null && thread.body.isEmpty) {
     final derived = poll.question.characters.take(50).toString();
     if (thread.title == derived || thread.title == poll.question) return '';
   }
-  return forumDisplayTitle(thread.title, legacyPoll);
-}
-
-String forumDisplayTitle(String title, ForumPollData? poll) {
-  if (poll != null && title.trim() == '投票：${poll.question}') return '';
-  return title;
+  return thread.title;
 }
 
 class ForumLinkedContentCard extends StatelessWidget {
@@ -190,7 +149,7 @@ class ForumPollCard extends StatefulWidget {
     this.onRemove,
   }) : assert(data != null || poll != null, '投票卡片需要预览数据或服务端投票');
 
-  /// 旧版正文投票或编辑预览：只在本地展示，不写入服务端。
+  /// 发帖编辑器里的投票预览：只改本地展示，不写入服务端。
   final ForumPollData? data;
 
   /// 结构化投票：人数、占比和当前用户选择都来自服务端。
@@ -262,7 +221,7 @@ class _ForumPollCardState extends State<ForumPollCard> {
     if (_voting) return;
     final poll = _poll;
     if (poll == null) {
-      // 旧版正文投票没有服务端记录，保留本地演示行为。
+      // 只有编辑器的预览卡片会走到这里（真实帖子没有 poll 就不渲染卡片）。
       if (_selectedIndex != null) return;
       setState(() {
         _selectedIndex = index;
@@ -1046,17 +1005,8 @@ class _ForumReactionChip extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(999),
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: selected
-                    ? accent.withValues(alpha: .45)
-                    : campusLine.withValues(alpha: .42),
-                width: .6,
-              ),
-            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1133,15 +1083,10 @@ class ForumThreadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    // 结构化投票不再写进正文；只有旧帖子才回退到正文解析。
-    final legacyPoll = thread.poll == null ? parseForumPoll(thread.body) : null;
+    // 投票只认服务端结构化字段，正文里的旧标记不再解析。
     final linked = thread.linkedContent;
-    final plainBody = linked == null
-        ? legacyPoll?.plainBody ?? thread.body
-        : '';
-    final displayTitle = linked == null
-        ? forumThreadDisplayTitle(thread, legacyPoll)
-        : '';
+    final plainBody = linked == null ? thread.body : '';
+    final displayTitle = linked == null ? forumThreadDisplayTitle(thread) : '';
     return Material(
       key: ValueKey('forum-thread-card-${thread.id}'),
       color: colors.surface,
@@ -1200,10 +1145,6 @@ class ForumThreadCard extends StatelessWidget {
                           repository: repository,
                           threadId: thread.id,
                         ),
-                      ] else if (legacyPoll != null) ...[
-                        if (displayTitle.isNotEmpty || plainBody.isNotEmpty)
-                          const SizedBox(height: 9),
-                        ForumPollCard(data: legacyPoll),
                       ],
                       if (linked != null) ...[
                         if (displayTitle.isNotEmpty || plainBody.isNotEmpty)
