@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:chengxin_youyou/core/network/api_client.dart';
+import 'package:chengxin_youyou/core/network/native_dio_adapter.dart';
 import 'package:dio/dio.dart';
 
 import '../models/campus_models.dart';
@@ -16,18 +17,21 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
       'RATINGS_API_BASE_URL',
       defaultValue: 'https://lehi.top',
     ),
-  }) : _dio =
-           dio ??
-           Dio(
-             BaseOptions(
-               baseUrl: baseUrl.replaceAll(RegExp(r'/$'), ''),
-               connectTimeout: const Duration(seconds: 15),
-               receiveTimeout: const Duration(seconds: 30),
-               sendTimeout: const Duration(seconds: 30),
-               persistentConnection: false,
-               headers: const {'Accept': 'application/json'},
-             ),
-           );
+  }) : _dio = dio ?? _createDio(baseUrl);
+
+  static Dio _createDio(String baseUrl) {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl.replaceAll(RegExp(r'/$'), ''),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: const {'Accept': 'application/json'},
+      ),
+    );
+    configureNativeDioAdapter(dio);
+    return dio;
+  }
 
   final ApiClient _api;
   final Dio _dio;

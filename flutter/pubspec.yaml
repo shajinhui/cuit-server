@@ -41,6 +41,7 @@ dependencies:
     path: packages/ohos_plugins/image_picker_ohos
   share_plus_ohos:
     path: packages/ohos_plugins/share_plus_ohos
+  native_dio_adapter: ^1.8.0
 
 dev_dependencies:
   flutter_test:

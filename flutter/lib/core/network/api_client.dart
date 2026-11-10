@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../storage/app_storage.dart';
 import 'api_exception.dart';
+import 'native_dio_adapter.dart';
 import 'session_transport.dart';
 
 class ApiClient {
@@ -32,12 +33,12 @@ class ApiClient {
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 30),
         sendTimeout: const Duration(seconds: 20),
-        persistentConnection: false,
         followRedirects: false,
         validateStatus: (status) => status != null && status < 600,
         headers: {'Accept': 'application/json'},
       ),
     );
+    configureNativeDioAdapter(dio);
     final transport = await configureSessionTransport(dio, secureStorage);
     return ApiClient(
       dio,
