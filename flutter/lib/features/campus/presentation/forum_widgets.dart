@@ -207,14 +207,12 @@ class _ForumPollCardState extends State<ForumPollCard> {
   int? _selectedIndex;
   late List<int> _votes;
   ForumPoll? _poll;
-  String? _localVoteOptionId;
   bool _voting = false;
 
   @override
   void initState() {
     super.initState();
     _poll = widget.poll;
-    _localVoteOptionId = widget.poll?.myOptionId;
     _votes = List<int>.filled(widget.data?.options.length ?? 0, 0);
   }
 
@@ -222,24 +220,7 @@ class _ForumPollCardState extends State<ForumPollCard> {
   void didUpdateWidget(covariant ForumPollCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_voting && !_samePoll(oldWidget.poll, widget.poll)) {
-      final incoming = widget.poll;
-      final localVote = _localVoteOptionId;
-      if (incoming != null &&
-          incoming.myOptionId == null &&
-          localVote != null &&
-          _poll?.myOptionId == localVote) {
-        // A refresh can finish with a request that started before the vote.
-        // Keep the confirmed local choice while accepting the new counts.
-        _poll = ForumPoll(
-          question: incoming.question,
-          totalVotes: incoming.totalVotes,
-          myOptionId: localVote,
-          options: incoming.options,
-        );
-      } else {
-        _poll = incoming;
-        _localVoteOptionId = incoming?.myOptionId;
-      }
+      _poll = widget.poll;
     }
     final oldOptions = oldWidget.data?.options ?? const <String>[];
     final newOptions = widget.data?.options ?? const <String>[];
@@ -303,7 +284,6 @@ class _ForumPollCardState extends State<ForumPollCard> {
     // 先移动自己那一票，失败再回滚；服务端结果会覆盖合计与占比。
     setState(() {
       _poll = _applyVote(poll, option.id);
-      _localVoteOptionId = option.id;
       _voting = true;
     });
     try {
@@ -314,14 +294,12 @@ class _ForumPollCardState extends State<ForumPollCard> {
       if (!mounted) return;
       setState(() {
         _poll = updated;
-        _localVoteOptionId = updated.myOptionId;
         _voting = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _poll = previous;
-        _localVoteOptionId = previous.myOptionId;
         _voting = false;
       });
       ScaffoldMessenger.maybeOf(

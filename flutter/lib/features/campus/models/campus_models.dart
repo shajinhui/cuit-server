@@ -726,8 +726,6 @@ class ForumThreadReaction {
 
 /// 论坛帖子。列表与详情共用同一结构，字段对齐后端 snake_case 契约。
 class ForumThread {
-  static const Object _copyWithUnset = Object();
-
   const ForumThread({
     required this.id,
     required this.categoryId,
@@ -799,7 +797,7 @@ class ForumThread {
     int? version,
     bool? canEdit,
     bool? canDelete,
-    Object? poll = _copyWithUnset,
+    ForumPoll? poll,
     ForumLinkedContent? linkedContent,
   }) => ForumThread(
     id: id,
@@ -813,7 +811,7 @@ class ForumThread {
     likeCount: likeCount ?? this.likeCount,
     reactions: reactions,
     myReaction: myReaction,
-    poll: identical(poll, _copyWithUnset) ? this.poll : poll as ForumPoll?,
+    poll: poll,
     linkedContent: linkedContent ?? this.linkedContent,
     isPinned: isPinned ?? this.isPinned,
     isLocked: isLocked ?? this.isLocked,

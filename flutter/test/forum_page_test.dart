@@ -175,7 +175,7 @@ void main() {
     expect(find.text('0人 | 0.0%'), findsOneWidget);
   });
 
-  testWidgets('刷新落后快照时保留刚确认的投票选择', (tester) async {
+  testWidgets('刷新读取服务端投票状态后更新当前选择', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -217,7 +217,7 @@ void main() {
     incoming = const ForumPoll(
       question: '你更喜欢哪种活动？',
       totalVotes: 1,
-      myOptionId: null,
+      myOptionId: 'option-a',
       options: [
         ForumPollOption(id: 'option-a', label: '社团活动', count: 1, percent: 100),
         ForumPollOption(id: 'option-b', label: '体育活动', count: 0, percent: 0),

@@ -36,7 +36,6 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
   int _sessionGeneration = 0;
   CancelToken _cancelToken = CancelToken();
   final Map<String, Future<Uint8List?>> _assetCache = {};
-  final Map<String, ForumPoll> _forumPollOverrides = {};
   final Set<CancelToken> _assetRequests = {};
   final Map<String, int> _assetSizes = {};
   int _cachedAssetBytes = 0;
@@ -438,12 +437,7 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
         'limit': 20,
       },
     );
-    final page = CampusPageResult.fromJson(_asMap(data), ForumThread.fromJson);
-    return CampusPageResult(
-      items: page.items.map(_mergeForumPoll).toList(),
-      nextCursor: page.nextCursor,
-      hasMore: page.hasMore,
-    );
+    return CampusPageResult.fromJson(_asMap(data), ForumThread.fromJson);
   }
 
   @override
@@ -668,12 +662,7 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
   @override
   Future<ForumThreadDetail> getForumThread(String threadId) async {
     final data = await _request('/api/v1/forum/threads/${_path(threadId)}');
-    final detail = ForumThreadDetail.fromJson(_asMap(data));
-    return ForumThreadDetail(
-      thread: _mergeForumPoll(detail.thread),
-      liked: detail.liked,
-      canReply: detail.canReply,
-    );
+    return ForumThreadDetail.fromJson(_asMap(data));
   }
 
   @override
@@ -821,32 +810,17 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
     required String threadId,
     required String optionId,
   }) async {
-    final data = await _request(
+    await _request(
       '/api/v1/forum/threads/${_path(threadId)}/poll/vote',
       method: 'POST',
       body: {'option_id': optionId},
     );
-    final poll = ForumPoll.fromJson(_asMap(data));
-    _forumPollOverrides[threadId] = poll;
-    return poll;
-  }
-
-  ForumThread _mergeForumPoll(ForumThread thread) {
-    final incoming = thread.poll;
-    final override = _forumPollOverrides[thread.id];
-    if (incoming == null || override?.myOptionId == null) return thread;
-    if (incoming.myOptionId != null) {
-      _forumPollOverrides[thread.id] = incoming;
-      return thread;
+    final detail = await getForumThread(threadId);
+    final poll = detail.thread.poll;
+    if (poll == null) {
+      throw const CampusRepositoryException('投票结果暂时无法读取，请稍后重试。');
     }
-    return thread.copyWith(
-      poll: ForumPoll(
-        question: incoming.question,
-        totalVotes: incoming.totalVotes,
-        myOptionId: override!.myOptionId,
-        options: incoming.options,
-      ),
-    );
+    return poll;
   }
 
   @override
@@ -1191,7 +1165,6 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
   @override
   void clearSession() {
     _sessionGeneration++;
-    _forumPollOverrides.clear();
     _cancelToken.cancel();
     _cancelToken = CancelToken();
     _cancelAssetRequests();
