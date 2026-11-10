@@ -24,6 +24,7 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
                connectTimeout: const Duration(seconds: 15),
                receiveTimeout: const Duration(seconds: 30),
                sendTimeout: const Duration(seconds: 30),
+               persistentConnection: false,
                headers: const {'Accept': 'application/json'},
              ),
            );
