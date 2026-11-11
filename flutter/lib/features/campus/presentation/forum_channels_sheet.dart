@@ -410,12 +410,12 @@ class _ForumChannelsSheetState extends State<ForumChannelsSheet> {
         ? null
         : (_editingHome ? _saveHomeSettings : _close),
     child: _saving
-        ? const SizedBox(
+        ? SizedBox(
             width: 18,
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           )
         : Text(_editingHome ? '保存' : '完成'),

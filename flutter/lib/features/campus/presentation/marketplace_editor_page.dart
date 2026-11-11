@@ -1,15 +1,13 @@
-import 'dart:typed_data';
-
 import 'package:chengxin_youyou/features/campus/data/campus_repository.dart';
 import 'package:chengxin_youyou/features/campus/models/campus_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../ui/components/page_layout.dart';
 import 'campus_theme.dart';
 import 'campus_image_picker.dart';
-import '../../../ui/components/page_selection.dart';
 import 'campus_widgets.dart';
 
 class MarketplaceEditorPage extends StatefulWidget {
@@ -169,231 +167,455 @@ class _MarketplaceEditorPageState extends State<MarketplaceEditorPage> {
     }
   }
 
+  void _clearImage() {
+    setState(() {
+      _imageBytes = null;
+      _filename = null;
+      _uploadedAssetId = null;
+      _imageError = null;
+    });
+  }
+
+  InputDecoration _field({
+    required String label,
+    String? hint,
+    String? errorText,
+  }) => InputDecoration(
+    labelText: label,
+    hintText: hint,
+    errorText: errorText,
+    filled: true,
+    fillColor: context.campusColors.controlSurface,
+    isDense: true,
+    counterText: '',
+  );
+
   @override
   Widget build(BuildContext context) =>
       CampusThemeBuilder(builder: _buildScaffold);
 
   Widget _buildScaffold(BuildContext context) => PageScaffold(
     title: _wanted ? '发布求购' : '发布闲置',
+    backgroundColor: context.campusColors.canvas,
+    bottomNavigationBar: _PublishBar(
+      error: _error,
+      label: _submitting
+          ? '正在发布…'
+          : _wanted
+          ? '发布求购'
+          : '确认上架',
+      onPressed: _submitting || _pickingImage ? null : _submit,
+    ),
     child: ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                PageSegmentedControl<String>(
-                  values: const {'sell': '我要出售', 'wanted': '我想求购'},
-                  selected: _listingType,
-                  onChanged: _submitting
-                      ? null
-                      : (value) => setState(() => _listingType = value),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _wanted ? '求购信息' : '商品信息',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _titleController,
-                  maxLength: 60,
-                  decoration: InputDecoration(
-                    labelText: _wanted ? '求购标题' : '商品标题',
-                    hintText: _wanted ? '例如：求购一盏护眼台灯' : '例如：九成新台灯',
-                  ),
-                ),
-                TextField(
-                  controller: _descriptionController,
-                  maxLength: 2000,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: InputDecoration(
-                    labelText: _wanted ? '需求说明' : '商品描述',
-                    hintText: _wanted
-                        ? '说说想要的型号、成色要求和期望交易地点。'
-                        : '说说成色、使用情况、配件和交易地点，如有瑕疵请注明。',
-                  ),
-                ),
-                TextField(
-                  controller: _priceController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  maxLength: 8,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: _wanted ? '预算（元）' : '价格（元）',
-                    prefixText: '¥ ',
-                    hintText: '0.00',
-                    counterText: '',
-                    errorText:
-                        _priceController.text.isNotEmpty && _priceCents == null
-                        ? '金额为 0.01–99999.99 元，最多两位小数'
-                        : null,
-                  ),
-                ),
-                PageDropdownField<String>(
-                  value: _campus,
-                  decoration: const InputDecoration(labelText: '交易校区'),
-                  values: const {'airport': '航空港校区', 'longquan': '龙泉校区'},
-                  onChanged: _submitting
-                      ? null
-                      : (value) {
-                          if (value != null) setState(() => _campus = value);
-                        },
-                ),
-              ],
-            ),
+        Container(
+          padding: const EdgeInsets.all(5),
+          decoration: campusCardDecoration(context, radius: 16),
+          child: PageSegmentedControl<String>(
+            values: const {'sell': '我要出售', 'wanted': '我想求购'},
+            selected: _listingType,
+            onChanged: _submitting
+                ? null
+                : (value) => setState(() => _listingType = value),
           ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+        const SizedBox(height: 10),
+        _EditorSection(
+          title: _wanted ? '求购信息' : '商品信息',
+          trailing: '必填',
+          children: [
+            TextField(
+              controller: _titleController,
+              textInputAction: TextInputAction.next,
+              enabled: !_submitting,
+              // 用输入截断代替 maxLength，省掉输入框下方常驻的计数器占位。
+              inputFormatters: [LengthLimitingTextInputFormatter(60)],
+              decoration: _field(
+                label: _wanted ? '求购标题' : '商品标题',
+                hint: _wanted ? '例如：求购一盏护眼台灯' : '例如：九成新台灯',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _descriptionController,
+              minLines: 3,
+              maxLines: 5,
+              enabled: !_submitting,
+              inputFormatters: [LengthLimitingTextInputFormatter(2000)],
+              decoration: _field(
+                label: _wanted ? '需求说明' : '商品描述',
+                hint: _wanted
+                    ? '说说想要的型号、成色要求和期望交易地点。'
+                    : '说说成色、使用情况、配件和交易地点，如有瑕疵请注明。',
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _priceController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              enabled: !_submitting,
+              inputFormatters: [LengthLimitingTextInputFormatter(8)],
+              onChanged: (_) => setState(() {}),
+              decoration: _field(
+                label: _wanted ? '预算（元）' : '价格（元）',
+                hint: '0.00',
+                errorText:
+                    _priceController.text.isNotEmpty && _priceCents == null
+                    ? '金额为 0.01–99999.99 元，最多两位小数'
+                    : null,
+              ).copyWith(prefixText: '¥ '),
+            ),
+            const SizedBox(height: 4),
+            _EditorLabel('交易校区'),
+            const SizedBox(height: 8),
+            _EditorChoiceRow<String>(
+              values: const {'airport': '航空港校区', 'longquan': '龙泉校区'},
+              selected: _campus,
+              onChanged: _submitting
+                  ? null
+                  : (value) => setState(() => _campus = value),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _EditorSection(
+          title: _wanted ? '参考图片（选填）' : '商品图片（选填）',
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  _wanted ? '参考图片（选填）' : '商品图片（选填）',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 10),
-                InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: _submitting || _pickingImage ? null : _pickImage,
-                  child: Container(
-                    height: _imageBytes == null ? 104 : 140,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: _imageBytes == null
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.add_photo_alternate_outlined,
-                                size: 36,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(_wanted ? '添加一张参考图' : '添加一张实拍图'),
-                            ],
-                          )
-                        : ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.memory(
-                              _imageBytes!,
-                              // 预览区不到 400 逻辑像素宽，按预览尺寸解码即可。
-                              cacheWidth:
-                                  (MediaQuery.sizeOf(context).width *
-                                          MediaQuery.devicePixelRatioOf(
-                                            context,
-                                          ))
-                                      .ceil(),
-                              fit: BoxFit.cover,
+                _buildImageTile(context),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _imageBytes == null
+                            ? '点击左侧方框添加一张${_wanted ? '参考' : '实拍'}图'
+                            : '已选择图片，点击图片可更换或移除',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '上传前会压缩，最大 5 MB。',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (_imageError != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            _imageError!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.error,
                             ),
                           ),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                const Text('上传前会适度压缩图片，处理后不超过 5 MB。'),
-                if (_imageBytes != null || _imageError != null)
-                  TextButton.icon(
-                    onPressed: _submitting
-                        ? null
-                        : () => setState(() {
-                            _imageBytes = null;
-                            _filename = null;
-                            _uploadedAssetId = null;
-                            _imageError = null;
-                          }),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('移除图片'),
-                  ),
-                if (_imageError != null)
-                  Text(
-                    _imageError!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
               ],
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _wanted ? '我的联系方式' : '联系卖家',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                PageDropdownField<String>(
-                  value: _contactType,
-                  decoration: const InputDecoration(labelText: '联系方式'),
-                  values: const {'wechat': '微信', 'qq': 'QQ', 'phone': '手机号'},
-                  onChanged: _submitting
-                      ? null
-                      : (value) {
-                          if (value != null) {
-                            setState(() => _contactType = value);
-                          }
-                        },
-                ),
-                TextField(
-                  controller: _contactController,
-                  maxLength: 80,
-                  onChanged: (_) => setState(() {}),
-                  keyboardType: _contactType == 'wechat'
-                      ? TextInputType.text
-                      : TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: contactLabel(_contactType),
-                    hintText: '填写对方可以联系到你的${contactLabel(_contactType)}',
-                    counterText: '',
-                    errorText:
-                        _contactController.text.isNotEmpty && !_contactValid
-                        ? '请填写有效的${contactLabel(_contactType)}，不要包含空格'
-                        : null,
-                  ),
-                ),
-                Text('发布即同意向点击“${_wanted ? '我有闲置' : '我想购买'}”的登录用户展示此联系方式。'),
-              ],
+        const SizedBox(height: 10),
+        _EditorSection(
+          title: _wanted ? '我的联系方式' : '联系卖家',
+          trailing: '对方看详情后才可见',
+          children: [
+            _EditorChoiceRow<String>(
+              values: const {'wechat': '微信', 'qq': 'QQ', 'phone': '手机号'},
+              selected: _contactType,
+              onChanged: _submitting
+                  ? null
+                  : (value) => setState(() => _contactType = value),
             ),
-          ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _contactController,
+              enabled: !_submitting,
+              inputFormatters: [LengthLimitingTextInputFormatter(80)],
+              onChanged: (_) => setState(() {}),
+              keyboardType: _contactType == 'wechat'
+                  ? TextInputType.text
+                  : TextInputType.number,
+              decoration: _field(
+                label: switch (_contactType) {
+                  'qq' => 'QQ 号',
+                  'phone' => '手机号',
+                  _ => '微信号',
+                },
+                hint: '填写对方可以联系到你的${contactLabel(_contactType)}',
+                errorText: _contactController.text.isNotEmpty && !_contactValid
+                    ? '请填写有效的${contactLabel(_contactType)}，不要包含空格'
+                    : null,
+              ),
+            ),
+          ],
         ),
-        const Padding(
-          padding: EdgeInsets.all(8),
-          child: Text('买卖双方自行联系、约定交易。本版本暂不支持在线支付。'),
-        ),
-        if (_error != null)
-          Text(
-            _error!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-        const SizedBox(height: 8),
-        FilledButton(
-          onPressed: _submitting || _pickingImage ? null : _submit,
+        Padding(
+          padding: EdgeInsets.fromLTRB(4, 12, 4, 0),
           child: Text(
-            _submitting
-                ? '正在发布…'
-                : _wanted
-                ? '发布求购'
-                : '确认上架',
+            '买卖双方自行联系、约定交易，本版本暂不支持在线支付。',
+            style: TextStyle(fontSize: 11, color: context.campusColors.muted),
           ),
         ),
       ],
+    ),
+  );
+
+  Widget _buildImageTile(BuildContext context) {
+    final busy = _submitting || _pickingImage;
+    return SizedBox(
+      width: 88,
+      height: 88,
+      child: _imageBytes == null
+          ? Material(
+              color: context.campusColors.controlSurface,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: busy ? null : _pickImage,
+                child: Center(
+                  child: _pickingImage
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(
+                          Icons.add_photo_alternate_outlined,
+                          size: 26,
+                        ),
+                ),
+              ),
+            )
+          : Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.memory(
+                      _imageBytes!,
+                      // 缩略图只按 88 逻辑像素解码，避免整张原图占内存。
+                      cacheWidth: (88 * MediaQuery.devicePixelRatioOf(context))
+                          .ceil(),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(onTap: busy ? null : _pickImage),
+                  ),
+                ),
+                Positioned(
+                  top: 3,
+                  right: 3,
+                  child: Tooltip(
+                    message: '移除图片',
+                    child: Material(
+                      color: const Color(0x8A000000),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: busy ? null : _clearImage,
+                        child: const Padding(
+                          padding: EdgeInsets.all(5),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 13,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// 表单分组：白面细描边卡片，标题一行到顶，避免多层标题堆叠。
+class _EditorSection extends StatelessWidget {
+  const _EditorSection({this.title, this.trailing, required this.children});
+  final String? title;
+  final String? trailing;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = this.title;
+    final trailing = this.trailing;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: campusCardDecoration(context, radius: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (trailing != null)
+                  Flexible(
+                    child: Text(
+                      trailing,
+                      textAlign: TextAlign.right,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+          ],
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _EditorLabel extends StatelessWidget {
+  const _EditorLabel(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: TextStyle(
+      fontSize: 12,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+  );
+}
+
+/// 胶囊选项组：替代下拉框，一行点选，节省一整个输入框的高度。
+class _EditorChoiceRow<T> extends StatelessWidget {
+  const _EditorChoiceRow({
+    required this.values,
+    required this.selected,
+    required this.onChanged,
+  });
+  final Map<T, String> values;
+  final T selected;
+  final ValueChanged<T>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final entry in values.entries)
+        Semantics(
+          button: true,
+          selected: entry.key == selected,
+          child: GestureDetector(
+            onTap: onChanged == null ? null : () => onChanged!(entry.key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              constraints: const BoxConstraints(minHeight: 44),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: entry.key == selected
+                    ? context.campusColors.ink
+                    : context.campusColors.controlSurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              // Center 带 widthFactor，胶囊按文字宽度收缩，不再撑满整行。
+              child: Center(
+                widthFactor: 1,
+                child: Text(
+                  entry.value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: entry.key == selected
+                        ? context.campusColors.onInk
+                        : context.campusColors.muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+/// 固定在底部的发布栏：错误提示与主按钮始终可见，不用滚到列表末尾。
+class _PublishBar extends StatelessWidget {
+  const _PublishBar({
+    required this.error,
+    required this.label,
+    required this.onPressed,
+  });
+  final String? error;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: context.campusColors.cardLine, width: .8),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: context.campusColors.ink,
+                foregroundColor: context.campusColors.onInk,
+              ),
+              child: Text(label),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

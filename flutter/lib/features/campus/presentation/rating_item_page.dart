@@ -386,7 +386,7 @@ class _RatingItemPageState extends State<RatingItemPage> {
     final detail = _detail;
     return PageScaffold(
       title: '评分详情',
-      backgroundColor: campusCanvas,
+      backgroundColor: context.campusColors.canvas,
       actions: [
         if (detail != null)
           IconButton(

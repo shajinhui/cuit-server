@@ -110,13 +110,27 @@ class _GradesPageState extends State<GradesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final failed = _grades.where((item) {
+    final published = _grades
+        .where((item) => displayGradeScore(item) != '—')
+        .toList();
+    final failed = published.where((item) {
       final score = double.tryParse(displayGradeScore(item));
       return score != null && score < 60;
     }).length;
-    final published = _grades
-        .where((item) => displayGradeScore(item) != '—')
-        .length;
+    double creditSum = 0;
+    double weightedSum = 0;
+    double weightSum = 0;
+    for (final item in published) {
+      final credits = double.tryParse('${item['Credits'] ?? ''}'.trim()) ?? 0;
+      creditSum += credits;
+      final score = double.tryParse(displayGradeScore(item));
+      if (score != null) {
+        // 无学分信息时按 1 学分计权，保证均分仍可计算。
+        final weight = credits > 0 ? credits : 1;
+        weightedSum += score * weight;
+        weightSum += weight;
+      }
+    }
     return ToolPageScaffold(
       title: '查成绩',
       hideTitle: _semesters.isNotEmpty,
@@ -140,7 +154,7 @@ class _GradesPageState extends State<GradesPage> {
               onRefresh: _initialize,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(22, 24, 22, 32),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                 children: [
                   academicSemesterPicker(
                     semesters: _semesters,
@@ -148,11 +162,16 @@ class _GradesPageState extends State<GradesPage> {
                     onChanged: _changeSemester,
                     label: '当前学期',
                   ),
-                  const SizedBox(height: 18),
-                  _SummaryCard(total: published, failed: failed),
-                  const SizedBox(height: 27),
-                  const ToolSectionHeading(title: '成绩明细', trailing: '已更新'),
+                  const SizedBox(height: 10),
+                  _SummaryCard(
+                    total: published.length,
+                    failed: failed,
+                    credits: creditSum,
+                    average: weightSum > 0 ? weightedSum / weightSum : null,
+                  ),
                   const SizedBox(height: 14),
+                  const ToolSectionHeading(title: '成绩明细'),
+                  const SizedBox(height: 10),
                   if (_grades.isEmpty)
                     const AcademicEmptyCard(
                       text: '本学期暂无成绩',
@@ -172,62 +191,102 @@ class _GradesPageState extends State<GradesPage> {
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.total, required this.failed});
+  const _SummaryCard({
+    required this.total,
+    required this.failed,
+    required this.credits,
+    required this.average,
+  });
   final int total;
   final int failed;
-  @override
-  Widget build(BuildContext context) => ToolCard(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 21),
-    child: IntrinsicHeight(
-      child: Row(
-        children: [
-          Expanded(
-            child: _SummaryValue(label: '已出成绩', value: '$total'),
-          ),
-          const VerticalDivider(width: 30, thickness: .5),
-          Expanded(
-            child: _SummaryValue(
-              label: '挂科',
-              value: '$failed',
-              color: failed > 0 ? Theme.of(context).colorScheme.error : null,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+  final double credits;
+  final double? average;
 
-class _SummaryValue extends StatelessWidget {
-  const _SummaryValue({required this.label, required this.value, this.color});
-  final String label;
-  final String value;
-  final Color? color;
+  String _format(double value) => value == value.roundToDouble()
+      ? '${value.toInt()}'
+      : value.toStringAsFixed(1);
+
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-      const SizedBox(height: 7),
-      Text.rich(
-        TextSpan(
+  Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+    final average = this.average;
+    final averageText = average == null ? '—' : average.toStringAsFixed(1);
+    return ToolCard(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      child: IntrinsicHeight(
+        child: Row(
           children: [
-            TextSpan(
-              text: value,
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w600,
-                color: color,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '平均分 · 学分加权',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    averageText,
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
-            const TextSpan(text: ' 门', style: TextStyle(fontSize: 12)),
+            const VerticalDivider(width: 26, thickness: .5),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SummaryStat(label: '已出', value: '$total 门'),
+                  const SizedBox(height: 5),
+                  _SummaryStat(
+                    label: '挂科',
+                    value: '$failed 门',
+                    valueColor: failed > 0 ? errorColor : null,
+                  ),
+                  const SizedBox(height: 5),
+                  _SummaryStat(label: '总学分', value: _format(credits)),
+                ],
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryStat extends StatelessWidget {
+  const _SummaryStat({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+  final String label;
+  final String value;
+  final Color? valueColor;
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      SizedBox(
+        width: 40,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      Text(
+        value,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: valueColor,
         ),
       ),
     ],
@@ -239,70 +298,110 @@ String _gradeValue(Map<String, dynamic> grade, String key) {
   return value.isEmpty ? '—' : value;
 }
 
-class _GradeCard extends StatelessWidget {
+/// 成绩行：收起时只露课程名与主分数，点击展开平时/期末等分项。
+class _GradeCard extends StatefulWidget {
   const _GradeCard({required this.grade});
   final Map<String, dynamic> grade;
   @override
+  State<_GradeCard> createState() => _GradeCardState();
+}
+
+class _GradeCardState extends State<_GradeCard> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final grade = widget.grade;
     final score = displayGradeScore(grade);
     final failed = (double.tryParse(score) ?? 100) < 60;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Container(
-      color: failed
-          ? Theme.of(context).colorScheme.error.withValues(alpha: .04)
-          : null,
-      padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: Container(
+        color: failed
+            ? Theme.of(context).colorScheme.error.withValues(alpha: .04)
+            : null,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  '${grade['CourseCategory'] ?? '课程'} · ${grade['CourseCode'] ?? ''}',
-                  style: TextStyle(fontSize: 10, color: muted),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '${grade['CourseName'] ?? '未命名课程'}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${grade['CourseName'] ?? '未命名课程'}',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${grade['CourseCategory'] ?? '课程'} · '
+                        '${_gradeValue(grade, 'Credits')} 学分 · '
+                        '绩点 ${_gradeValue(grade, 'GradePoint')}',
+                        style: TextStyle(fontSize: 11, color: muted),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 5),
-                Wrap(
-                  spacing: 11,
-                  runSpacing: 5,
-                  children: [
-                    for (final text in [
-                      '${_gradeValue(grade, 'Credits')} 学分',
-                      '平时 ${_gradeValue(grade, 'UsualScore')}',
-                      '期末 ${_gradeValue(grade, 'FinalExamScore')}',
-                      if ('${grade['MakeupScore'] ?? ''}'.isNotEmpty)
-                        '补考 ${grade['MakeupScore']}',
-                      '绩点 ${_gradeValue(grade, 'GradePoint')}',
-                    ])
-                      Text(text, style: TextStyle(fontSize: 10, color: muted)),
-                  ],
+                const SizedBox(width: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 72),
+                  child: Text(
+                    score,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: failed
+                          ? Theme.of(context).colorScheme.error
+                          : null,
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _expanded ? .5 : 0,
+                  duration: const Duration(milliseconds: 180),
+                  child: Icon(
+                    Icons.expand_more_rounded,
+                    size: 18,
+                    color: muted,
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 15),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 90),
-            child: Text(
-              score,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 29,
-                fontWeight: FontWeight.w500,
-                color: failed ? Theme.of(context).colorScheme.error : null,
-              ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topLeft,
+              child: _expanded
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Wrap(
+                        spacing: 14,
+                        runSpacing: 4,
+                        children: [
+                          for (final text in [
+                            '平时 ${_gradeValue(grade, 'UsualScore')}',
+                            '期末 ${_gradeValue(grade, 'FinalExamScore')}',
+                            '总评 ${_gradeValue(grade, 'OverallScore')}',
+                            '代码 ${_gradeValue(grade, 'CourseCode')}',
+                          ])
+                            Text(
+                              text,
+                              style: TextStyle(fontSize: 11, color: muted),
+                            ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

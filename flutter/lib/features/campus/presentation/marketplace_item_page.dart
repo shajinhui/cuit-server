@@ -124,7 +124,7 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
     final wanted = item?.listingType == 'wanted';
     return PageScaffold(
       title: wanted ? '求购详情' : '商品详情',
-      backgroundColor: campusCanvas,
+      backgroundColor: context.campusColors.canvas,
       actions: [
         if (item?.isMine == true)
           TextButton(
@@ -144,7 +144,10 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   border: Border(
-                    top: BorderSide(color: campusCardLine, width: .8),
+                    top: BorderSide(
+                      color: context.campusColors.cardLine,
+                      width: .8,
+                    ),
                   ),
                 ),
                 child: SizedBox(
@@ -154,8 +157,8 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                         ? null
                         : _revealContact,
                     style: FilledButton.styleFrom(
-                      backgroundColor: campusInk,
-                      foregroundColor: campusOnInk,
+                      backgroundColor: context.campusColors.ink,
+                      foregroundColor: context.campusColors.onInk,
                       minimumSize: const Size(44, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -195,7 +198,7 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
     required Widget child,
     EdgeInsetsGeometry padding = const EdgeInsets.all(17),
   }) => Container(
-    decoration: campusCardDecoration(radius: 18),
+    decoration: campusCardDecoration(context, radius: 18),
     child: Padding(padding: padding, child: child),
   );
 
@@ -212,7 +215,7 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
         if (item.imageAssetId != null)
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: campusCardDecoration(radius: 20),
+            decoration: campusCardDecoration(context, radius: 20),
             child: Stack(
               children: [
                 CampusAssetImage(
@@ -233,7 +236,9 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: campusSurface.withValues(alpha: .92),
+                      color: context.campusColors.surface.withValues(
+                        alpha: .92,
+                      ),
                       borderRadius: BorderRadius.circular(99),
                     ),
                     child: Text(
@@ -260,12 +265,12 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                   Expanded(
                     child: Text(
                       '${wanted ? '预算 ' : ''}¥${campusFormatPrice(item.priceCents)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 30,
                         height: 1.15,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -.8,
-                        color: campusInk,
+                        color: context.campusColors.ink,
                         fontFeatures: [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -277,16 +282,16 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: campusControlSurface,
+                      color: context.campusColors.controlSurface,
                       borderRadius: BorderRadius.circular(99),
                     ),
                     child: Text(
                       listingStatusLabel(item),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10.5,
                         height: 1.2,
                         fontWeight: FontWeight.w600,
-                        color: campusMuted,
+                        color: context.campusColors.muted,
                       ),
                     ),
                   ),
@@ -354,9 +359,12 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: campusCanvas,
+                  color: context.campusColors.canvas,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: campusCardLine, width: .7),
+                  border: Border.all(
+                    color: context.campusColors.cardLine,
+                    width: .7,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -406,13 +414,13 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                       width: 30,
                       height: 30,
                       decoration: BoxDecoration(
-                        color: campusInk,
+                        color: context.campusColors.ink,
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.chat_bubble_outline_rounded,
                         size: 15,
-                        color: campusOnInk,
+                        color: context.campusColors.onInk,
                       ),
                     ),
                     const SizedBox(width: 9),
@@ -440,7 +448,7 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                   child: TextButton.icon(
                     onPressed: _copyContact,
                     style: TextButton.styleFrom(
-                      foregroundColor: campusInk,
+                      foregroundColor: context.campusColors.ink,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
                     icon: const Icon(Icons.copy_rounded, size: 16),
@@ -515,7 +523,7 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: campusControlSurface,
+                  color: context.campusColors.controlSurface,
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: const Icon(Icons.tune_rounded, size: 16),
@@ -555,8 +563,8 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                         ),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(44, 42),
-                    foregroundColor: campusInk,
-                    side: const BorderSide(color: campusCardLine),
+                    foregroundColor: context.campusColors.ink,
+                    side: BorderSide(color: context.campusColors.cardLine),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -571,8 +579,8 @@ class _MarketplaceItemPageState extends State<MarketplaceItemPage> {
                   onPressed: _busy ? null : () => _changeStatus('sold'),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size(44, 42),
-                    backgroundColor: campusControlSurface,
-                    foregroundColor: campusInk,
+                    backgroundColor: context.campusColors.controlSurface,
+                    foregroundColor: context.campusColors.ink,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

@@ -1000,7 +1000,9 @@ class _ForumReactionChip extends StatelessWidget {
       selected: selected,
       label: '表情 $emoji，$count 人',
       child: Material(
-        color: selected ? accent.withValues(alpha: .08) : campusControlSurface,
+        color: selected
+            ? accent.withValues(alpha: .08)
+            : context.campusColors.controlSurface,
         borderRadius: BorderRadius.circular(999),
         child: InkWell(
           onTap: onTap,

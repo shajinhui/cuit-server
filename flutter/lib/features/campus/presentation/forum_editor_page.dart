@@ -406,12 +406,12 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
               ),
             ),
             child: _submitting
-                ? const SizedBox(
+                ? SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: colors.onPrimary,
                     ),
                   )
                 : Text(_editing ? '保存' : '发布'),
@@ -507,7 +507,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Material(
-        color: campusControlSurface,
+        color: context.campusColors.controlSurface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           key: const ValueKey('forum-add-image'),
@@ -565,7 +565,7 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
               )
               .name;
     return Material(
-      color: campusControlSurface,
+      color: context.campusColors.controlSurface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         key: const ValueKey('forum-category-selector'),
@@ -847,31 +847,34 @@ class _ForumEditorPageState extends State<ForumEditorPage> {
   }
 }
 
-InputDecoration _composerFieldDecoration({String? label, String? hint}) =>
-    InputDecoration(
-      labelText: label,
-      hintText: hint,
-      isDense: true,
-      filled: true,
-      fillColor: campusControlSurface,
-      counterText: '',
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: campusInk.withValues(alpha: .24),
-          width: .8,
-        ),
-      ),
-    );
+InputDecoration _composerFieldDecoration(
+  BuildContext context, {
+  String? label,
+  String? hint,
+}) => InputDecoration(
+  labelText: label,
+  hintText: hint,
+  isDense: true,
+  filled: true,
+  fillColor: context.campusColors.controlSurface,
+  counterText: '',
+  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide.none,
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide.none,
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: BorderSide(
+      color: context.campusColors.ink.withValues(alpha: .24),
+      width: .8,
+    ),
+  ),
+);
 
 class _ComposerHeader extends StatelessWidget {
   const _ComposerHeader({required this.title, required this.onClose});
@@ -918,7 +921,7 @@ class _ComposerActions extends StatelessWidget {
           onPressed: onCancel,
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(44),
-            foregroundColor: campusMuted,
+            foregroundColor: context.campusColors.muted,
             side: const BorderSide(color: campusLine, width: .7),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -934,8 +937,8 @@ class _ComposerActions extends StatelessWidget {
           onPressed: onConfirm,
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(44),
-            backgroundColor: campusInk,
-            foregroundColor: campusOnInk,
+            backgroundColor: context.campusColors.ink,
+            foregroundColor: context.campusColors.onInk,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -1024,6 +1027,7 @@ class _PollComposerSheetState extends State<_PollComposerSheet> {
                   autofocus: true,
                   maxLength: 80,
                   decoration: _composerFieldDecoration(
+                    context,
                     label: '投票问题',
                     hint: '问问大家吧',
                   ),
@@ -1056,6 +1060,7 @@ class _PollComposerSheetState extends State<_PollComposerSheet> {
                             controller: _optionControllers[index],
                             maxLength: 40,
                             decoration: _composerFieldDecoration(
+                              context,
                               hint: '选项 ${index + 1}',
                             ),
                           ),
@@ -1182,6 +1187,7 @@ class _TeamUpComposerSheetState extends State<_TeamUpComposerSheet> {
                   autofocus: true,
                   maxLength: 30,
                   decoration: _composerFieldDecoration(
+                    context,
                     label: '组队主题',
                     hint: '例如：今晚一起去图书馆自习',
                   ),
@@ -1195,6 +1201,7 @@ class _TeamUpComposerSheetState extends State<_TeamUpComposerSheet> {
                         controller: _timeController,
                         maxLength: 30,
                         decoration: _composerFieldDecoration(
+                          context,
                           label: '时间',
                           hint: '今晚 19:00',
                         ),
@@ -1207,6 +1214,7 @@ class _TeamUpComposerSheetState extends State<_TeamUpComposerSheet> {
                         controller: _locationController,
                         maxLength: 30,
                         decoration: _composerFieldDecoration(
+                          context,
                           label: '地点',
                           hint: '图书馆三楼',
                         ),
@@ -1223,6 +1231,7 @@ class _TeamUpComposerSheetState extends State<_TeamUpComposerSheet> {
                     keyboardType: TextInputType.number,
                     maxLength: 2,
                     decoration: _composerFieldDecoration(
+                      context,
                       label: '人数上限',
                       hint: '2-20 人',
                     ),
@@ -1235,6 +1244,7 @@ class _TeamUpComposerSheetState extends State<_TeamUpComposerSheet> {
                   maxLength: 100,
                   maxLines: 2,
                   decoration: _composerFieldDecoration(
+                    context,
                     label: '补充说明',
                     hint: '例如：有资料可以一起分享',
                   ),
@@ -1392,12 +1402,12 @@ class _ImageThumbnail extends StatelessWidget {
             ? Container(
                 width: 88,
                 height: 88,
-                color: campusInk,
+                color: context.campusColors.ink,
                 alignment: Alignment.center,
-                child: const Icon(
+                child: Icon(
                   Icons.play_circle_fill_rounded,
                   size: 30,
-                  color: campusOnInk,
+                  color: context.campusColors.onInk,
                 ),
               )
             : Image.memory(

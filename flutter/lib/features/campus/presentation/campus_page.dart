@@ -423,7 +423,7 @@ class _CampusPageState extends State<CampusPage> {
       useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: campusSurface,
+      backgroundColor: context.campusColors.surface,
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * .86,
       ),
@@ -676,7 +676,9 @@ class _CampusPageState extends State<CampusPage> {
                 child: ColoredBox(
                   key: const ValueKey('campus-body-background'),
                   // 评分列表仍使用浅灰画布；二手和论坛与顶部统一为页面底色。
-                  color: _area == 'ratings' ? campusCanvas : scheme.surface,
+                  color: _area == 'ratings'
+                      ? context.campusColors.canvas
+                      : scheme.surface,
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (notification) {
                       if (notification.metrics.axis != Axis.vertical) {
@@ -730,9 +732,9 @@ class _CampusPageState extends State<CampusPage> {
       values: const {'forum': '论坛', 'ratings': '评分', 'marketplace': '二手'},
       selected: _area,
       onChanged: _changeArea,
-      trackColor: campusControlSurface,
-      selectedColor: campusInk,
-      selectedForegroundColor: campusOnInk,
+      trackColor: context.campusColors.controlSurface,
+      selectedColor: context.campusColors.ink,
+      selectedForegroundColor: context.campusColors.onInk,
     );
     const title = Text(
       '校园',
@@ -816,11 +818,11 @@ class _CampusPageState extends State<CampusPage> {
     key: const ValueKey('campus-rating-intro'),
     margin: const EdgeInsets.only(bottom: 12),
     decoration: BoxDecoration(
-      color: campusInk,
+      color: context.campusColors.ink,
       borderRadius: BorderRadius.circular(18),
       boxShadow: [
         BoxShadow(
-          color: campusInk.withValues(alpha: .12),
+          color: context.campusColors.shadow,
           blurRadius: 18,
           offset: const Offset(0, 6),
         ),
@@ -835,7 +837,7 @@ class _CampusPageState extends State<CampusPage> {
           child: Icon(
             Icons.star_rounded,
             size: 108,
-            color: Colors.white.withValues(alpha: .045),
+            color: context.campusColors.onInk.withValues(alpha: .045),
           ),
         ),
         Padding(
@@ -850,7 +852,7 @@ class _CampusPageState extends State<CampusPage> {
                       Icon(
                         Icons.auto_awesome_rounded,
                         size: 12,
-                        color: Colors.white.withValues(alpha: .7),
+                        color: context.campusColors.onInk.withValues(alpha: .7),
                       ),
                       const SizedBox(width: 5),
                       Text(
@@ -859,7 +861,9 @@ class _CampusPageState extends State<CampusPage> {
                           fontSize: 10,
                           letterSpacing: .6,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: .68),
+                          color: context.campusColors.onInk.withValues(
+                            alpha: .68,
+                          ),
                         ),
                       ),
                     ],
@@ -874,7 +878,7 @@ class _CampusPageState extends State<CampusPage> {
                       height: 1.25,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -.2,
-                      color: scheme.onPrimary,
+                      color: context.campusColors.onInk,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -885,7 +889,7 @@ class _CampusPageState extends State<CampusPage> {
                     style: TextStyle(
                       fontSize: 11.5,
                       height: 1.35,
-                      color: Colors.white.withValues(alpha: .6),
+                      color: context.campusColors.onInk.withValues(alpha: .6),
                     ),
                   ),
                 ],
@@ -894,8 +898,8 @@ class _CampusPageState extends State<CampusPage> {
                 key: const ValueKey('campus-create-board'),
                 onPressed: _createBoard,
                 style: FilledButton.styleFrom(
-                  backgroundColor: campusSurface,
-                  foregroundColor: campusInk,
+                  backgroundColor: context.campusColors.surface,
+                  foregroundColor: context.campusColors.ink,
                   minimumSize: const Size(44, 40),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -1032,9 +1036,9 @@ class _CampusPageState extends State<CampusPage> {
       values: const {'popular': '热门', 'newest': '最新'},
       selected: _sort,
       onChanged: _changeSort,
-      trackColor: campusControlSurface,
-      selectedColor: campusInk,
-      selectedForegroundColor: campusOnInk,
+      trackColor: context.campusColors.controlSurface,
+      selectedColor: context.campusColors.ink,
+      selectedForegroundColor: context.campusColors.onInk,
     );
     final largeText = MediaQuery.textScalerOf(context).scale(13) > 20;
     return Padding(
@@ -1063,9 +1067,9 @@ class _CampusPageState extends State<CampusPage> {
       values: const {'sell': '出售', 'wanted': '求购'},
       selected: _listingType,
       onChanged: (value) => _changeListingType(value),
-      trackColor: campusControlSurface,
-      selectedColor: campusInk,
-      selectedForegroundColor: campusOnInk,
+      trackColor: context.campusColors.controlSurface,
+      selectedColor: context.campusColors.ink,
+      selectedForegroundColor: context.campusColors.onInk,
     );
     final countAndRefresh = Row(
       mainAxisSize: MainAxisSize.min,
@@ -1087,9 +1091,12 @@ class _CampusPageState extends State<CampusPage> {
               minimumSize: const Size(34, 34),
               maximumSize: const Size(34, 34),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              foregroundColor: campusInk,
-              backgroundColor: campusSurface,
-              side: const BorderSide(color: campusCardBorder, width: .5),
+              foregroundColor: context.campusColors.ink,
+              backgroundColor: context.campusColors.surface,
+              side: BorderSide(
+                color: context.campusColors.cardBorder,
+                width: .5,
+              ),
               shape: const CircleBorder(),
             ),
             icon: const Icon(Icons.refresh_rounded, size: 16),
@@ -1135,8 +1142,8 @@ class _CampusPageState extends State<CampusPage> {
                 key: const ValueKey('campus-create-listing'),
                 onPressed: _createListing,
                 style: FilledButton.styleFrom(
-                  backgroundColor: campusInk,
-                  foregroundColor: campusOnInk,
+                  backgroundColor: context.campusColors.ink,
+                  foregroundColor: context.campusColors.onInk,
                   minimumSize: const Size(44, 34),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   padding: const EdgeInsets.symmetric(
@@ -1522,8 +1529,8 @@ class _CampusPageState extends State<CampusPage> {
     style: FilledButton.styleFrom(
       minimumSize: const Size(88, 40),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      backgroundColor: campusInk,
-      foregroundColor: campusOnInk,
+      backgroundColor: context.campusColors.ink,
+      foregroundColor: context.campusColors.onInk,
       shape: const StadiumBorder(),
       textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
     ),
@@ -1640,7 +1647,7 @@ class _CampusPageState extends State<CampusPage> {
       useRootNavigator: true,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: campusSurface,
+      backgroundColor: context.campusColors.surface,
       constraints: BoxConstraints(
         maxHeight: MediaQuery.sizeOf(context).height * .8,
       ),
@@ -1710,9 +1717,9 @@ class _CampusPageState extends State<CampusPage> {
                         _changeForumSort(value);
                         setSheetState(() {});
                       },
-                      trackColor: campusControlSurface,
-                      selectedColor: campusInk,
-                      selectedForegroundColor: campusOnInk,
+                      trackColor: context.campusColors.controlSurface,
+                      selectedColor: context.campusColors.ink,
+                      selectedForegroundColor: context.campusColors.onInk,
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -1839,12 +1846,12 @@ class _RatingBoardCard extends StatelessWidget {
       children: [
         Text(
           '${board.itemCount}',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             height: 1,
             fontWeight: FontWeight.w700,
-            color: campusInk,
-            fontFeatures: [FontFeature.tabularFigures()],
+            color: context.campusColors.ink,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(height: 1),
@@ -1856,7 +1863,7 @@ class _RatingBoardCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: campusControlSurface,
+            color: context.campusColors.controlSurface,
             borderRadius: BorderRadius.circular(99),
           ),
           child: Text(
@@ -1951,7 +1958,7 @@ class _RatingBoardCard extends StatelessWidget {
     return Container(
       key: ValueKey('rating-board-card-${board.id}'),
       margin: const EdgeInsets.only(bottom: 6),
-      decoration: campusCardDecoration(radius: 14),
+      decoration: campusCardDecoration(context, radius: 14),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
@@ -2001,16 +2008,16 @@ class _MarketplaceCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: campusSurface.withValues(alpha: .92),
+                    color: context.campusColors.surface.withValues(alpha: .92),
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text(
                     listingStatusLabel(listing),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 9.5,
                       height: 1.2,
                       fontWeight: FontWeight.w600,
-                      color: campusInk,
+                      color: context.campusColors.ink,
                     ),
                   ),
                 ),
@@ -2018,11 +2025,15 @@ class _MarketplaceCard extends StatelessWidget {
             ],
           )
         : Container(
-            color: campusControlSurface,
+            color: context.campusColors.controlSurface,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.search_rounded, size: 20, color: campusMuted),
+                Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: context.campusColors.muted,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   '求购需求',
@@ -2036,7 +2047,7 @@ class _MarketplaceCard extends StatelessWidget {
             ),
           );
     return Container(
-      decoration: campusCardDecoration(radius: 16),
+      decoration: campusCardDecoration(context, radius: 16),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
@@ -2056,13 +2067,13 @@ class _MarketplaceCard extends StatelessWidget {
                       '${wanted ? '预算 ' : ''}¥${campusFormatPrice(listing.priceCents)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         height: 1.2,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -.45,
-                        color: campusInk,
-                        fontFeatures: [FontFeature.tabularFigures()],
+                        color: context.campusColors.ink,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
                     const SizedBox(height: 5),

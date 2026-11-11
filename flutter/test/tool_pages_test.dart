@@ -54,16 +54,25 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('成绩明细保留分项，统计只计算已出成绩', (tester) async {
+  testWidgets('成绩行点击展开分项，统计只计算已出成绩', (tester) async {
     final api = toolPreviewApi();
     addTearDown(api.client.dispose);
     await tester.pumpWidget(_app(GradesPage(api: api.client)));
     await tester.pumpAndSettle();
-    expect(find.text('平时 92'), findsOneWidget);
-    expect(find.text('期末 88'), findsOneWidget);
-    expect(find.text('绩点 4.0'), findsOneWidget);
+    // 收起时只显示课程名与主分数，分项收进展开区。
+    expect(find.text('高等数学 A'), findsOneWidget);
+    expect(find.text('90'), findsOneWidget);
+    expect(find.text('平时 92'), findsNothing);
+    // 汇总卡：已出 2 门（第三门未出）、挂科 1 门、总学分 8、均分 76.9。
     expect(find.text('2 门'), findsOneWidget);
     expect(find.text('1 门'), findsOneWidget);
+    expect(find.text('76.9'), findsOneWidget);
+    expect(find.text('8'), findsOneWidget);
+    await tester.tap(find.text('高等数学 A'));
+    await tester.pumpAndSettle();
+    expect(find.text('平时 92'), findsOneWidget);
+    expect(find.text('期末 88'), findsOneWidget);
+    expect(find.text('绩点 4.0'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

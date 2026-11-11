@@ -146,7 +146,7 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
     final colors = Theme.of(context).colorScheme;
     return PageScaffold(
       title: '评分板块',
-      backgroundColor: campusCanvas,
+      backgroundColor: context.campusColors.canvas,
       actions: [
         if (board != null)
           IconButton(
@@ -164,7 +164,10 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
                 decoration: BoxDecoration(
                   color: colors.surface,
                   border: Border(
-                    top: BorderSide(color: campusCardLine, width: .8),
+                    top: BorderSide(
+                      color: context.campusColors.cardLine,
+                      width: .8,
+                    ),
                   ),
                 ),
                 child: SizedBox(
@@ -175,8 +178,8 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
                       pathParameters: {'boardId': board.id},
                     ),
                     style: FilledButton.styleFrom(
-                      backgroundColor: campusInk,
-                      foregroundColor: campusOnInk,
+                      backgroundColor: context.campusColors.ink,
+                      foregroundColor: context.campusColors.onInk,
                       minimumSize: const Size(44, 42),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
@@ -237,21 +240,24 @@ class _RatingBoardPageState extends State<RatingBoardPage> {
                       ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: campusCardLine,
+                  borderSide: BorderSide(
+                    color: context.campusColors.cardLine,
                     width: .8,
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: campusCardLine,
+                  borderSide: BorderSide(
+                    color: context.campusColors.cardLine,
                     width: .8,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: campusInk, width: 1.1),
+                  borderSide: BorderSide(
+                    color: context.campusColors.ink,
+                    width: 1.1,
+                  ),
                 ),
               ),
               onChanged: (_) => setState(() {}),
@@ -381,7 +387,7 @@ class _RatingItemCard extends StatelessWidget {
     return Container(
       key: ValueKey('rating-item-card-${item.id}'),
       margin: const EdgeInsets.only(bottom: 6),
-      decoration: campusCardDecoration(radius: 14),
+      decoration: campusCardDecoration(context, radius: 14),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
@@ -436,21 +442,24 @@ class _RatingItemCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.fromLTRB(7, 5, 7, 5),
                   decoration: BoxDecoration(
-                    color: campusCanvas,
+                    color: context.campusColors.canvas,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: campusCardLine, width: .5),
+                    border: Border.all(
+                      color: context.campusColors.cardLine,
+                      width: .5,
+                    ),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         score == null ? '—' : score.toStringAsFixed(1),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 19,
                           height: 1,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -.4,
-                          color: campusInk,
+                          color: context.campusColors.ink,
                           fontFeatures: [FontFeature.tabularFigures()],
                         ),
                       ),

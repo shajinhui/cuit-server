@@ -34,7 +34,7 @@ class CampusHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: campusCardDecoration(radius: 16),
+    decoration: campusCardDecoration(context, radius: 16),
     child: PageCard(
       radius: 16,
       padding: const EdgeInsets.all(11),
@@ -93,15 +93,15 @@ class CampusHero extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: campusControlSurface,
+                          color: context.campusColors.controlSurface,
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
                           stats!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 9.5,
                             height: 1.2,
-                            color: campusMuted,
+                            color: context.campusColors.muted,
                           ),
                         ),
                       ),
@@ -115,10 +115,10 @@ class CampusHero extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               description,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.4,
-                color: campusMuted,
+                color: context.campusColors.muted,
               ),
             ),
           ],
@@ -533,7 +533,7 @@ class CampusRatingSummaryCard extends StatelessWidget {
     final score = summary.score;
     return Container(
       key: const ValueKey('campus-rating-summary-card'),
-      decoration: campusCardDecoration(radius: 16),
+      decoration: campusCardDecoration(context, radius: 16),
       child: PageCard(
         radius: 16,
         padding: const EdgeInsets.all(11),
@@ -546,9 +546,12 @@ class CampusRatingSummaryCard extends StatelessWidget {
               width: stacked ? double.infinity : 96,
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
               decoration: BoxDecoration(
-                color: campusCanvas,
+                color: context.campusColors.canvas,
                 borderRadius: BorderRadius.circular(11),
-                border: Border.all(color: campusCardLine, width: .5),
+                border: Border.all(
+                  color: context.campusColors.cardLine,
+                  width: .5,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,13 +566,15 @@ class CampusRatingSummaryCard extends StatelessWidget {
                           child: Text(
                             score == null ? '—' : score.toStringAsFixed(1),
                             maxLines: 1,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28,
                               height: 1,
-                              color: campusInk,
+                              color: context.campusColors.ink,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -.8,
-                              fontFeatures: [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ),
@@ -622,7 +627,8 @@ class CampusRatingSummaryCard extends StatelessWidget {
                                       summary.count,
                             minHeight: 4,
                             borderRadius: BorderRadius.circular(4),
-                            backgroundColor: campusControlSurface,
+                            backgroundColor:
+                                context.campusColors.controlSurface,
                           ),
                         ),
                         const SizedBox(width: 6),
