@@ -67,7 +67,7 @@ class _PastExamsPageState extends State<PastExamsPage> {
       }
       try {
         final response = await _api.get<Map<String, dynamic>>(
-          '/api/v1/past-exams/index',
+          '/api/v1/ratings/past-exams/index',
         );
         if (mounted && response.data != null) {
           setState(() => _applyIndex(response.data!));
@@ -144,7 +144,7 @@ class _PastExamsPageState extends State<PastExamsPage> {
 
   Uri _fileUri(_PastFile file) {
     return Uri.parse(
-      '$_apiBaseUrl/api/v1/past-exams/file',
+      '$_apiBaseUrl/api/v1/ratings/past-exams/file',
     ).replace(queryParameters: {'path': file.path});
   }
 
