@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/network/native_dio_adapter.dart';
 import 'tool_page_scaffold.dart';
 
 class PastExamsPage extends StatefulWidget {
@@ -17,12 +18,14 @@ class PastExamsPage extends StatefulWidget {
 }
 
 class _PastExamsPageState extends State<PastExamsPage> {
-  static const _rawFileHost =
-      'https://raw.githubusercontent.com/andream7/cuit_sharing';
+  static const _apiBaseUrl = String.fromEnvironment(
+    'RATINGS_API_BASE_URL',
+    defaultValue: 'https://lehi.top',
+  );
   final _searchController = TextEditingController();
-  final _downloader = Dio();
+  late final Dio _api = _createDio();
+  late final Dio _downloader = _createDio();
   List<_PastFile> _files = [];
-  String _commit = '';
   String _updatedAt = '';
   String _sourceUrl = '';
   String _directory = '';
@@ -49,25 +52,27 @@ class _PastExamsPageState extends State<PastExamsPage> {
       _error = null;
     });
     try {
-      final raw =
+      final bundled =
           jsonDecode(
                 await rootBundle.loadString(
                   'assets/data/past-exams-index.json',
                 ),
               )
               as Map<String, dynamic>;
-      final files = (raw['files'] as List)
-          .map((item) => _PastFile.fromJson(item as Map<String, dynamic>))
-          .toList();
       if (mounted) {
         setState(() {
-          _files = files;
-          _commit = raw['commit'] as String;
-          _sourceUrl = raw['sourceURL'] as String;
-          _updatedAt = '${raw['updatedAt'] ?? ''}'.split('T').first;
+          _applyIndex(bundled);
           _loading = false;
         });
       }
+      try {
+        final response = await _api.get<Map<String, dynamic>>(
+          '/api/v1/past-exams/index',
+        );
+        if (mounted && response.data != null) {
+          setState(() => _applyIndex(response.data!));
+        }
+      } catch (_) {}
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -76,6 +81,14 @@ class _PastExamsPageState extends State<PastExamsPage> {
         });
       }
     }
+  }
+
+  void _applyIndex(Map<String, dynamic> raw) {
+    _files = (raw['files'] as List)
+        .map((item) => _PastFile.fromJson(item as Map<String, dynamic>))
+        .toList();
+    _sourceUrl = raw['sourceURL'] as String;
+    _updatedAt = '${raw['updatedAt'] ?? ''}'.split('T').first;
   }
 
   List<_PastItem> get _items {
@@ -130,8 +143,15 @@ class _PastExamsPageState extends State<PastExamsPage> {
   }
 
   Uri _fileUri(_PastFile file) {
-    final encodedPath = file.path.split('/').map(Uri.encodeComponent).join('/');
-    return Uri.parse('$_rawFileHost/$_commit/$encodedPath');
+    return Uri.parse(
+      '$_apiBaseUrl/api/v1/past-exams/file',
+    ).replace(queryParameters: {'path': file.path});
+  }
+
+  static Dio _createDio() {
+    final dio = Dio(BaseOptions(baseUrl: _apiBaseUrl));
+    configureNativeDioAdapter(dio);
+    return dio;
   }
 
   Future<void> _openFile(_PastFile file) async {
@@ -211,7 +231,7 @@ class _PastExamsPageState extends State<PastExamsPage> {
         : _directory.split('/').last;
     return ToolPageScaffold(
       title: '历年试卷',
-      subtitle: 'GitHub 课程资料',
+      subtitle: '服务器课程资料',
       onBack: _back,
       actions: [
         IconButton(
@@ -351,7 +371,7 @@ class _PastExamsPageState extends State<PastExamsPage> {
                         ),
                       const SizedBox(height: 16),
                       Text(
-                        '目录更新于 $_updatedAt · GitHub 课程共享资料',
+                        '目录更新于 $_updatedAt · 课程共享资料',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 10,
