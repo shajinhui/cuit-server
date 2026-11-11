@@ -19,6 +19,10 @@ describe('官网能力与发布边界', () => {
     expect(forum).toContain('新版原生客户端')
     expect(forum).toContain('需安装支持论坛的新版客户端')
     expect(campus).toContain('不处理支付或担保交易')
+    expect(campus).toContain('新版校园社区')
+    for (const name of ['landingCommunityForum', 'landingCommunityRatings', 'landingCommunityMarketplace']) {
+      expect(source).toContain(`:src="${name}"`)
+    }
   })
 
   it('下载区优先推荐 iOS TestFlight，PWA 为备用，不误称 App Store 正式上架', () => {

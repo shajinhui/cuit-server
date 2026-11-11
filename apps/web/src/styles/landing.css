@@ -614,6 +614,32 @@
 .landing-campus-card ul { display: grid; margin: 24px 0 20px; padding: 0; gap: 10px; list-style: none; font-size: 14px; line-height: 1.5; }
 .landing-campus-card li { padding-left: 14px; border-left: 2px solid var(--blue-ring); }
 .landing-campus-card small { margin-top: auto; color: var(--text-cool); font-size: 12px; line-height: 1.7; }
+.landing-community-showcase {
+  display: grid;
+  margin-top: 28px;
+  padding: 42px 42px 0;
+  grid-template-columns: minmax(250px, 0.72fr) minmax(0, 1.28fr);
+  align-items: end;
+  gap: 42px;
+  overflow: hidden;
+  background: linear-gradient(145deg, var(--bg-page-warm), var(--blue-chip));
+  border: 1px solid var(--landing-line);
+  border-radius: 36px;
+}
+.landing-community-showcase__copy { align-self: center; padding-bottom: 42px; }
+.landing-community-showcase__copy h3 { margin: 14px 0 0; font-size: clamp(31px, 3.5vw, 48px); line-height: 1.12; letter-spacing: -0.045em; }
+.landing-community-showcase__copy > p:not(.landing-eyebrow) { margin: 20px 0 0; color: var(--landing-muted); font-size: 15px; line-height: 1.8; }
+.landing-community-showcase__note { display: block; margin-top: 22px; color: var(--text-cool); font-size: 12px; line-height: 1.7; }
+.landing-community-gallery { display: grid; min-width: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 16px; }
+.landing-community-shot { min-width: 0; margin: 0; }
+.landing-community-shot__frame { position: relative; overflow: hidden; aspect-ratio: 303 / 660; background: var(--ink-deepest); border: 5px solid var(--ink-deepest); border-bottom: 0; border-radius: 26px 26px 0 0; box-shadow: 0 22px 42px rgba(37, 50, 74, 0.2); }
+.landing-community-shot__frame::after { position: absolute; inset: 0; content: ''; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 21px 21px 0 0; pointer-events: none; }
+.landing-community-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.landing-community-shot figcaption { display: grid; padding: 14px 4px 24px; gap: 3px; }
+.landing-community-shot figcaption strong { font-size: 15px; }
+.landing-community-shot figcaption span { color: var(--landing-muted); font-size: 12px; line-height: 1.5; }
+.landing-community-shot--forum { transform: translateY(28px); }
+.landing-community-shot--marketplace { transform: translateY(10px); }
 .landing-details { padding-top: 70px; }
 .landing-details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 56px; }
 .landing-detail { min-width: 0; padding: 32px 0; border-top: 1px solid var(--landing-line); }
@@ -957,6 +983,8 @@
   .landing-campus-card { padding: 28px; }
   .landing-capability-icon { margin-bottom: 20px; }
   .landing-campus-card ul { margin-bottom: 16px; }
+  .landing-community-showcase { grid-template-columns: 1fr; gap: 20px; padding: 34px 28px 0; }
+  .landing-community-showcase__copy { padding-bottom: 0; }
   .landing-details-grid { gap: 0 32px; }
   .landing-platform { padding: 48px 40px; grid-template-columns: 1fr; }
   .landing-platform__copy { max-width: 640px; margin: 0 auto; }
@@ -1020,6 +1048,14 @@
   .landing-phone--life-right { right: -5%; }
   .landing-details-grid { grid-template-columns: 1fr; }
   .landing-detail h3 { font-size: 22px; }
+  .landing-community-showcase { margin-top: 20px; padding: 30px 18px 0; border-radius: 30px; }
+  .landing-community-showcase__copy h3 { font-size: 32px; }
+  .landing-community-gallery { margin-right: -18px; padding-right: 18px; grid-template-columns: repeat(3, 170px); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .landing-community-gallery::-webkit-scrollbar { display: none; }
+  .landing-community-shot { scroll-snap-align: start; }
+  .landing-community-shot--forum,
+  .landing-community-shot--marketplace { transform: none; }
+  .landing-community-shot__frame { border-radius: 22px 22px 0 0; }
   .landing-platform { margin-top: 60px; padding: 36px 24px; gap: 36px; border-radius: 30px; }
   .landing-final-cta { margin-top: 120px; }
   .landing-final-cta__actions { display: grid; }

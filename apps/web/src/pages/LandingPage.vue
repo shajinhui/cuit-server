@@ -5,6 +5,9 @@ import { useRouter } from 'vue-router'
 
 import landingClassrooms from '@/assets/landing/landing-classrooms.webp'
 import landingClub from '@/assets/landing/landing-club.webp'
+import landingCommunityForum from '@/assets/landing/landing-community-forum.webp'
+import landingCommunityMarketplace from '@/assets/landing/landing-community-marketplace.webp'
+import landingCommunityRatings from '@/assets/landing/landing-community-ratings.webp'
 import landingExams from '@/assets/landing/landing-exams.webp'
 import landingGrades from '@/assets/landing/landing-grades.webp'
 import landingLibrary from '@/assets/landing/landing-library.webp'
@@ -314,6 +317,35 @@ function resetHeroPerspective() {
           <ul><li>分类与话题搜索</li><li>发帖、回复与点赞</li><li>内容管理与举报</li></ul>
           <small>论坛已接入服务端，需安装支持论坛的新版客户端。</small>
         </article>
+      </div>
+
+      <div class="landing-community-showcase landing-reveal">
+        <div class="landing-community-showcase__copy">
+          <p class="landing-eyebrow">新版校园社区</p>
+          <h3>校园里的每一种声音，<br />都有自己的位置。</h3>
+          <p>论坛、评分和闲置交换已经连成一条更自然的校园动线。打开客户端，就能浏览新鲜话题、分享体验，也能把用不上的东西交给下一位同学。</p>
+          <span class="landing-community-showcase__note">界面来自新版原生客户端，实际功能和开放范围以当前版本为准。</span>
+        </div>
+        <div class="landing-community-gallery" aria-label="校园社区功能预览">
+          <figure class="landing-community-shot landing-community-shot--forum">
+            <div class="landing-community-shot__frame">
+              <img :src="landingCommunityForum" alt="校园论坛页面，展示话题、图片和互动" loading="lazy" />
+            </div>
+            <figcaption><strong>校园论坛</strong><span>看见同学正在讨论的事</span></figcaption>
+          </figure>
+          <figure class="landing-community-shot landing-community-shot--ratings">
+            <div class="landing-community-shot__frame">
+              <img :src="landingCommunityRatings" alt="校园评分页面，展示评分板块和校园对象" loading="lazy" />
+            </div>
+            <figcaption><strong>校园评分</strong><span>把真实体验留给下一位同学</span></figcaption>
+          </figure>
+          <figure class="landing-community-shot landing-community-shot--marketplace">
+            <div class="landing-community-shot__frame">
+              <img :src="landingCommunityMarketplace" alt="校园闲置页面，展示出售中的物品卡片" loading="lazy" />
+            </div>
+            <figcaption><strong>校园闲置</strong><span>让闲置找到下一位主人</span></figcaption>
+          </figure>
+        </div>
       </div>
     </section>
 
