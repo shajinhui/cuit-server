@@ -96,6 +96,10 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // play-services-cronet 18.1.1 pins cronet-api 141, whose API and shared
+    // artifacts both declare org.chromium.net. Pinning the newer compatible
+    // API artifact keeps AGP 9's unique namespace validation unambiguous.
+    implementation("org.chromium.net:cronet-api:143.7445.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
 }
