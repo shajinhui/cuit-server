@@ -114,14 +114,14 @@ class AboutPage extends StatelessWidget {
               onTap: () => showLicensePage(
                 context: context,
                 applicationName: '成信友友',
-                applicationVersion: '0.1.4+6',
+                applicationVersion: '0.1.5+7',
               ),
             ),
           ],
         ),
         const SizedBox(height: 22),
         const Text(
-          'Flutter 版 · 0.1.4+6',
+          'Flutter 版 · 0.1.5+7',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12),
         ),

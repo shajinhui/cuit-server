@@ -53,7 +53,7 @@ class PushNotificationService {
     required this.repository,
     required this.session,
     required this.platform,
-    this.appVersion = '0.1.4+6',
+    this.appVersion = '0.1.5+7',
   }) {
     session.addListener(_onSessionChanged);
   }
