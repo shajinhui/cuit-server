@@ -20,3 +20,7 @@
 ## 桌面小组件（安卓）
 - 安卓没有「同组件多尺寸」，添加时的小／中／大 = 清单里注册三个 receiver（`ScheduleWidgetSmallProvider` 2×2 / `ScheduleWidgetProvider` 4×2 / `ScheduleWidgetLargeProvider` 4×4），共用一份 `ScheduleWidgetProvider` 渲染代码（基类须 `open`），一次刷新遍历 `providerClasses` 覆盖全部尺寸；`onDisabled` 要在三个组件都空了才停闹钟。
 - 每种尺寸都必须写 `resizeMode="horizontal|vertical"` 与 `maxResizeWidth/Height`（缺省时框架下发 0，放大能力由各家桌面自行解释）；下限 160dp 是硬指标：标题+周次+一节课的时间地点约需 156dp。
+
+## 底部玻璃导航栏
+- 安卓真机（Impeller）走 `LiquidGlassTabBar.withImpeller` 折射路径，测试环境（Skia）走 `_SimpleGlassNavigationBar` 降级路径；`GlassSurface` 里两条路径的填充色必须分开调（折射 12% 白 / 降级 30% 白），否则白卡片页上会糊成纯白「背景条」。
+- 判断真机走哪条路径：临时 `debugPrint` + `adb logcat | grep`，别靠猜。

@@ -15,7 +15,7 @@ void main() {
     const Size(360, 800),
     const Size(440, 956),
   ]) {
-    testWidgets('安卓课表在 ${size.width.toInt()} 宽屏幕：头部只占一行、节次不被导航遮挡', (
+    testWidgets('安卓课表在 ${size.width.toInt()} 宽屏幕：头部只占一行、课表从导航后面穿过', (
       tester,
     ) async {
       final bottomInset = size.width == 320 ? 0.0 : 24.0;
@@ -73,18 +73,19 @@ void main() {
           .getTopLeft(find.byType(GlassNavigationBar))
           .dy;
       final scroll = find.byKey(const PageStorageKey('schedule-scroll'));
-      expect(tester.getBottomLeft(scroll).dy, lessThan(navigationTop));
+      // 导航是浮在内容上的一层玻璃：课表要一直铺到屏幕底边，从导航后面
+      // 穿过去。旧版按「屏高 − 导航高」压缩网格，课程色块会在导航上沿被
+      // 切一刀，看起来像页面到那里就结束了。
+      expect(tester.getBottomLeft(scroll).dy, size.height);
+      expect(tester.getBottomLeft(grid).dy, greaterThan(navigationTop));
       if (size.height >= 800) {
         final section11 = find.descendant(of: grid, matching: find.text('11'));
-        expect(tester.getBottomLeft(section11).dy, lessThan(navigationTop));
-        final time11 = find.descendant(
-          of: grid,
-          matching: find.text('20:25\n21:10'),
+        expect(
+          tester.getBottomLeft(section11).dy,
+          lessThanOrEqualTo(size.height),
         );
-        expect(tester.getBottomLeft(time11).dy, lessThan(navigationTop));
       }
 
-      final scrollViewportBottomBefore = tester.getBottomLeft(scroll).dy;
       await tester.drag(
         find.byKey(const PageStorageKey('schedule-scroll')),
         const Offset(0, -1000),
@@ -94,11 +95,14 @@ void main() {
         tester.element(find.byType(CourseGrid)),
       );
       expect(navigationScope?.visible, isFalse);
-      // 导航收起后视口要真正铺到系统安全区上方，不能继续预留整条导航高度。
-      expect(
-        tester.getBottomLeft(scroll).dy,
-        greaterThan(scrollViewportBottomBefore),
-      );
+      // 底部滚动余量要真的存在：滑到底时最后一节完整落在安全区上方，
+      // 而不是永远被导航压住。
+      final position = tester
+          .state<ScrollableState>(
+            find.descendant(of: scroll, matching: find.byType(Scrollable)),
+          )
+          .position;
+      expect(position.pixels, greaterThan(0));
       final lastSection = find.descendant(
         of: grid,
         matching: find.text('${vm.sectionCount}'),

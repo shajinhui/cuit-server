@@ -40,17 +40,18 @@ class CourseGrid extends StatelessWidget {
         builder: (context, size) {
           // extendBody 的 Scaffold 会把应用导航高度放进 padding.bottom。导航
           // 自动收起后不能继续预留这条高度，否则课表底部会留下一条被截断的空带。
-          final androidBottomPadding = navigation == null
+          final navigationInset = navigation == null
               ? scaffoldBottom + 4
               : navigation.visible
               ? math.max(scaffoldBottom, navigation.bottomBarHeight) + 4
               : navigation.systemBottomInset + 4;
+          // 导航是浮在内容上的一层玻璃，网格必须铺到屏幕底边，让最后一节课
+          // 从导航后面穿过去；否则课程色块会在导航上沿被切一刀，看着像页面
+          // 到那里就结束了。底部只留滚动余量，滑到底时最后一节仍能完整露出。
           final bottomPadding = android
-              ? androidBottomPadding
+              ? navigationInset
               : math.max(64.0, 52 + scaffoldBottom);
-          final visibleHeight = android
-              ? math.max(0.0, size.maxHeight - bottomPadding)
-              : size.maxHeight;
+          final visibleHeight = size.maxHeight;
           // 短屏保留课程名称与教室的空间，通过滚动查看，不能强行压进 11 节。
           final rowHeight = android
               ? math.max(40.0, visibleHeight / 11)
@@ -60,7 +61,7 @@ class CourseGrid extends StatelessWidget {
           final font = (size.maxWidth * .03).clamp(11.0, 14.0);
           final scrollView = SingleChildScrollView(
             key: const PageStorageKey('schedule-scroll'),
-            padding: EdgeInsets.only(bottom: android ? 0 : bottomPadding),
+            padding: EdgeInsets.only(bottom: bottomPadding),
             child: SizedBox(
               height: rowHeight * rowCount,
               child: Stack(
@@ -273,12 +274,7 @@ class CourseGrid extends StatelessWidget {
               ),
             ),
           );
-          return android
-              ? Padding(
-                  padding: EdgeInsets.only(bottom: bottomPadding),
-                  child: scrollView,
-                )
-              : scrollView;
+          return scrollView;
         },
       ),
     );

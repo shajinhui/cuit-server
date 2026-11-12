@@ -1104,12 +1104,12 @@ class ForumThreadCard extends StatelessWidget {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(context),
-                const SizedBox(height: 7),
+                const SizedBox(height: 6),
                 Padding(
                   padding: const EdgeInsets.only(left: 52),
                   child: Column(
@@ -1127,7 +1127,7 @@ class ForumThreadCard extends StatelessWidget {
                           ),
                         ),
                       if (displayTitle.isNotEmpty && plainBody.isNotEmpty)
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                       if (plainBody.isNotEmpty)
                         Text(
                           plainBody,
@@ -1141,7 +1141,7 @@ class ForumThreadCard extends StatelessWidget {
                         ),
                       if (thread.poll != null) ...[
                         if (displayTitle.isNotEmpty || plainBody.isNotEmpty)
-                          const SizedBox(height: 9),
+                          const SizedBox(height: 8),
                         ForumPollCard(
                           poll: thread.poll,
                           repository: repository,
@@ -1150,7 +1150,7 @@ class ForumThreadCard extends StatelessWidget {
                       ],
                       if (linked != null) ...[
                         if (displayTitle.isNotEmpty || plainBody.isNotEmpty)
-                          const SizedBox(height: 9),
+                          const SizedBox(height: 8),
                         ForumLinkedContentCard(
                           content: linked,
                           repository: repository,
@@ -1158,10 +1158,10 @@ class ForumThreadCard extends StatelessWidget {
                         ),
                       ],
                       if (thread.imageAssetIds.isNotEmpty) ...[
-                        const SizedBox(height: 9),
+                        const SizedBox(height: 8),
                         _buildImages(),
                       ],
-                      const SizedBox(height: 7),
+                      const SizedBox(height: 6),
                       _buildFooter(context),
                     ],
                   ),

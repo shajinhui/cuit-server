@@ -307,12 +307,12 @@ class _SimpleGlassNavigationBar extends StatelessWidget {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          scheme.primary.withValues(alpha: .16),
-                          scheme.primary.withValues(alpha: .06),
+                          scheme.primary.withValues(alpha: .22),
+                          scheme.primary.withValues(alpha: .09),
                         ],
                       ),
                       border: Border.all(
-                        color: scheme.primary.withValues(alpha: .08),
+                        color: scheme.primary.withValues(alpha: .12),
                       ),
                     ),
                   ),
