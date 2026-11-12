@@ -92,6 +92,7 @@ class AppDependencies {
         ? const OhosSecureAppStorage()
         : const SecureAppStorage(FlutterSecureStorage());
     final api = await ApiClient.create(config.apiBaseUrl, privateStorage);
+    final campusRepository = DefaultCampusRepository(api);
     final session = SessionViewModel(
       DefaultSessionRepository(
         api,
@@ -102,7 +103,7 @@ class AppDependencies {
     );
     final push = !kIsWeb && !isHarmonyOS && !config.startInDemo
         ? PushNotificationService(
-            api: api,
+            repository: campusRepository,
             session: session,
             platform: defaultTargetPlatform == TargetPlatform.iOS
                 ? 'ios'
@@ -114,7 +115,7 @@ class AppDependencies {
       calendar: calendar,
       settings: AppSettings(preferences: preferences),
       api: api,
-      campusRepository: DefaultCampusRepository(api),
+      campusRepository: campusRepository,
       autoRunRepository: AutoRunRepository(privateStorage),
       appUpdate: AppUpdateViewModel(
         isHarmonyOS

@@ -139,6 +139,34 @@ class DefaultCampusRepository implements CampusRepository, CommunityRepository {
       0;
 
   @override
+  Future<void> registerPushDevice({
+    required String token,
+    required String platform,
+    required String appVersion,
+    required String locale,
+  }) async {
+    await _request(
+      '$_community/me/push-devices',
+      method: 'POST',
+      body: {
+        'token': token,
+        'platform': platform,
+        'app_version': appVersion,
+        'locale': locale,
+      },
+    );
+  }
+
+  @override
+  Future<void> unregisterPushDevice(String token) async {
+    await _request(
+      '$_community/me/push-devices',
+      method: 'DELETE',
+      body: {'token': token},
+    );
+  }
+
+  @override
   Future<CampusPageResult<CommunityFavorite>> listFavorites({
     String? cursor,
   }) async => CampusPageResult.fromJson(

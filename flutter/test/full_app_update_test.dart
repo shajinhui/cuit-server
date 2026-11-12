@@ -1,6 +1,10 @@
 import 'package:chengxin_youyou/features/app_update/data/full_app_update_repository.dart';
 import 'package:chengxin_youyou/features/app_update/presentation/full_app_update_view_model.dart';
+import 'package:chengxin_youyou/app/app.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'fakes/test_dependencies.dart';
 
 void main() {
   test('完整更新检查发现新版本后等待用户安装', () async {
@@ -52,6 +56,37 @@ void main() {
 
     expect(model.state, FullAppUpdateState.available);
     expect(model.error, '完整更新失败，请稍后重试');
+  });
+
+  testWidgets('发现新版本后应用自动提示，稍后仅关闭本次提醒', (tester) async {
+    final repository = _FakeFullUpdateRepository(
+      update: const FullAppUpdate(
+        platform: 'android',
+        versionName: '0.1.4',
+        versionCode: 6,
+        minimumVersionCode: 5,
+        downloadPath: '/download.apk',
+        storeUrl: null,
+        sha256: null,
+        size: null,
+        forceUpdate: false,
+        releaseNotes: ['修复更新问题'],
+      ),
+    );
+    final model = FullAppUpdateViewModel(repository);
+    final dependencies = (await tester.runAsync(
+      () => testDependencies(fullAppUpdate: model),
+    ))!;
+    addTearDown(dependencies.dispose);
+
+    await tester.pumpWidget(ChengxinApp(dependencies: dependencies));
+    await tester.pumpAndSettle();
+
+    expect(find.text('发现新版本 0.1.4'), findsOneWidget);
+    expect(find.textContaining('修复更新问题'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('full-update-later')));
+    await tester.pumpAndSettle();
+    expect(find.text('发现新版本 0.1.4'), findsNothing);
   });
 }
 

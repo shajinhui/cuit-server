@@ -6,8 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../../core/network/api_client.dart';
 import '../../core/platform/app_platform.dart';
+import '../community/data/community_repository.dart';
 import '../session/presentation/session_view_model.dart';
 
 class PushNotificationTarget {
@@ -50,15 +50,15 @@ class PushNotificationTarget {
 /// Firebase setup is optional for local/demo builds; failures never block startup.
 class PushNotificationService {
   PushNotificationService({
-    required this.api,
+    required this.repository,
     required this.session,
     required this.platform,
-    this.appVersion = '0.1.0+2',
+    this.appVersion = '0.1.4+6',
   }) {
     session.addListener(_onSessionChanged);
   }
 
-  final ApiClient api;
+  final CommunityRepository repository;
   final SessionViewModel session;
   final String platform;
   final String appVersion;
@@ -72,7 +72,9 @@ class PushNotificationService {
   String? _registeredToken;
   bool _disposed = false;
   PushNotificationTarget? _pendingTarget;
+  bool _pendingAnnouncement = false;
   void Function(PushNotificationTarget target)? onNotificationTap;
+  VoidCallback? onAnnouncementTap;
 
   Future<void> initialize() {
     if (_disposed) return Future.value();
@@ -84,7 +86,7 @@ class PushNotificationService {
   Future<void> _initialize() async {
     if (kIsWeb || isHarmonyOS) return;
     try {
-      await Firebase.initializeApp();
+      await _initializeFirebase();
       final messaging = FirebaseMessaging.instance;
       await messaging.requestPermission(
         alert: true,
@@ -107,15 +109,49 @@ class PushNotificationService {
     }
   }
 
+  Future<void> _initializeFirebase() async {
+    const apiKey = String.fromEnvironment('FIREBASE_API_KEY');
+    const appId = String.fromEnvironment('FIREBASE_APP_ID');
+    const messagingSenderId = String.fromEnvironment(
+      'FIREBASE_MESSAGING_SENDER_ID',
+    );
+    const projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+    if (apiKey.isEmpty ||
+        appId.isEmpty ||
+        messagingSenderId.isEmpty ||
+        projectId.isEmpty) {
+      await Firebase.initializeApp();
+      return;
+    }
+    await Firebase.initializeApp(
+      options: FirebaseOptions(
+        apiKey: apiKey,
+        appId: appId,
+        messagingSenderId: messagingSenderId,
+        projectId: projectId,
+        iosBundleId: defaultTargetPlatform == TargetPlatform.iOS
+            ? const String.fromEnvironment(
+                'FIREBASE_IOS_BUNDLE_ID',
+                defaultValue: 'org.dpdns.fanxiaogao05.chengxin.flutter',
+              )
+            : null,
+      ),
+    );
+  }
+
   Future<void> _initializeLocalNotifications() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const darwin = DarwinInitializationSettings();
     await _local.initialize(
       settings: const InitializationSettings(android: android, iOS: darwin),
       onDidReceiveNotificationResponse: (response) {
-        _deliverTarget(
-          PushNotificationTarget.fromLocalPayload(response.payload),
-        );
+        if (_isAnnouncementPayload(response.payload)) {
+          _deliverAnnouncement();
+        } else {
+          _deliverTarget(
+            PushNotificationTarget.fromLocalPayload(response.payload),
+          );
+        }
       },
     );
     await _local
@@ -139,11 +175,23 @@ class PushNotificationService {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(channel);
+    const announcementChannel = AndroidNotificationChannel(
+      'app_announcements',
+      '应用公告',
+      description: '版本更新和服务公告',
+      importance: Importance.high,
+    );
+    await _local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(announcementChannel);
   }
 
   Future<void> _showForegroundMessage(RemoteMessage message) async {
     final target = PushNotificationTarget.fromRemoteMessage(message);
-    if (target == null) return;
+    final isAnnouncement = message.data['type'] == 'announcement';
+    if (target == null && !isAnnouncement) return;
     final title = message.notification?.title ?? '新的互动消息';
     final body = message.notification?.body ?? '有人回复了你的帖子或回复';
     try {
@@ -151,17 +199,17 @@ class PushNotificationService {
         id: message.hashCode & 0x7fffffff,
         title: title,
         body: body,
-        notificationDetails: const NotificationDetails(
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-            'community_messages',
-            '互动消息',
-            channelDescription: '论坛帖子和回复提醒',
+            isAnnouncement ? 'app_announcements' : 'community_messages',
+            isAnnouncement ? '应用公告' : '互动消息',
+            channelDescription: isAnnouncement ? '版本更新和服务公告' : '论坛帖子和回复提醒',
             importance: Importance.high,
             priority: Priority.high,
           ),
-          iOS: DarwinNotificationDetails(),
+          iOS: const DarwinNotificationDetails(),
         ),
-        payload: target.toPayload(),
+        payload: target?.toPayload() ?? jsonEncode(message.data),
       );
     } catch (_) {
       // The in-app inbox remains available if a platform channel is unavailable.
@@ -170,7 +218,11 @@ class PushNotificationService {
 
   void _handleOpenedMessage(RemoteMessage? message) {
     if (message == null) return;
-    _deliverTarget(PushNotificationTarget.fromRemoteMessage(message));
+    if (message.data['type'] == 'announcement') {
+      _deliverAnnouncement();
+    } else {
+      _deliverTarget(PushNotificationTarget.fromRemoteMessage(message));
+    }
   }
 
   void _deliverTarget(PushNotificationTarget? target) {
@@ -183,6 +235,25 @@ class PushNotificationService {
     }
   }
 
+  void _deliverAnnouncement() {
+    final callback = onAnnouncementTap;
+    if (callback == null) {
+      _pendingAnnouncement = true;
+    } else {
+      callback();
+    }
+  }
+
+  bool _isAnnouncementPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return false;
+    try {
+      final value = jsonDecode(payload);
+      return value is Map && value['type'] == 'announcement';
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _registerToken(String? token) async {
     if (_disposed || token == null || token.isEmpty) return;
     _token = token;
@@ -192,15 +263,11 @@ class PushNotificationService {
       if (previous != null && previous != token) {
         await _unregisterToken(previous);
       }
-      await api.request(
-        '/api/v1/ratings/community/me/push-devices',
-        method: 'POST',
-        data: {
-          'token': token,
-          'platform': platform,
-          'app_version': appVersion,
-          'locale': 'zh-CN',
-        },
+      await repository.registerPushDevice(
+        token: token,
+        platform: platform,
+        appVersion: appVersion,
+        locale: 'zh-CN',
       );
       _registeredToken = token;
     } catch (_) {
@@ -210,11 +277,7 @@ class PushNotificationService {
 
   Future<void> _unregisterToken(String token) async {
     try {
-      await api.request(
-        '/api/v1/ratings/community/me/push-devices',
-        method: 'DELETE',
-        data: {'token': token},
-      );
+      await repository.unregisterPushDevice(token);
     } catch (_) {
       // Expired sessions are cleaned up by the next successful registration.
     }
@@ -236,6 +299,10 @@ class PushNotificationService {
     final target = _pendingTarget;
     _pendingTarget = null;
     if (target != null) _deliverTarget(target);
+    if (_pendingAnnouncement) {
+      _pendingAnnouncement = false;
+      _deliverAnnouncement();
+    }
   }
 
   void dispose() {

@@ -294,7 +294,7 @@ class ProfilePage extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14),
                     leading: const _SettingIcon(icon: Icons.info_outline),
                     title: const Text('关于成信友友'),
-                    subtitle: const Text('Flutter 版 · 0.1.0'),
+                    subtitle: const Text('Flutter 版 · 0.1.4'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () => context.pushNamed('about'),
                   ),

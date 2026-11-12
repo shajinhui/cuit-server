@@ -5,6 +5,8 @@ import '../features/profile/presentation/feedback_page.dart';
 import '../features/profile/presentation/about_page.dart';
 import '../features/app_update/presentation/app_update_tile.dart';
 import '../features/app_update/presentation/full_app_update_tile.dart';
+import '../features/app_update/presentation/full_app_update_dialog.dart';
+import '../features/app_update/presentation/full_app_update_view_model.dart';
 
 import 'package:chengxin_youyou/features/schedule/presentation/schedule_page.dart';
 import 'package:chengxin_youyou/features/session/presentation/login_page.dart';
@@ -53,20 +55,29 @@ class ChengxinApp extends StatefulWidget {
 
 class _ChengxinAppState extends State<ChengxinApp> {
   late final AppLifecycleListener _appLifecycle;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  int? _promptedUpdateCode;
+  bool _updatePromptScheduled = false;
 
   @override
   void initState() {
     super.initState();
     widget.dependencies.push?.onNotificationTap = _openPushTarget;
+    widget.dependencies.push?.onAnnouncementTap = _openAnnouncements;
     widget.dependencies.push?.flushPendingTarget();
     // 热更新独立于账号和业务初始化，不等待网络检查才展示页面。
     unawaited(widget.dependencies.appUpdate?.checkInBackground());
     unawaited(widget.dependencies.fullAppUpdate?.checkInBackground());
+    widget.dependencies.fullAppUpdate?.addListener(_scheduleFullUpdatePrompt);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scheduleFullUpdatePrompt(),
+    );
     _appLifecycle = AppLifecycleListener(
       onResume: () {
         unawaited(widget.dependencies.appUpdate?.checkInBackground());
         unawaited(widget.dependencies.fullAppUpdate?.checkInBackground());
         unawaited(widget.dependencies.community?.refreshUnread());
+        unawaited(widget.dependencies.announcements?.refresh());
       },
     );
     unawaited(widget.dependencies.announcements?.refresh());
@@ -81,6 +92,36 @@ class _ChengxinAppState extends State<ChengxinApp> {
       pathParameters: {'threadId': target.threadId},
       queryParameters: {if (target.replyId != null) 'reply': target.replyId!},
     );
+  }
+
+  void _openAnnouncements() {
+    if (!mounted) return;
+    _router.go('/tools');
+    unawaited(widget.dependencies.announcements?.refresh(force: true));
+  }
+
+  void _scheduleFullUpdatePrompt() {
+    if (!mounted || _updatePromptScheduled) return;
+    _updatePromptScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updatePromptScheduled = false;
+      if (mounted) unawaited(_showFullUpdatePrompt());
+    });
+  }
+
+  Future<void> _showFullUpdatePrompt() async {
+    final viewModel = widget.dependencies.fullAppUpdate;
+    final update = viewModel?.update;
+    final context = _navigatorKey.currentContext;
+    if (viewModel == null ||
+        update == null ||
+        viewModel.state != FullAppUpdateState.available ||
+        context == null ||
+        _promptedUpdateCode == update.versionCode) {
+      return;
+    }
+    _promptedUpdateCode = update.versionCode;
+    await showFullAppUpdatePrompt(context, viewModel, update);
   }
 
   Future<void> _consumeWidgetLaunch() async {
@@ -101,6 +142,7 @@ class _ChengxinAppState extends State<ChengxinApp> {
   }
 
   late final GoRouter _router = GoRouter(
+    navigatorKey: _navigatorKey,
     initialLocation: '/schedule',
     refreshListenable: widget.dependencies.session,
     redirect: (context, state) {
@@ -440,6 +482,10 @@ class _ChengxinAppState extends State<ChengxinApp> {
   void dispose() {
     _appLifecycle.dispose();
     widget.dependencies.push?.onNotificationTap = null;
+    widget.dependencies.push?.onAnnouncementTap = null;
+    widget.dependencies.fullAppUpdate?.removeListener(
+      _scheduleFullUpdatePrompt,
+    );
     widget.dependencies.desktopWidgets?.onOpenSchedule = null;
     _router.dispose();
     super.dispose();

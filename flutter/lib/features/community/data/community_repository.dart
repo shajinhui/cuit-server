@@ -19,6 +19,13 @@ abstract interface class CommunityRepository {
   Future<int> getUnreadCount();
   Future<void> readNotification(String id);
   Future<int> readAllNotifications(String watermark);
+  Future<void> registerPushDevice({
+    required String token,
+    required String platform,
+    required String appVersion,
+    required String locale,
+  });
+  Future<void> unregisterPushDevice(String token);
   Future<CampusPageResult<CommunityFavorite>> listFavorites({String? cursor});
   Future<bool> getForumFavorite(String threadId);
   Future<bool> setForumFavorite(String threadId, bool favorited);

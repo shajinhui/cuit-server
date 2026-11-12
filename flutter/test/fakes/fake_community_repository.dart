@@ -75,6 +75,17 @@ class FakeCommunityRepository extends CampusPreviewRepository
   }
 
   @override
+  Future<void> registerPushDevice({
+    required String token,
+    required String platform,
+    required String appVersion,
+    required String locale,
+  }) async {}
+
+  @override
+  Future<void> unregisterPushDevice(String token) async {}
+
+  @override
   Future<CampusPageResult<CommunityFavorite>> listFavorites({
     String? cursor,
   }) async => favorites;
