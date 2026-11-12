@@ -4,6 +4,7 @@ import '../features/profile/presentation/plan_completion_page.dart';
 import '../features/profile/presentation/feedback_page.dart';
 import '../features/profile/presentation/about_page.dart';
 import '../features/app_update/presentation/app_update_tile.dart';
+import '../features/app_update/presentation/full_app_update_tile.dart';
 
 import 'package:chengxin_youyou/features/schedule/presentation/schedule_page.dart';
 import 'package:chengxin_youyou/features/session/presentation/login_page.dart';
@@ -60,9 +61,11 @@ class _ChengxinAppState extends State<ChengxinApp> {
     widget.dependencies.push?.flushPendingTarget();
     // 热更新独立于账号和业务初始化，不等待网络检查才展示页面。
     unawaited(widget.dependencies.appUpdate?.checkInBackground());
+    unawaited(widget.dependencies.fullAppUpdate?.checkInBackground());
     _appLifecycle = AppLifecycleListener(
       onResume: () {
         unawaited(widget.dependencies.appUpdate?.checkInBackground());
+        unawaited(widget.dependencies.fullAppUpdate?.checkInBackground());
         unawaited(widget.dependencies.community?.refreshUnread());
       },
     );
@@ -364,7 +367,16 @@ class _ChengxinAppState extends State<ChengxinApp> {
                     avatar: widget.dependencies.avatar,
                     updateTile: appUpdate == null
                         ? null
-                        : AppUpdateTile(viewModel: appUpdate),
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AppUpdateTile(viewModel: appUpdate),
+                              if (widget.dependencies.fullAppUpdate != null)
+                                FullAppUpdateTile(
+                                  viewModel: widget.dependencies.fullAppUpdate!,
+                                ),
+                            ],
+                          ),
                     desktopWidgetTile:
                         widget.dependencies.desktopWidgets == null
                         ? null

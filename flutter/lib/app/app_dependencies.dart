@@ -23,7 +23,9 @@ import '../features/push/push_service.dart';
 import '../features/autorun/data/autorun_repository.dart';
 import '../features/app_update/data/shorebird_app_update_repository.dart';
 import '../features/app_update/data/unavailable_app_update_repository.dart';
+import '../features/app_update/data/full_app_update_repository.dart';
 import '../features/app_update/presentation/app_update_view_model.dart';
+import '../features/app_update/presentation/full_app_update_view_model.dart';
 import '../features/announcements/announcements.dart';
 import '../core/platform/desktop_widgets.dart';
 import '../features/schedule/models/desktop_widget_snapshot.dart';
@@ -42,6 +44,7 @@ class AppDependencies {
     this.userStorage,
     this.autoRunRepository,
     this.appUpdate,
+    this.fullAppUpdate,
     this.announcements,
     this.desktopWidgets,
     this.push,
@@ -62,6 +65,7 @@ class AppDependencies {
   final AutoRunRepository? autoRunRepository;
   final ProfileRepository? profileRepository;
   final AppUpdateViewModel? appUpdate;
+  final FullAppUpdateViewModel? fullAppUpdate;
   final AnnouncementViewModel? announcements;
   final DesktopWidgets? desktopWidgets;
   final PushNotificationService? push;
@@ -116,6 +120,16 @@ class AppDependencies {
         isHarmonyOS
             ? const UnavailableAppUpdateRepository()
             : ShorebirdAppUpdateRepository(),
+      ),
+      fullAppUpdate: FullAppUpdateViewModel(
+        isHarmonyOS
+            ? const UnavailableFullAppUpdateRepository()
+            : RemoteFullAppUpdateRepository(
+                api: api,
+                platform: defaultTargetPlatform == TargetPlatform.iOS
+                    ? 'ios'
+                    : 'android',
+              ),
       ),
       announcements: AnnouncementViewModel(
         DefaultAnnouncementRepository(
@@ -288,6 +302,7 @@ class AppDependencies {
     session.dispose();
     settings.dispose();
     appUpdate?.dispose();
+    fullAppUpdate?.dispose();
     announcements?.dispose();
     api?.dispose();
   }
