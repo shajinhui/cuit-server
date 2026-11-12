@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../core/network/api_client.dart';
+import '../../../core/network/native_dio_adapter.dart';
 import '../../../core/platform/app_platform.dart';
 
 class FullAppUpdate {
@@ -46,12 +46,30 @@ abstract interface class FullAppUpdateRepository {
 
 class RemoteFullAppUpdateRepository implements FullAppUpdateRepository {
   RemoteFullAppUpdateRepository({
-    required ApiClient api,
     required this.platform,
-  }) : _api = api;
+    Dio? dio,
+    String baseUrl = const String.fromEnvironment(
+      'RATINGS_API_BASE_URL',
+      defaultValue: 'https://lehi.top',
+    ),
+  }) : _dio = dio ?? _createDio(baseUrl);
 
-  final ApiClient _api;
+  final Dio _dio;
   final String platform;
+
+  static Dio _createDio(String baseUrl) {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl.replaceAll(RegExp(r'/$'), ''),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(minutes: 10),
+        followRedirects: true,
+        headers: const {'Accept': 'application/json'},
+      ),
+    );
+    configureNativeDioAdapter(dio);
+    return dio;
+  }
 
   @override
   bool get isAvailable =>
@@ -61,15 +79,19 @@ class RemoteFullAppUpdateRepository implements FullAppUpdateRepository {
   Future<FullAppUpdate?> check() async {
     if (!isAvailable) return null;
     final package = await PackageInfo.fromPlatform();
-    final data = await _api.request(
+    final response = await _dio.get<Map<String, dynamic>>(
       '/api/v1/ratings/app-updates',
-      query: {
+      queryParameters: {
         'platform': platform,
         'channel': 'stable',
         'version_code': int.tryParse(package.buildNumber) ?? 0,
       },
     );
-    if (data is! Map<String, dynamic>) return null;
+    final envelope = response.data;
+    if (envelope == null || envelope['code'] != 0 || envelope['data'] is! Map) {
+      throw const FormatException('更新响应格式无效');
+    }
+    final data = envelope['data'] as Map<String, dynamic>;
     final raw = data['update'];
     if (raw == null) return null;
     if (raw is! Map<String, dynamic>) {
@@ -99,7 +121,7 @@ class RemoteFullAppUpdateRepository implements FullAppUpdateRepository {
         'chengxin-youyou-${update.versionName}.apk',
       ),
     );
-    await _api.dio.download(
+    await _dio.download(
       downloadPath,
       target.path,
       deleteOnError: true,

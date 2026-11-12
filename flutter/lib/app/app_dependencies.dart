@@ -125,7 +125,6 @@ class AppDependencies {
         isHarmonyOS
             ? const UnavailableFullAppUpdateRepository()
             : RemoteFullAppUpdateRepository(
-                api: api,
                 platform: defaultTargetPlatform == TargetPlatform.iOS
                     ? 'ios'
                     : 'android',
