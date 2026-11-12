@@ -67,13 +67,15 @@ flutter:
   # 安卓单独使用 HarmonyOS Sans SC；iOS 继续用系统苹方 / SF Pro。
   # 该字体许可禁止修改（不能 subset），只能原样打包，见 assets/fonts 中的许可文本。
   #
-  # 该字体的 Medium/Light 在文件内部是独立的 family 名（"HarmonyOS Sans SC
-  # Medium" / "... Light"），Flutter 的权重匹配无法把它们当成同一家族的字重，
-  # w600/w700 会落到同家族的 Bold。这里只登记 Light 一个字面，所有字重都落到
-  # 它，层级靠字号。
+  # 该字体的 Medium/Light 在文件内部是独立的 family 名，Flutter 无法把它们当成
+  # 同一家族的字重（w600/w700 会落到 Bold）。所以拆成两个家族、按字号分工：
+  # 大标题（display/headline）用 Light，正文/标签用 Regular。
   fonts:
-    - family: HarmonyOS Sans SC
+    - family: HarmonyOS Sans SC Light
       fonts:
-        # 只登记 Light 一个字面，避免 w600/w700 落到 Bold。
         - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
+          weight: 400
+    - family: HarmonyOS Sans SC Text
+      fonts:
+        - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
           weight: 400

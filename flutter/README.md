@@ -188,7 +188,7 @@ python3 tool/sync_calendar.py --check  # 构建前检查
 
 ## 字体
 
-安卓单独使用 HarmonyOS Sans SC（华为免费商用），iOS 继续用系统苹方 / SF Pro；Flutter 在安卓默认请求 Roboto，不同 ROM 回落到 MiSans / Noto Sans CJK，观感不一致。该字体的 Medium/Light 在文件内部是独立 family，Flutter 权重匹配不可靠，所以只登记 Light 一个字面（层级靠字号）、标题不再用 Bold；许可限制（禁止 subset，只能原样打包）、体积和回退方式见 [安卓字体](docs/ANDROID_TYPOGRAPHY.md)。
+安卓单独使用 HarmonyOS Sans SC（华为免费商用），iOS 继续用系统苹方 / SF Pro；Flutter 在安卓默认请求 Roboto，不同 ROM 回落到 MiSans / Noto Sans CJK，观感不一致。该字体的 Medium/Light 在文件内部是独立 family，Flutter 权重匹配不可靠；因此拆成 Light / Regular 两个家族，大标题用 Light、正文和标签用 Regular，小字不发飘也不发重；许可限制（禁止 subset，只能原样打包）、体积和回退方式见 [安卓字体](docs/ANDROID_TYPOGRAPHY.md)。
 
 ## 检查与截图
 

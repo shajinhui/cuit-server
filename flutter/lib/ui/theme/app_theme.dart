@@ -6,12 +6,23 @@ class AppTheme {
   static const background = Color(0xFFF4F6FA);
 
   /// 仅安卓使用内置的 HarmonyOS Sans SC；iOS 传 null，继续用系统的苹方 / SF Pro。
-  static const String androidFontFamily = 'HarmonyOS Sans SC';
+  ///
+  /// 这个家族没有 350 的中间字面：Light 偏细、Regular 偏粗。所以按字号分工：
+  /// 大标题用 Light，正文/标签用 Regular，既不发飘也不发重。
+  static const String androidFontFamily = 'HarmonyOS Sans SC Text';
+  static const String androidDisplayFontFamily = 'HarmonyOS Sans SC Light';
 
   static String? get _platformFontFamily {
     if (kIsWeb) return null;
     return defaultTargetPlatform == TargetPlatform.android
         ? androidFontFamily
+        : null;
+  }
+
+  static String? get _platformDisplayFontFamily {
+    if (kIsWeb) return null;
+    return defaultTargetPlatform == TargetPlatform.android
+        ? androidDisplayFontFamily
         : null;
   }
 
@@ -23,7 +34,7 @@ class AppTheme {
       primary: dark ? const Color(0xFF8DB6FF) : accent,
       surface: dark ? const Color(0xFF191C23) : Colors.white,
     );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       brightness: brightness,
@@ -95,6 +106,19 @@ class AppTheme {
       dividerTheme: DividerThemeData(
         color: scheme.outlineVariant.withValues(alpha: .45),
         thickness: .7,
+      ),
+    );
+    final displayFont = _platformDisplayFontFamily;
+    if (displayFont == null) return theme;
+    final text = theme.textTheme;
+    return theme.copyWith(
+      textTheme: text.copyWith(
+        displayLarge: text.displayLarge?.copyWith(fontFamily: displayFont),
+        displayMedium: text.displayMedium?.copyWith(fontFamily: displayFont),
+        displaySmall: text.displaySmall?.copyWith(fontFamily: displayFont),
+        headlineLarge: text.headlineLarge?.copyWith(fontFamily: displayFont),
+        headlineMedium: text.headlineMedium?.copyWith(fontFamily: displayFont),
+        headlineSmall: text.headlineSmall?.copyWith(fontFamily: displayFont),
       ),
     );
   }

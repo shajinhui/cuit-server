@@ -27,11 +27,12 @@ iOS 的 `PingFang SC` + `SF Pro` 由系统提供，Flutter 通过 `CupertinoSyst
 | 文件 | 大小 |
 | --- | --- |
 | `HarmonyOS_Sans_SC_Light.ttf` | 8.2 MB |
-| 合计（未压缩） | 8.2 MB |
+| `HarmonyOS_Sans_SC_Regular.ttf` | 8.26 MB |
+| 合计（未压缩） | 16.5 MB |
 
-只打包 Light 一个文件，release APK 为 **75.7 MB**（三字体版本是 86.0 MB）。Regular/Medium/Bold 仍留在仓库里备用，未在 `fonts:` 声明就不会打进包。字体属于 assets，**不能通过 Shorebird 补丁下发**，要发新的基础版本。
+两个家族各打包一份，release APK 为 **82.6 MB**。Medium/Bold 仍留在仓库里备用，未在 `fonts:` 声明就不会打进包。字体属于 assets，**不能通过 Shorebird 补丁下发**，要发新的基础版本。
 
-## 字重映射：只用 Light
+## 字重映射：按字号分两个家族
 
 实测发现 HarmonyOS Sans SC 的各个字重并不在同一个内部 family 里：
 
@@ -42,43 +43,47 @@ iOS 的 `PingFang SC` + `SF Pro` 由系统提供，Flutter 通过 `CupertinoSyst
 | Medium | `HarmonyOS Sans SC Medium` | Regular | 500 |
 | Bold | `HarmonyOS Sans SC` | Bold | 700 |
 
-Flutter 的资产字重匹配因此不可靠：把 Medium/Light 按 500/300 登记进同一个 `fonts:` family 时，它们不一定被当成该 family 的字重；而 `w600/w700` 更容易落到同 family 的 **Bold** 上——上一版“标签/标题偏粗”就是从这里来的（`w600` 的 99 处标签都拿到了 700 的字面）。
+Flutter 的资产字重匹配因此不可靠：把 Medium/Light 按 500/300 登记进同一个 `fonts:` family 时，它们不一定被当成该 family 的字重；而 `w600/w700` 更容易落到同 family 的 **Bold** 上——最初“标签/标题偏粗”就是从这里来的。
 
-现在只登记 **Light** 一个文件：
+只用一个 Light（全部偏细）或一个 Regular（小字偏粗）都走极端，所以按字号拆成两个家族：
 
 ```yaml
 fonts:
-  - family: HarmonyOS Sans SC
+  - family: HarmonyOS Sans SC Light
     fonts:
       - asset: assets/fonts/HarmonyOS_Sans_SC_Light.ttf
         weight: 400
+  - family: HarmonyOS Sans SC Text
+    fonts:
+      - asset: assets/fonts/HarmonyOS_Sans_SC_Regular.ttf
+        weight: 400
 ```
 
-所有字重都落到 Light，层级只靠字号。同一页实测文字墨量：
+`app_theme.dart` 里默认字体是 `HarmonyOS Sans SC Text`（Regular），只把 display/headline 六档改成 `HarmonyOS Sans SC Light`。效果是大标题轻盈、正文和标签扎实：
 
-| 位置 | 旧（Bold/Medium） | 新（Light） |
-| --- | --- | --- |
-| 页面标题 | 0.455 | 0.357 |
-| 工具名 | 0.478 | 0.366 |
-| 说明文字 | 0.266 | 0.185 |
+| 位置 | 全 Light | 全 Regular | 现在（分字号） |
+| --- | --- | --- | --- |
+| 页面标题（24px） | 0.357 | 0.455 | **0.357**（Light） |
+| 工具名（15px） | 0.366 | 0.478 | **0.478**（Regular） |
+| 说明文字（12px） | 0.185 | 0.266 | **0.266**（Regular） |
 
-代价是标题不再比正文“重”，只剩大小差异；如果觉得太细，把 `fonts:` 换成 Regular 即可（改一行、重新打包）。
+这样小字不再发飘，大标题也不会显得沉重；字号越大越轻，符合常见的视觉习惯。
 
 ## 代码位置
 
 | 位置 | 作用 |
 | --- | --- |
-| `pubspec.yaml` | 声明字体家族与四个字重 |
-| `lib/ui/theme/app_theme.dart` | `_platformFontFamily`：仅 `defaultTargetPlatform == android` 时返回 `HarmonyOS Sans SC`；iOS 传 null |
+| `pubspec.yaml` | 声明 Light / Text 两个家族 |
+| `lib/ui/theme/app_theme.dart` | `_platformFontFamily`（Text/Regular）与 `_platformDisplayFontFamily`（Light）：仅安卓生效，iOS 传 null |
 | `lib/ui/theme/font_licenses.dart` | 把许可文本挂到 Flutter 的开源许可页 |
 | `lib/features/profile/presentation/about_page.dart` | 关于页脚注 |
-| `assets/fonts/` | 三个未修改的 TTF + 许可全文 |
+| `assets/fonts/` | 未修改的 TTF（当前打包 Light + Regular）+ 许可全文 |
 
 鸿蒙（`defaultTargetPlatform.name == 'ohos'`）不会命中 `TargetPlatform.android`，继续用系统字体。
 
 ## 验证与回退
 
-模拟器（Android 15 AOSP）实测：登录页、课表、工具页均正常显示 HarmonyOS Sans SC，`w700` 标题仍明显重于 `w600` 工具名，没有溢出。
+模拟器（Android 15 AOSP）实测：登录页、课表、工具页均正常显示 HarmonyOS Sans SC；页面标题走 Light、工具名和正文走 Regular，层级靠字号而不是字重，没有溢出。
 
 | 课表 | 工具 |
 | --- | --- |
@@ -91,7 +96,7 @@ fonts:
 回退到系统字体：
 
 1. 删除 `pubspec.yaml` 里的 `fonts:` 段和 `assets/fonts/...` 资产项；
-2. 删除 `AppTheme._platformFontFamily` 并在 `ThemeData` 去掉 `fontFamily`；
+2. 删除 `AppTheme._platformFontFamily` / `_platformDisplayFontFamily`，去掉 `ThemeData.fontFamily` 和 headline 的字体覆盖；
 3. 删除 `main.dart` 的 `registerBundledFontLicenses()`、`font_licenses.dart`、关于页脚注；
 4. 删除 `assets/fonts/`。
 

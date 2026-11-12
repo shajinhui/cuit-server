@@ -17,6 +17,15 @@ void main() {
       android.textTheme.titleLarge?.fontFamily,
       AppTheme.androidFontFamily,
     );
+    // 大标题用 Light，正文/标签用 Regular。
+    expect(
+      android.textTheme.headlineSmall?.fontFamily,
+      AppTheme.androidDisplayFontFamily,
+    );
+    expect(
+      android.textTheme.bodyMedium?.fontFamily,
+      AppTheme.androidFontFamily,
+    );
 
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     final ios = AppTheme.build(Brightness.light);
