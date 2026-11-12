@@ -33,7 +33,7 @@ usePageTheme('bg-page')
         <h2 id="about-introduction-title">应用介绍</h2>
         <p>
           成信友友是一款面向成都信息工程大学学生的校园助手，提供课表、成绩、考试、空教室和学籍信息等常用服务，
-          并支持 PWA 与 Android 安装。
+          并提供 iOS（TestFlight 测试）与 Android（安装包）原生客户端。
         </p>
         <p class="about-card__note">本应用为非官方学生项目，与学校及教务系统运营方无隶属或授权关系。</p>
       </section>

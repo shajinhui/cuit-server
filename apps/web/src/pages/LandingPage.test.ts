@@ -25,32 +25,39 @@ describe('官网能力与发布边界', () => {
     }
   })
 
-  it('下载区优先推荐 iOS TestFlight，PWA 为备用，不误称 App Store 正式上架', () => {
+  it('下载区只保留 iOS TestFlight 与 Android 安装包，不误称 App Store 正式上架', () => {
     const platforms = section('landing-platforms')
     const firstOption = platforms.slice(platforms.indexOf('<article>'), platforms.indexOf('</article>'))
-    expect(firstOption).toContain('iOS 推荐安装方式 · 测试版')
+    expect(firstOption).toContain('iOS 安装方式 · 测试版')
     expect(firstOption).toContain(':href="IOS_TESTFLIGHT_URL"')
     expect(firstOption).toContain('先安装 Apple TestFlight')
-    expect(platforms).toContain('iPhone / iPad PWA 备用指引')
     expect(platforms).toContain(':href="ANDROID_DOWNLOAD_URL"')
-    expect(platforms).toContain('当前入口仍为原版客户端')
-    expect(platforms).toContain('首次仍需安装对应基础包')
+    expect(platforms).toContain('下载 Android APK')
+    expect(platforms).toContain('首次仍需安装完整包')
     expect(platforms).toContain('TestFlight 测试不等于 App Store 正式上架')
-    expect(platforms).not.toContain('暂未提供 App Store / TestFlight 公开分发')
     expect(platforms).toContain('原生鸿蒙仍在验证中')
+    // 官网上不再出现网页 / PWA 之类的第三条安装路径。
+    expect(platforms).not.toContain('PWA')
+    expect(platforms).not.toContain('体验网页版')
+    expect(source).not.toContain('openWebApp')
+    expect(source).not.toContain('chooseInstallGuide')
   })
 
-  it('安装弹窗将 TestFlight 排在首位，保留 iOS PWA 备用入口', () => {
+  it('安装弹窗只留 TestFlight 与 Android 安装包两个入口', () => {
     const chooser = source.slice(source.indexOf('<div class="landing-usage-options">'))
     expect(chooser).toMatch(/landing-usage-options">\s*<a[^>]*:href="IOS_TESTFLIGHT_URL"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/)
-    expect(chooser).toContain('iOS TestFlight 测试（推荐）')
-    expect(chooser).toContain('iPhone / iPad PWA（备用）')
+    expect(chooser).toContain('iOS TestFlight 测试')
+    expect(chooser).toContain('Android 安装包')
+    expect(chooser).not.toContain('PWA')
+    expect(chooser).not.toContain('网页版')
+    // TestFlight 3 处（下载区主按钮、下载区卡片、安装弹窗）。
     expect(source.match(/:href="IOS_TESTFLIGHT_URL"/g)).toHaveLength(3)
     expect(source).not.toContain('https://testflight.apple.com/join/')
   })
 
   it('下载按钮只使用不缓存的固定入口，不将包地址写死在页面', () => {
-    expect(source.match(/:href="ANDROID_DOWNLOAD_URL"/g)).toHaveLength(2)
+    // Android 3 处（下载区主按钮、下载区卡片、安装弹窗）。
+    expect(source.match(/:href="ANDROID_DOWNLOAD_URL"/g)).toHaveLength(3)
     expect(source).not.toContain('.apk')
     expect(source).not.toContain('releases/download/')
   })

@@ -152,14 +152,17 @@ describe('样式层颜色约束', () => {
       ...readSourceTree(`${appRoot}src`),
     ]
 
-    const unused = [...defined].filter(
-      (token) =>
-        !intentional.has(token) &&
-        !sources.some((source) => new RegExp(`${token}(?![a-z0-9-])`).test(source)),
-    )
+    // 逐令牌 × 逐文件地跑正则要几十万次匹配，并发跑全量测试时会直接超时。
+    // 改成先把源码里出现的令牌名一次性抽出来，再按名字比对，结果等价：
+    // 原来的 `令牌(?![-a-z0-9])` 与“抽出的完整令牌名相等”判定一致。
+    const haystack = sources.join('\n')
+    const occurrences = new Set(haystack.match(/--[a-z0-9-]+/g) ?? [])
+
+    const unused = [...defined].filter((token) => !intentional.has(token) && !occurrences.has(token))
 
     expect(unused, 'theme.css 里存在没有任何消费者的令牌，请删除或说明保留原因').toEqual([])
-  })
+    // 这条要读 src 下两百多个源文件，并发跑全量时磁盘会被抢，给足时间。
+  }, 30_000)
 
   it('theme.css 的浅色令牌与深色令牌键集合一致', () => {
     const source = readStylesheet('theme.css')

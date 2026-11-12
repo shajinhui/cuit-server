@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { Capacitor } from '@capacitor/core'
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 
 import landingClassrooms from '@/assets/landing/landing-classrooms.webp'
 import landingClub from '@/assets/landing/landing-club.webp'
@@ -16,15 +14,12 @@ import landingResources from '@/assets/landing/landing-resources.webp'
 import landingRun from '@/assets/landing/landing-run.webp'
 import landingSchedule from '@/assets/landing/landing-schedule.webp'
 import landingTools from '@/assets/landing/landing-tools.webp'
-import { usePwaInstall } from '@/features/pwa-install'
 import { QQ_GROUP_NUMBER, QQ_GROUP_URL } from '@/shared/config/community'
 import { ANDROID_DOWNLOAD_URL, IOS_TESTFLIGHT_URL } from '@/shared/config/downloads'
 import { usePageTheme } from '@/shared/composables/usePageTheme'
 
 defineOptions({ name: 'LandingPage' })
 
-const router = useRouter()
-const { openInstallGuide } = usePwaInstall()
 const usageChooserVisible = ref(false)
 const usageDialog = ref<HTMLElement | null>(null)
 const heroStage = ref<HTMLElement | null>(null)
@@ -72,20 +67,6 @@ async function openApp() {
   usageChooserVisible.value = true
   await nextTick()
   usageDialog.value?.querySelector<HTMLButtonElement>('button')?.focus()
-}
-
-function openWebApp() {
-  // 官网未注册应用 Worker；进入网页版时完整导航，让应用正常初始化离线能力。
-  if (!Capacitor.isNativePlatform()) {
-    window.location.assign('/login')
-    return
-  }
-  void router.push({ name: 'login' })
-}
-
-function chooseInstallGuide(kind: 'ios' | 'android-pwa') {
-  closeUsageChooser()
-  openInstallGuide(kind)
 }
 
 function closeUsageChooser() {
@@ -157,7 +138,7 @@ function resetHeroPerspective() {
         <button type="button" @click="scrollToSection('landing-platforms')">下载</button>
         <RouterLink :to="{ name: 'privacy' }">隐私</RouterLink>
       </div>
-      <button class="landing-nav__open" type="button" @click="openWebApp">体验网页版</button>
+      <button class="landing-nav__open" type="button" @click="scrollToSection('landing-platforms')">下载安装</button>
     </nav>
 
     <section class="landing-hero" aria-labelledby="landing-title">
@@ -179,7 +160,7 @@ function resetHeroPerspective() {
             看看能做什么
           </button>
         </div>
-        <p class="landing-hero__note landing-hero__item">iOS TestFlight 测试 · Android 安装包 · 网页 / PWA</p>
+        <p class="landing-hero__note landing-hero__item">iOS 通过 TestFlight 安装测试版 · Android 直接下载安装包</p>
       </div>
 
       <div
@@ -226,7 +207,7 @@ function resetHeroPerspective() {
 
     <section class="landing-trust landing-reveal" aria-label="产品特点">
       <div><strong>教务与生活</strong><span>常用查询与校园交流放在一起</span></div>
-      <div><strong>按设备选择</strong><span>浏览器、主屏幕或 Android 安装</span></div>
+      <div><strong>按设备选择</strong><span>iOS 用 TestFlight，Android 装安装包</span></div>
       <div><strong>持续打磨</strong><span>代码公开可查，认真听取反馈</span></div>
     </section>
 
@@ -449,43 +430,28 @@ function resetHeroPerspective() {
     <section id="landing-platforms" class="landing-platform" aria-labelledby="landing-platform-title">
       <div class="landing-platform__copy landing-reveal">
         <p class="landing-eyebrow">选择适合你的入口</p>
-        <h2 id="landing-platform-title">先用起来，<br />再选择怎么安装。</h2>
-        <p>iPhone / iPad 推荐通过 TestFlight 安装测试版，PWA 作为备用方式；电脑直接用网页，Android 可选择安装包或 PWA。</p>
+        <h2 id="landing-platform-title">iPhone 用 TestFlight，<br />Android 装安装包。</h2>
+        <p>两个平台都是原生客户端：iPhone / iPad 通过 Apple TestFlight 安装测试版，Android 直接下载安装包。</p>
         <div class="landing-platform-actions">
           <a class="landing-button landing-button--primary" :href="IOS_TESTFLIGHT_URL" target="_blank" rel="noopener noreferrer">iOS TestFlight 测试</a>
-          <button class="landing-button landing-button--secondary" type="button" @click="openWebApp">体验网页版</button>
+          <a class="landing-button landing-button--secondary" :href="ANDROID_DOWNLOAD_URL" rel="noopener noreferrer">下载 Android 安装包</a>
         </div>
-        <small class="landing-platform__note">展示界面为示意，不同平台与版本的布局和功能可能略有差异。</small>
+        <small class="landing-platform__note">TestFlight 测试不等于 App Store 正式上架；原生鸿蒙仍在验证中。展示界面为示意，不同版本的功能可能略有差异。</small>
       </div>
       <div class="landing-platform-options landing-reveal">
         <article>
-          <span class="landing-capability-label landing-capability-label--native">iOS 推荐安装方式 · 测试版</span>
+          <span class="landing-capability-label landing-capability-label--native">iOS 安装方式 · 测试版</span>
           <h3>iPhone / iPad · TestFlight</h3>
           <p>先安装 Apple TestFlight，再接受邀请安装成信友友测试版。</p>
           <a class="landing-platform-download" :href="IOS_TESTFLIGHT_URL" target="_blank" rel="noopener noreferrer">加入 iOS TestFlight 测试 <span aria-hidden="true">↗</span></a>
-          <small>测试名额、设备兼容性和可安装版本以 TestFlight 页面为准。无法加入时，可使用下方的 PWA 备用方式。</small>
+          <small>测试名额、设备兼容性和可安装版本以 TestFlight 页面为准。</small>
         </article>
         <article>
-          <span class="landing-capability-label">无需安装 · iOS 备用方式</span>
-          <h3>网页 / PWA</h3>
-          <p>课表与校园工具、评分、二手等功能。PWA 添加到主屏幕后使用，不等同于 TestFlight 原生客户端。</p>
-          <div class="landing-platform-links">
-            <button type="button" @click="chooseInstallGuide('ios')">iPhone / iPad PWA 备用指引</button>
-            <button type="button" @click="chooseInstallGuide('android-pwa')">Android PWA 安装指引</button>
-          </div>
-        </article>
-        <article>
-          <span class="landing-capability-label">当前公开下载</span>
-          <h3>Android 安装包</h3>
-          <p>固定下载入口自动获取服务器当前提供的安装包。</p>
+          <span class="landing-capability-label landing-capability-label--native">Android 安装方式</span>
+          <h3>Android · 安装包</h3>
+          <p>下载 APK 后直接安装，覆盖安装会保留本机数据。</p>
           <a class="landing-platform-download" :href="ANDROID_DOWNLOAD_URL" rel="noopener noreferrer">下载 Android APK <span aria-hidden="true">↗</span></a>
-          <small>当前入口仍为原版客户端，不等同于下方的新版原生客户端。</small>
-        </article>
-        <article>
-          <span class="landing-capability-label landing-capability-label--native">新版客户端进展</span>
-          <h3>Android / iOS 原生版</h3>
-          <p>论坛、桌面小组件与原生交互已实现。Android 新版支持补丁更新，首次仍需安装对应基础包。</p>
-          <small>iOS 通过上方 TestFlight 参与测试，Android 新版正式下载另行公告；TestFlight 测试不等于 App Store 正式上架。原生鸿蒙仍在验证中。</small>
+          <small>固定入口自动获取服务器上的当前版本；安装时可能需要允许「安装未知来源应用」。Android 新版支持应用内补丁更新，首次仍需安装完整包。</small>
         </article>
       </div>
     </section>
@@ -533,55 +499,25 @@ function resetHeroPerspective() {
             </button>
             <p class="landing-eyebrow">选择你的使用方式</p>
             <h2 id="landing-usage-title">安装成信友友</h2>
-            <p class="landing-usage-dialog__intro">iPhone / iPad 推荐 TestFlight 测试版，PWA 保留为备用方式；功能以实际版本为准。</p>
+            <p class="landing-usage-dialog__intro">选一个平台安装原生客户端：iPhone / iPad 用 TestFlight，Android 用安装包。</p>
             <div class="landing-usage-options">
               <a class="landing-usage-option landing-usage-option--blue" :href="IOS_TESTFLIGHT_URL" target="_blank" rel="noopener noreferrer">
                 <span class="landing-usage-option__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M12 3v10M8.5 9.5 12 13l3.5-3.5M6 16v4h12v-4" /></svg>
                 </span>
                 <span class="landing-usage-option__copy">
-                  <strong>iOS TestFlight 测试（推荐）</strong>
+                  <strong>iOS TestFlight 测试</strong>
                   <small>iPhone / iPad：通过 Apple TestFlight 安装测试版</small>
                 </span>
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
               </a>
-              <button class="landing-usage-option landing-usage-option--blue" type="button" @click="openWebApp">
-                <span class="landing-usage-option__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 9h18M6 6.5h.1M9 6.5h.1" /></svg>
-                </span>
-                <span class="landing-usage-option__copy">
-                  <strong>直接使用网页版</strong>
-                  <small>无需安装，登录后使用课表与校园服务</small>
-                </span>
-                <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
-              </button>
-              <button class="landing-usage-option landing-usage-option--blue" type="button" @click="chooseInstallGuide('ios')">
-                <span class="landing-usage-option__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 14V3M8.5 6.5 12 3l3.5 3.5M6 12v9h12v-9" /></svg>
-                </span>
-                <span class="landing-usage-option__copy">
-                  <strong>iPhone / iPad PWA（备用）</strong>
-                  <small>无法使用 TestFlight 时，可添加网页到主屏幕</small>
-                </span>
-                <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
-              </button>
-              <button class="landing-usage-option landing-usage-option--orange" type="button" @click="chooseInstallGuide('android-pwa')">
-                <span class="landing-usage-option__icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M4 5.5h16v11H4zM8 20h8M12 16.5V20" /></svg>
-                </span>
-                <span class="landing-usage-option__copy">
-                  <strong>安卓 PWA 安装</strong>
-                  <small>用 Chrome 或 Edge 添加到桌面</small>
-                </span>
-                <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
-              </button>
-              <a class="landing-usage-option landing-usage-option--blue" :href="ANDROID_DOWNLOAD_URL" rel="noopener noreferrer">
+              <a class="landing-usage-option landing-usage-option--orange" :href="ANDROID_DOWNLOAD_URL" rel="noopener noreferrer">
                 <span class="landing-usage-option__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M12 3v10M8.5 9.5 12 13l3.5-3.5M6 16v4h12v-4" /></svg>
                 </span>
                 <span class="landing-usage-option__copy">
                   <strong>Android 安装包</strong>
-                  <small>当前公开的原版 APK；新版原生客户端另行公告</small>
+                  <small>下载 APK 直接安装，覆盖安装保留本机数据</small>
                 </span>
                 <svg class="landing-usage-option__arrow" aria-hidden="true" viewBox="0 0 20 20"><path d="m7 4 6 6-6 6" /></svg>
               </a>
