@@ -25,7 +25,7 @@ describe('安卓最新版固定下载入口', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-store, max-age=0')
     expect(response.body).toBeNull()
     expect(LATEST_ANDROID_APK_URL).toBe(
-      'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.0/chengxin-youyou-android-layout-fix2.apk',
+      'https://gitee.com/fanxiaogao05/cuit-server/releases/download/1.0.1/chengxin-youyou-0.1.5%207.apk',
     )
   })
 
