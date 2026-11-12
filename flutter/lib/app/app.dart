@@ -4,7 +4,6 @@ import '../features/profile/presentation/plan_completion_page.dart';
 import '../features/profile/presentation/feedback_page.dart';
 import '../features/profile/presentation/about_page.dart';
 import '../features/app_update/presentation/app_update_tile.dart';
-import '../features/app_update/presentation/full_app_update_tile.dart';
 import '../features/app_update/presentation/full_app_update_dialog.dart';
 import '../features/app_update/presentation/full_app_update_view_model.dart';
 
@@ -409,15 +408,9 @@ class _ChengxinAppState extends State<ChengxinApp> {
                     avatar: widget.dependencies.avatar,
                     updateTile: appUpdate == null
                         ? null
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AppUpdateTile(viewModel: appUpdate),
-                              if (widget.dependencies.fullAppUpdate != null)
-                                FullAppUpdateTile(
-                                  viewModel: widget.dependencies.fullAppUpdate!,
-                                ),
-                            ],
+                        : AppUpdateTile(
+                            viewModel: appUpdate,
+                            fullViewModel: widget.dependencies.fullAppUpdate,
                           ),
                     desktopWidgetTile:
                         widget.dependencies.desktopWidgets == null

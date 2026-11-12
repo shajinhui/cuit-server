@@ -1,26 +1,26 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'app_update_view_model.dart';
+import 'full_app_update_view_model.dart';
 
 class AppUpdateTile extends StatelessWidget {
-  const AppUpdateTile({super.key, required this.viewModel});
+  const AppUpdateTile({super.key, required this.viewModel, this.fullViewModel});
 
   final AppUpdateViewModel viewModel;
+  final FullAppUpdateViewModel? fullViewModel;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: viewModel,
+    listenable: Listenable.merge([viewModel, ?fullViewModel]),
     builder: (context, _) {
       final theme = Theme.of(context);
-      final subtitle = switch (viewModel.state) {
-        AppUpdateState.idle => '检查并下载可用更新',
-        AppUpdateState.unavailable => '当前安装包暂不支持在线更新',
-        AppUpdateState.checking => '正在检查更新…',
-        AppUpdateState.upToDate => '暂无可用的在线更新',
-        AppUpdateState.downloading => '正在检查并下载可用更新…',
-        AppUpdateState.restartRequired => '更新已准备好，下次启动生效',
-        AppUpdateState.failed => viewModel.error!,
-      };
+      final full = fullViewModel;
+      final fullAvailable =
+          full?.state == FullAppUpdateState.available && full?.update != null;
+      final busy = viewModel.isBusy || full?.isBusy == true;
+      final subtitle = _subtitle(full);
       return ListTile(
         key: const Key('profile-check-update'),
         contentPadding: const EdgeInsets.symmetric(horizontal: 18),
@@ -53,19 +53,50 @@ class AppUpdateTile extends StatelessWidget {
               ),
           ],
         ),
-        trailing: viewModel.isBusy
+        trailing: busy
             ? const SizedBox.square(
                 dimension: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.chevron_right_rounded),
-        onTap:
-            viewModel.isBusy ||
-                viewModel.state == AppUpdateState.unavailable ||
-                viewModel.state == AppUpdateState.restartRequired
+        onTap: busy
             ? null
-            : viewModel.checkAndDownload,
+            : fullAvailable
+            ? full!.install
+            : viewModel.state == AppUpdateState.restartRequired
+            ? null
+            : () {
+                unawaited(viewModel.checkAndDownload());
+                final full = fullViewModel;
+                if (full != null) unawaited(full.check());
+              },
       );
     },
   );
+
+  String _subtitle(FullAppUpdateViewModel? full) {
+    final update = full?.update;
+    if (full?.state == FullAppUpdateState.available && update != null) {
+      return '发现新版本 ${update.versionName}，点击更新';
+    }
+    if (viewModel.state == AppUpdateState.restartRequired) {
+      return '热更新已准备好，下次启动生效';
+    }
+    if (full?.state == FullAppUpdateState.downloading) {
+      return '正在下载完整安装包…';
+    }
+    if (viewModel.isBusy || full?.isBusy == true) return '正在检查更新…';
+    if (viewModel.state == AppUpdateState.failed) return viewModel.error!;
+    if (full?.state == FullAppUpdateState.failed) return full!.error!;
+    if (viewModel.state == AppUpdateState.upToDate ||
+        (viewModel.state == AppUpdateState.unavailable &&
+            full?.state == FullAppUpdateState.upToDate)) {
+      return '当前已是最新版本';
+    }
+    if (viewModel.state == AppUpdateState.idle &&
+        (full == null || full.state == FullAppUpdateState.idle)) {
+      return '检查可用更新';
+    }
+    return '点击重新检查';
+  }
 }

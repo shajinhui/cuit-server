@@ -1,10 +1,14 @@
 import 'package:chengxin_youyou/features/app_update/data/full_app_update_repository.dart';
+import 'package:chengxin_youyou/features/app_update/data/app_update_repository.dart';
+import 'package:chengxin_youyou/features/app_update/presentation/app_update_tile.dart';
+import 'package:chengxin_youyou/features/app_update/presentation/app_update_view_model.dart';
 import 'package:chengxin_youyou/features/app_update/presentation/full_app_update_view_model.dart';
 import 'package:chengxin_youyou/app/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fakes/test_dependencies.dart';
+import 'fakes/fake_app_update_repository.dart';
 
 void main() {
   test('完整更新检查发现新版本后等待用户安装', () async {
@@ -87,6 +91,44 @@ void main() {
     await tester.tap(find.byKey(const Key('full-update-later')));
     await tester.pumpAndSettle();
     expect(find.text('发现新版本 0.1.4'), findsNothing);
+  });
+
+  testWidgets('个人中心只显示一个更新入口，并优先提示完整安装包', (tester) async {
+    final patchRepository = FakeAppUpdateRepository()
+      ..patches = const AppPatchInfo(currentPatch: 4, nextPatch: 4);
+    final patchModel = AppUpdateViewModel(patchRepository);
+    await patchModel.checkAndDownload();
+    final fullRepository = _FakeFullUpdateRepository(
+      update: const FullAppUpdate(
+        platform: 'android',
+        versionName: '0.1.5',
+        versionCode: 7,
+        minimumVersionCode: 5,
+        downloadPath: '/download.apk',
+        storeUrl: null,
+        sha256: null,
+        size: null,
+        forceUpdate: false,
+        releaseNotes: [],
+      ),
+    );
+    final fullModel = FullAppUpdateViewModel(fullRepository);
+    await fullModel.check();
+    addTearDown(patchModel.dispose);
+    addTearDown(fullModel.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AppUpdateTile(viewModel: patchModel, fullViewModel: fullModel),
+        ),
+      ),
+    );
+
+    expect(find.text('检查更新'), findsOneWidget);
+    expect(find.text('发现新版本 0.1.5，点击更新'), findsOneWidget);
+    expect(find.byKey(const Key('profile-check-update')), findsOneWidget);
+    expect(find.byKey(const Key('profile-full-update')), findsNothing);
   });
 }
 

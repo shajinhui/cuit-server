@@ -207,12 +207,12 @@ void main() {
 
     await tester.tap(find.byKey(const Key('profile-check-update')));
     await tester.pump();
-    expect(find.text('正在检查并下载可用更新…'), findsOneWidget);
+    expect(find.text('正在检查更新…'), findsOneWidget);
     expect(tester.widget<ListTile>(find.byType(ListTile)).onTap, isNull);
 
     checking.complete(true);
     await tester.pumpAndSettle();
-    expect(find.text('更新已准备好，下次启动生效'), findsOneWidget);
+    expect(find.text('热更新已准备好，下次启动生效'), findsOneWidget);
     expect(find.byType(AppUpdateTile), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -237,7 +237,7 @@ void main() {
     await model.checkAndDownload();
     await tester.pump();
     expect(find.text('当前补丁：2'), findsOneWidget);
-    expect(find.text('更新已准备好，下次启动生效'), findsOneWidget);
+    expect(find.text('热更新已准备好，下次启动生效'), findsOneWidget);
     expect(find.text('当前补丁：3'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -265,7 +265,7 @@ void main() {
       find.byKey(const Key('profile-check-update')),
       200,
     );
-    expect(find.text('更新已准备好，下次启动生效'), findsOneWidget);
+    expect(find.text('热更新已准备好，下次启动生效'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     dependencies.dispose();
