@@ -3,18 +3,13 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ratingsPublicCacheScope } from '@/features/ratings'
 import { fetchAnnouncements, parseOnlineAnnouncement, type OnlineAnnouncement } from './api'
-import { getAnnouncementViewCount, LOCAL_ACTIVE_ANNOUNCEMENT, recordAnnouncementPresentation, ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT } from './model'
+import { getAnnouncementViewCount, recordAnnouncementPresentation, ANNOUNCEMENT_AUTO_PRESENTATION_LIMIT } from './model'
 
 export function announcementKey(item: OnlineAnnouncement) { return `${item.id}:${item.revision}` }
-function includeLocalAnnouncement(items: OnlineAnnouncement[]) {
-  return items.length > 0
-    ? [...items.filter(item => item.id !== LOCAL_ACTIVE_ANNOUNCEMENT.id), LOCAL_ACTIVE_ANNOUNCEMENT]
-    : [LOCAL_ACTIVE_ANNOUNCEMENT]
-}
 export const useAnnouncementsStore = defineStore('announcements', () => {
   const platform = Capacitor.isNativePlatform() ? Capacitor.getPlatform() : 'web'
   const cacheKey = `announcements:v1:${ratingsPublicCacheScope()}:${platform}`
-  const feed = ref<OnlineAnnouncement[]>([LOCAL_ACTIVE_ANNOUNCEMENT])
+  const feed = ref<OnlineAnnouncement[]>([])
   const views = ref<Record<string, number>>({})
   const loading = ref(false), initialized = ref(false), fresh = ref(false)
   const error = ref('')
@@ -44,7 +39,7 @@ export const useAnnouncementsStore = defineStore('announcements', () => {
     try {
       const saved = JSON.parse(localStorage.getItem(cacheKey) || 'null') as { items?: unknown; views?: unknown } | null
       if (!saved || !Array.isArray(saved.items) || saved.items.length > 20) return
-      feed.value = includeLocalAnnouncement(saved.items.map(parseOnlineAnnouncement))
+      feed.value = saved.items.map(parseOnlineAnnouncement)
       if (saved.views && typeof saved.views === 'object') {
         views.value = Object.fromEntries(Object.entries(saved.views).slice(-100).filter(([, count]) => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0 && count <= 2))
       }
@@ -58,7 +53,7 @@ export const useAnnouncementsStore = defineStore('announcements', () => {
       syncTime()
       error.value = ''
       if (!initialized.value) readCache()
-      try { feed.value = includeLocalAnnouncement(await fetchAnnouncements(platform)); fresh.value = true; saveCache() }
+      try { feed.value = await fetchAnnouncements(platform); fresh.value = true; saveCache() }
       catch { fresh.value = false; error.value = '公告更新失败，请检查网络后重试' }
       finally { syncTime(); loading.value = false; initialized.value = true; lastCheck = Date.now() }
     })().finally(() => { inFlight = undefined })
