@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { fetchAnnouncements, parseOnlineAnnouncement, type OnlineAnnouncement } from './api'
+import { LOCAL_ACTIVE_ANNOUNCEMENT } from './model'
 import { useAnnouncementsStore } from './store'
 
 vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), fetchAnnouncements: vi.fn() }))
@@ -15,6 +16,14 @@ beforeEach(() => {
   vi.mocked(fetchAnnouncements).mockReset().mockResolvedValue([message])
 })
 describe('在线公告状态', () => {
+  it('在线接口为空时仍保留前端固定更新公告', async () => {
+    vi.mocked(fetchAnnouncements).mockResolvedValue([])
+    const store = useAnnouncementsStore()
+    await store.refresh()
+    expect(store.latest?.id).toBe(LOCAL_ACTIVE_ANNOUNCEMENT.id)
+    expect(store.autoCandidate?.id).toBe(LOCAL_ACTIVE_ANNOUNCEMENT.id)
+  })
+
   it('再次获取新列表期间不自动弹出尚未确认有效的旧消息', async () => {
     const store = useAnnouncementsStore()
     await store.refresh()
@@ -24,7 +33,7 @@ describe('在线公告状态', () => {
     expect(store.autoCandidate).toBeUndefined()
     resolve([])
     await pending
-    expect(store.latest).toBeUndefined()
+    expect(store.latest?.id).toBe(LOCAL_ACTIVE_ANNOUNCEMENT.id)
   })
   it('手动查看与延迟弹出前重新检查缓存过期时间', async () => {
     vi.useFakeTimers()
@@ -35,8 +44,9 @@ describe('在线公告状态', () => {
     expect(store.latest).toBeDefined()
     vi.setSystemTime(new Date('2026-10-14T00:02:00Z'))
     store.syncTime()
-    expect(store.latest).toBeUndefined()
-    expect(store.autoCandidate).toBeUndefined()
+    expect(store.latest?.id).toBe(LOCAL_ACTIVE_ANNOUNCEMENT.id)
+    expect(store.items.some(item => item.id === message.id)).toBe(false)
+    expect(store.autoCandidate?.id).toBe(LOCAL_ACTIVE_ANNOUNCEMENT.id)
   })
   it('跨启动累计两次，更新内容版本重置提醒，阅读次数不无限增长', async () => {
     for (let i = 0; i < 2; i++) {
@@ -67,7 +77,7 @@ describe('在线公告状态', () => {
     expect(store.autoCandidate).toBeUndefined()
     vi.mocked(fetchAnnouncements).mockResolvedValue([])
     await store.refresh(true)
-    expect(store.items).toEqual([])
+    expect(store.items).toEqual([LOCAL_ACTIVE_ANNOUNCEMENT])
   })
   it('同会话关闭后不再补弹；后台设置为不自动弹出仍可手动查看', async () => {
     const store = useAnnouncementsStore()

@@ -2,11 +2,19 @@ import { describe, expect, it } from 'vitest'
 
 import {
   getAnnouncementViewCount,
+  LOCAL_ACTIVE_ANNOUNCEMENT,
   recordAnnouncementPresentation,
   shouldAutoPresentAnnouncement,
 } from './model'
 
 describe('announcement presentation state', () => {
+  it('保留旧版 PWA 与安卓网页套壳的本地更新公告', () => {
+    expect(LOCAL_ACTIVE_ANNOUNCEMENT.title).toBe('旧版客户端请更新')
+    expect(LOCAL_ACTIVE_ANNOUNCEMENT.body).toContain('旧版 PWA')
+    expect(LOCAL_ACTIVE_ANNOUNCEMENT.body).toContain('旧安卓网页套壳')
+    expect(LOCAL_ACTIVE_ANNOUNCEMENT.action?.url).toBe('https://fanxiaogao05.dpdns.org/official')
+  })
+
   it('没有展示记录时需要自动展示', () => {
     expect(shouldAutoPresentAnnouncement(null, 'announcement-2')).toBe(true)
   })
